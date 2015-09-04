@@ -14,6 +14,7 @@ def remove_all(db='default'):
             os.remove(os.path.join(settings.MEDIA_ROOT,'video','condition_%d.mp4' % condition.id))
     cursor=connections[db].cursor()
     cursor.execute('DELETE FROM %s.mirrordb_event WHERE 1=1' % (settings.DATABASES[db]['NAME']))
+    cursor.execute('DELETE FROM %s.mirrordb_unitrecording WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.mirrordb_recordingtrial WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.mirrordb_unit WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.mirrordb_graspobservationcondition WHERE 1=1' % (settings.DATABASES[db]['NAME']))

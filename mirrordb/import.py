@@ -286,7 +286,7 @@ def import_kraskov_data(mat_file, video_dir, db='default'):
             previous_trial=None
             if trial_numbers[unit.id][trial.condition.id]>1:
                 previous_trial=RecordingTrial.objects.using(db).get(condition=trial.condition,
-                    unitrecording__unit=unit, trial_number=trial_numbers[unit.id][trial.condition.id]-1)
+                    unit_recordings__unit=unit, trial_number=trial_numbers[unit.id][trial.condition.id]-1)
 
             unit_recording=UnitRecording(unit=unit, trial=trial)
             # load spikes
@@ -328,6 +328,8 @@ def import_kraskov_data(mat_file, video_dir, db='default'):
 
 def import_bonini_data(nex_files, db='default'):
     collator=User.objects.using(db).get(username='jbonaiuto')
+    if User.objects.using(db).filter(username='lbonini').count():
+        collator=User.objects.using(db).get(username='lbonini')
 
     event_map={
         'ev_01_LightON_visualCOR_RNG':('lon','light on'),

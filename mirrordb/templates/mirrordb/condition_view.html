@@ -9,6 +9,7 @@
         shape-rendering: crispEdges;
         stroke: black;
         fill: none;
+        stroke-width: 1.2px;
     }
 
     .bar {
@@ -23,7 +24,7 @@
     .line {
         fill: none;
         stroke: black;
-        stroke-width: 1.5px;
+        stroke-width: 2px;
     }
 
     .overlay {
@@ -68,28 +69,6 @@
     <input id="align_event" type="hidden" value="start"/>
 </form>
 <script>
-    var margin = {top: 30, right: 20, bottom: 30, left: 50}
-            , width = 960 - margin.left - margin.right
-            , height = 500 - margin.top - margin.bottom;
-
-    var raster_svg = d3.select('body').append('svg:svg')
-            .attr('width', width + margin.right + margin.left)
-            .attr('height', height + margin.top + margin.bottom)
-            .append('g')
-            .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-
-    var histo_svg = d3.select('body').append('svg:svg')
-            .attr('width', width + margin.right + margin.left)
-            .attr('height', height + margin.top + margin.bottom)
-            .append('g')
-            .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-
-    var rate_svg = d3.select("body").append("svg:svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
     var bisectTime = d3.bisector(function(d) { return d.x; }).left;
     var p=d3.scale.category10();
 
@@ -106,8 +85,84 @@
         $.ajax(args)
     });
 
+    function loadedData(resp){
+        var idx=1;
+
+        var unit_trials=new Map();
+        var unit_trial_events=new Map();
+        var unit_ids=[];
+        var event_types=['start'];
+
+        for(var i=0; i<resp.recording_trials.length; i++)
+        {
+            var recording_trial=resp.recording_trials[i];
+            var trial_number=recording_trial.trial_number;
+            var start_time=parseFloat(recording_trial.start_time);
+
+            for(var j=0; j<recording_trial.unit_recordings.length; j++)
+            {
+                var unit_recording=recording_trial.unit_recordings[j];
+                var unit_id=unit_recording.unit.id;
+                if(unit_ids.indexOf(unit_id)<0)
+                    unit_ids.push(unit_id);
+
+                if(unit_trials.get(unit_id)==null)
+                    unit_trials.set(unit_id,[]);
+
+                if(unit_trial_events.get(unit_id)==null)
+                    unit_trial_events.set(unit_id,[]);
+
+                unit_trial_events.get(unit_id).push({
+                    t: start_time,
+                    trial: trial_number,
+                    name: 'start',
+                    description: 'trial start'
+                });
+                for(var k=0; k<recording_trial.events.length; k++)
+                {
+                    var event=recording_trial.events[k];
+                    unit_trial_events.get(unit_id).push({
+                        t: parseFloat(event.time),
+                        trial: trial_number,
+                        name: event.name,
+                        description: event.description
+                    });
+                    if(event_types.indexOf(event.name)<0)
+                        event_types.push(event.name);
+                }
+
+                var unit_data=[];
+                var spike_times=unit_recording.spike_times.split(',');
+                for(var k=0; k<spike_times.length; k++)
+                {
+                    unit_trials.get(unit_id).push({
+                        x: parseFloat(spike_times[k]),
+                        y: trial_number
+                    });
+                }
+            }
+        }
+        var single_unit_trials=unit_trials.get(unit_ids[0]);
+        var single_unit_trial_events=unit_trial_events.get(unit_ids[0]);
+        drawRaster(single_unit_trials, single_unit_trial_events, event_types);
+
+        drawHistogram(single_unit_trials, single_unit_trial_events, event_types);
+
+        drawFiringRate(single_unit_trials, single_unit_trial_events, event_types);
+    }
+
     function drawRaster(data, trial_events, event_types)
     {
+        var margin = {top: 30, right: 20, bottom: 30, left: 50},
+                width = 960 - margin.left - margin.right,
+                height = 250 - margin.top - margin.bottom;
+
+        var raster_svg = d3.select('body').append('svg:svg')
+                .attr('width', width + margin.right + margin.left)
+                .attr('height', height + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
         var align_event = d3.select("#align_event").node().value;
         d3.selectAll("#align_event").on("change.raster", update);
         var realigned_data=realign_spikes(data, trial_events, align_event);
@@ -142,7 +197,7 @@
                 .style("display", "none");
 
         focus.append("circle")
-                .attr("r", 4.5);
+                .attr("r", 6);
 
         focus.append("text")
                 .attr("x", 9)
@@ -154,7 +209,7 @@
                 .data(realigned_trial_events)
                 .enter().append("svg:circle")
                 .attr("transform", function (d) { return "translate("+xScale(d.t)+", "+yScale(d.trial)+")"})
-                .attr("r", 3)
+                .attr("r", 5)
                 .style('fill', function (d) {return p(event_types.indexOf(d.name))})
                 .on("mouseover", function(d) {
                     focus.attr("transform", "translate(" + xScale(d.t) + "," + yScale(d.trial) + ")");
@@ -222,6 +277,16 @@
 
     function drawHistogram(data, trial_events, event_types)
     {
+        var margin = {top: 30, right: 20, bottom: 30, left: 50}
+                , width = 960 - margin.left - margin.right
+                , height = 200 - margin.top - margin.bottom;
+
+        var histo_svg = d3.select('body').append('svg:svg')
+                .attr('width', width + margin.right + margin.left)
+                .attr('height', height + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
         var binwidth = parseInt(d3.select("#binwidth").node().value);
         d3.selectAll("#binwidth").on("change.histo", update);
         var align_event = d3.select("#align_event").node().value;
@@ -404,6 +469,16 @@
 
     function drawFiringRate(data, trial_events, event_types)
     {
+        var margin = {top: 30, right: 20, bottom: 30, left: 50}
+                , width = 960 - margin.left - margin.right
+                , height = 400 - margin.top - margin.bottom;
+
+        var rate_svg = d3.select("body").append("svg:svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
         var binwidth = parseInt(d3.select("#binwidth").node().value);
         d3.selectAll("#binwidth").on("change.rate", update);
 
@@ -412,7 +487,7 @@
         var realigned_data=realign_spikes(data, trial_events, align_event);
         var realigned_trial_events=realign_events(trial_events, align_event);
 
-        var rate=get_firing_rate(realigned_data, binwidth);
+        var rate=get_firing_rate(realigned_data, binwidth, width);
 
         var xScale = d3.scale.linear()
                 .range([0, width])
@@ -520,7 +595,7 @@
             realigned_data=realign_spikes(data, trial_events, align_event);
             realigned_trial_events=realign_events(trial_events, align_event);
 
-            rate=get_firing_rate(realigned_data, binwidth);
+            rate=get_firing_rate(realigned_data, binwidth, width);
 
             yScale.domain([0, d3.max(rate, function(d) { return d.y; })]);
             yAxis.scale(yScale);
@@ -538,79 +613,15 @@
                     .attr("x2", xScale(0));
 
             rate_svg.selectAll('.line').datum(rate)
+                    .transition().duration(1000)
                     .attr("class", "line")
                     .attr("d", line);
+
             rate_svg.selectAll(".text").data(hist).remove();
             rate_svg.select(".y.axis").call(yAxis);
             rate_svg.select(".x.axis").call(xAxis);
 
         }
-    }
-
-    function loadedData(resp){
-        var idx=1;
-
-        var unit_trials=new Map();
-        var unit_trial_events=new Map();
-        var unit_ids=[];
-        var event_types=['start'];
-
-        for(var i=0; i<resp.recording_trials.length; i++)
-        {
-            var recording_trial=resp.recording_trials[i];
-            var trial_number=recording_trial.trial_number;
-            var start_time=parseFloat(recording_trial.start_time);
-
-            for(var j=0; j<recording_trial.unit_recordings.length; j++)
-            {
-                var unit_recording=recording_trial.unit_recordings[j];
-                var unit_id=unit_recording.unit.id;
-                if(unit_ids.indexOf(unit_id)<0)
-                    unit_ids.push(unit_id);
-
-                if(unit_trials.get(unit_id)==null)
-                    unit_trials.set(unit_id,[]);
-
-                if(unit_trial_events.get(unit_id)==null)
-                    unit_trial_events.set(unit_id,[]);
-
-                unit_trial_events.get(unit_id).push({
-                    t: start_time,
-                    trial: trial_number,
-                    name: 'start',
-                    description: 'trial start'
-                });
-                for(var k=0; k<recording_trial.events.length; k++)
-                {
-                    var event=recording_trial.events[k];
-                    unit_trial_events.get(unit_id).push({
-                        t: parseFloat(event.time),
-                        trial: trial_number,
-                        name: event.name,
-                        description: event.description
-                    });
-                    if(event_types.indexOf(event.name)<0)
-                        event_types.push(event.name);
-                }
-
-                var unit_data=[];
-                var spike_times=unit_recording.spike_times.split(',');
-                for(var k=0; k<spike_times.length; k++)
-                {
-                    unit_trials.get(unit_id).push({
-                        x: parseFloat(spike_times[k]),
-                        y: trial_number
-                    });
-                }
-            }
-        }
-        var single_unit_trials=unit_trials.get(unit_ids[0]);
-        var single_unit_trial_events=unit_trial_events.get(unit_ids[0]);
-        drawRaster(single_unit_trials, single_unit_trial_events, event_types);
-
-        drawHistogram(single_unit_trials, single_unit_trial_events, event_types);
-
-        drawFiringRate(single_unit_trials, single_unit_trial_events, event_types);
     }
 
     function realign_spikes(trials, trial_events, event_name)
@@ -668,7 +679,7 @@
         return realigned;
     }
 
-    function get_firing_rate(trials, bin_width)
+    function get_firing_rate(trials, bin_width, width)
     {
         var window=[];
         for(var i=-2*bin_width; i<2*bin_width+1; i++)

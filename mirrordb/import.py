@@ -34,7 +34,7 @@ def import_kraskov_data(mat_file, video_dir, db='default'):
     if not os.path.exists(mirrordb_video_dir):
         os.mkdir(mirrordb_video_dir)
 
-    collator=User.objects.using(db).get(username='jbonaiuto')
+    collator=User.objects.using(db).get(username='mwinter')
     if User.objects.using(db).filter(username='akraskov').count():
         collator=User.objects.using(db).get(username='akraskov')
 
@@ -328,7 +328,7 @@ def import_kraskov_data(mat_file, video_dir, db='default'):
 
 
 def import_bonini_data(nex_files, db='default'):
-    collator=User.objects.using(db).get(username='jbonaiuto')
+    collator=User.objects.using(db).get(username='mwinter')
     if User.objects.using(db).filter(username='lbonini').count():
         collator=User.objects.using(db).get(username='lbonini')
 
@@ -364,7 +364,7 @@ def import_bonini_data(nex_files, db='default'):
     else:
         exp=Experiment()
         exp.collator=collator
-        exp.last_modified_by=User.objects.using(db).get(username='jbonaiuto')
+        exp.last_modified_by=User.objects.using(db).get(username='mwinter')
         exp.title=exp_title
         exp.brief_description='Recording of unidentified F5 neurons while monkeys observed or performed object-directed grasps'
         exp.subject_species=Species.objects.using(db).get(genus_name='Macaca',species_name='mulatta')

@@ -364,7 +364,7 @@ def import_bonini_data(nex_files, db='default'):
     else:
         exp=Experiment()
         exp.collator=collator
-        exp.last_modified_by=User.objects.using(db).get(username='mwinter')
+        exp.last_modified_by=collator
         exp.title=exp_title
         exp.brief_description='Recording of unidentified F5 neurons while monkeys observed or performed object-directed grasps'
         exp.subject_species=Species.objects.using(db).get(genus_name='Macaca',species_name='mulatta')

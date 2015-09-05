@@ -34,7 +34,7 @@ def import_kraskov_data(mat_file, video_dir, db='default'):
     if not os.path.exists(mirrordb_video_dir):
         os.mkdir(mirrordb_video_dir)
 
-    collator=User.objects.using(db).get(username='mwinter')
+    collator=User.objects.using(db).filter(is_superuser=True)[0]
     if User.objects.using(db).filter(username='akraskov').count():
         collator=User.objects.using(db).get(username='akraskov')
 
@@ -328,7 +328,7 @@ def import_kraskov_data(mat_file, video_dir, db='default'):
 
 
 def import_bonini_data(nex_files, db='default'):
-    collator=User.objects.using(db).get(username='mwinter')
+    collator=User.objects.using(db).filter(is_superuser=True)[0]
     if User.objects.using(db).filter(username='lbonini').count():
         collator=User.objects.using(db).get(username='lbonini')
 

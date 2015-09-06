@@ -326,7 +326,8 @@
             });
 
         var xBinwidth = width / scaledHist.length -1;
-        yScale.domain([d3.min(scaledHist, function(d) { return d.y-1; }), d3.max(scaledHist, function(d) { return d.y+1; })])
+        var yMax=d3.max(scaledHist, function(d) { return d.y+1; });
+        yScale.domain([0, yMax +.1*yMax])
 
         histo_svg.selectAll(".bar")
                 .data(scaledHist)
@@ -356,16 +357,11 @@
                 .text("Firing Rate (Hz)");
 
         // Events
-        var i = bisectTime(scaledHist, xScale(0), 1),
-                d0 = scaledHist[i - 1],
-                d1 = scaledHist[i],
-                d = xScale(0) - d0.x > d1.x - xScale(0) ? d1 : d0;
-
         var event_line=histo_svg.append("line")
                 .attr("x1", xScale(0))
                 .attr("y1", yScale(0))
                 .attr("x2", xScale(0))
-                .attr("y2", yScale(d.y+10))
+                .attr("y2", yScale(yMax +.1*yMax))
                 .classed("annotation-line",true);
 
         var event_note=histo_svg.selectAll(".g-note")
@@ -374,7 +370,7 @@
                 .classed("g-text-annotation",true)
                 .style('fill', p(event_types.indexOf(align_event)))
                 .attr("x", xScale(0))
-                .attr("y", yScale(d.y+10))
+                .attr("y", yScale(yMax +.1*yMax))
                 .attr("dy", function(d, i) { return i * 1.3 + "em"; })
                 .text(function(d) { return d; });
 
@@ -411,7 +407,8 @@
                 });
 
             xAxis.scale(xScale);
-            yScale.domain([d3.min(scaledHist, function(d) { return d.y - 1; }), d3.max(scaledHist, function(d) { return d.y + 1; })]);
+            var yMax=d3.max(scaledHist, function(d) { return d.y+1; });
+            yScale.domain([0, yMax +.1*yMax]);
             xBinwidth =  width / scaledHist.length-1;
 
             var xEase = "cubic-in-out";
@@ -452,14 +449,12 @@
             event_note.data([align_event])
                     .style('fill', p(event_types.indexOf(align_event)))
                     .attr("x", xScale(0))
-                    .attr("y", yScale(d.y+10))
                     .attr("dy", function(d, i) { return i * 1.3 + "em"; })
                     .text(function(d) { return d; });
 
             event_line.attr("x1", xScale(0))
-                    .attr("y1", yScale(0))
-                    .attr("x2", xScale(0))
-                    .attr("y2", yScale(d.y+10));
+                    .attr("x2", xScale(0));
+
 
             histo_svg.selectAll(".text").data(hist).remove();
 
@@ -515,7 +510,8 @@
 
 
         xScale.domain([d3.min(rate, function(d) { return d.x; }), d3.max(rate, function(d) { return d.x; })]);
-        yScale.domain(d3.extent(rate, function(d) { return d.y; }));
+        var yMax=d3.max(rate, function(d) { return d.y+1; });
+        yScale.domain([0, yMax +.1*yMax])
 
         rate_svg.append("g")
                 .attr("class", "x axis")
@@ -554,7 +550,7 @@
                 .attr("x1", xScale(0))
                 .attr("y1", yScale(0))
                 .attr("x2", xScale(0))
-                .attr("y2", yScale(d3.max(rate, function(d) { return d.y; }))+20)
+                .attr("y2", yScale(yMax +.1*yMax))
                 .classed("annotation-line",true);
 
         var event_note=rate_svg.selectAll(".g-note")
@@ -563,7 +559,7 @@
                 .classed("g-text-annotation",true)
                 .style('fill', p(event_types.indexOf(align_event)))
                 .attr("x", xScale(0))
-                .attr("y", yScale(d3.max(rate, function(d) { return d.y; }))+30)
+                .attr("y", yScale(yMax +.1*yMax))
                 .attr("dy", function(d, i) { return i * 1.3 + "em"; })
                 .text(function(d) { return d; });
 
@@ -605,7 +601,8 @@
 
             rate=get_firing_rate(realigned_data, binwidth, width);
 
-            yScale.domain([0, d3.max(rate, function(d) { return d.y; })]);
+            var yMax=d3.max(rate, function(d) { return d.y+1; });
+            yScale.domain([0, yMax +.1*yMax])
             yAxis.scale(yScale);
             xScale.domain([d3.min(rate, function(d) { return d.x; }), d3.max(rate, function(d) { return d.x; })]);
             xAxis.scale(xScale);

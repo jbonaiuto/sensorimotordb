@@ -50,7 +50,7 @@ class ExperimentResource(ModelResource):
 
 
 class UnitResource(ModelResource):
-    area = fields.ForeignKey(BrainRegionResource, 'area')
+    area = fields.ForeignKey(BrainRegionResource, 'area',full=True)
 
     class Meta:
         queryset = Unit.objects.all()

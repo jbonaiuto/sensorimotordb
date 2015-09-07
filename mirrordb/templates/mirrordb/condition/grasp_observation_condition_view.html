@@ -4,6 +4,7 @@
 
 <script type="text/javascript" src="{% static 'mirrordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/d3.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'mirrordb/js/colorbrewer.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_functions.js' %}"></script>
 <script>
@@ -89,7 +90,7 @@ function loadedData(resp){
             }
         }
     }
-    //drawPopulationFiringRate(unit_trials, unit_trial_events, event_types);
+    drawPopulationFiringRate(unit_trials, unit_trial_events, event_types);
 
     $('.unit_list').each(function(index, element){
         $(this).empty();
@@ -182,6 +183,8 @@ function drawUnitRaster(unit_id, data, trial_events, event_types)
             })
             .on("click", function(d) {
                 d3.select("#align_event").node().value= d.name;
+                func=d3.select('#align_event').on("change.rate.population");
+                func();
                 for(var j=0; j<unit_ids.length; j++)
                 {
                     func=d3.select("#align_event").on("change.raster.unit."+unit_ids[j]);
@@ -471,7 +474,6 @@ function drawUnitFiringRate(unit_id, data, trial_events, event_types)
             .y(function(d) { return yScale(d.y); });
 
 
-    xScale.domain([d3.min(rate, function(d) { return d.x; }), d3.max(rate, function(d) { return d.x; })]);
     var yMax=d3.max(rate, function(d) { return d.y+1; });
     yScale.domain([0, yMax +.1*yMax])
 
@@ -591,10 +593,10 @@ function drawUnitFiringRate(unit_id, data, trial_events, event_types)
 function drawPopulationFiringRate(unit_trials, unit_trial_events, event_types)
 {
     var margin = {top: 30, right: 20, bottom: 40, left: 50}
-            , wideth = 960 - margin.left - margin.right
+            , width = 960 - margin.left - margin.right
             , height = 400 - margin.top - margin.bottom;
 
-    var rate_svg = d3.select("#condition_info").append("svg:svg")
+    var rate_svg = d3.select(".condition_info").append("svg:svg")
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
@@ -604,54 +606,74 @@ function drawPopulationFiringRate(unit_trials, unit_trial_events, event_types)
     d3.selectAll("#binwidth").on("change.rate.population", update);
 
     var align_event = d3.select("#align_event").node().value;
-    d3.selectAll("#align_event").on("change.rate.population."+unit_id, update);
-    var realigned_data=new Map();
-    for(unit_id in unit_trials.keys())
+    d3.selectAll("#align_event").on("change.rate.population", update);
+    var rate_data=new Map();
+    var min_time=10000;
+    var max_time=-10000;
+    var max_rate=0;
+    for(var i=0; i<unit_ids.length; i++)
     {
-        realigned_data.set(unit_ids, realign_spikes(unit_trials.get(unit_id), unit_trial_events.get(unit_id), align_event));
+        var unit_id=unit_ids[i];
+        var realigned_unit_data=realign_spikes(unit_trials.get(unit_id), unit_trial_events.get(unit_id), align_event);
+        var rate=get_firing_rate(realigned_unit_data, binwidth, width);
+        rate_data.set(unit_id,rate);
+        var unit_min_time=d3.min(rate, function(d){ return d.x; });
+        var unit_max_time=d3.max(rate, function(d){ return d.x; });
+        if(unit_min_time<min_time)
+            min_time=unit_min_time;
+        if(unit_max_time>max_time)
+            max_time=unit_max_time;
+        var unit_max_rate=d3.max(rate, function(d){ return d.y+1 });
+        if(unit_max_rate>max_rate)
+            max_rate=unit_max_rate;
     }
-//    var realigned_data=realign_spikes(data, trial_events, align_event);
-//    var realigned_trial_events=realign_events(trial_events, align_event);
-//
-//    var rate=get_firing_rate(realigned_data, binwidth, width);
-//
-//    var xScale = d3.scale.linear()
-//            .range([0, width])
-//            .domain([d3.min(rate, function(d) { return d.x; }), d3.max(rate, function(d) { return d.x; })]);;
-//
-//    var yScale = d3.scale.linear()
-//            .range([height, 0]);
-//
-//    var xAxis = d3.svg.axis()
-//            .scale(xScale)
-//            .orient("bottom");
-//
-//    var yAxis = d3.svg.axis()
-//            .scale(yScale)
-//            .orient("left");
+
+    var xScale = d3.scale.linear()
+            .range([0, width])
+            .domain([min_time, max_time]);
+
+    var yScale = d3.scale.linear()
+            .range([height, 0]);
+
+    var xAxis = d3.svg.axis()
+            .scale(xScale)
+            .orient("bottom");
+
+    var yAxis = d3.svg.axis()
+            .scale(yScale)
+            .orient("left");
 
     var line = d3.svg.line()
             .x(function(d) { return xScale(d.x); })
             .y(function(d) { return yScale(d.y); });
 
 
-//    xScale.domain([d3.min(rate, function(d) { return d.x; }), d3.max(rate, function(d) { return d.x; })]);
-//    var yMax=d3.max(rate, function(d) { return d.y+1; });
-//    yScale.domain([0, yMax +.1*yMax])
+    yScale.domain([0, max_rate +.1*max_rate]);
 
-//    rate_svg.append("g")
-//            .attr("class", "x axis")
-//            .attr("transform", "translate(0," + height + ")")
-//            .call(xAxis);
-//
-//    rate_svg.append("svg:g")
-//            .attr("class", "y axis")
-//            .call(yAxis);
-//
-//    rate_svg.append("path")
-//            .datum(rate)
-//            .attr("class", "data-line")
-//            .attr("d", line);
+    rate_svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
+
+    rate_svg.append("svg:g")
+            .attr("class", "y axis")
+            .call(yAxis);
+
+    for(var i=0; i<unit_ids.length; i++)
+    {
+        rate_svg.append("path")
+            .attr("id", "unit-"+unit_ids[i])
+            .datum(rate_data.get(unit_ids[i]))
+            .attr("class", "data-line")
+            .style("stroke", p(i))
+            .attr("d", line);
+        rate_svg.append("text")
+            .attr("class","axis-label")
+            .attr("x",width-2*margin.left)
+            .attr("y",margin.top+i*20)
+            .style("fill", p(i))
+            .text("Unit "+unit_ids[i]);
+    }
 
     rate_svg.append("text")
             .attr("class", "axis-label")
@@ -670,22 +692,22 @@ function drawPopulationFiringRate(unit_trials, unit_trial_events, event_types)
             .text("Firing Rate (Hz)");
 
     // Events
-//    var event_line=rate_svg.append("line")
-//            .attr("x1", xScale(0))
-//            .attr("y1", yScale(0))
-//            .attr("x2", xScale(0))
-//            .attr("y2", yScale(yMax +.1*yMax))
-//            .classed("annotation-line",true);
-//
-//    var event_note=rate_svg.selectAll(".g-note")
-//            .data([align_event])
-//            .enter().append("text")
-//            .classed("annotation-text",true)
-//            .style('fill', p(event_types.indexOf(align_event)))
-//            .attr("x", xScale(0))
-//            .attr("y", yScale(yMax +.1*yMax))
-//            .attr("dy", function(d, i) { return i * 1.3 + "em"; })
-//            .text(function(d) { return d; });
+    var event_line=rate_svg.append("line")
+            .attr("x1", xScale(0))
+            .attr("y1", yScale(0))
+            .attr("x2", xScale(0))
+            .attr("y2", yScale(max_rate +.1*max_rate))
+            .classed("annotation-line",true);
+
+    var event_note=rate_svg.selectAll(".g-note")
+            .data([align_event])
+            .enter().append("text")
+            .classed("annotation-text",true)
+            .style('fill', p(event_types.indexOf(align_event)))
+            .attr("x", xScale(0))
+            .attr("y", yScale(max_rate +.1*max_rate))
+            .attr("dy", function(d, i) { return i * 1.3 + "em"; })
+            .text(function(d) { return d; });
 
     var focus = rate_svg.append("g")
             .attr("class", "focus")
@@ -698,36 +720,53 @@ function drawPopulationFiringRate(unit_trials, unit_trial_events, event_types)
             .attr("x", 9)
             .attr("dy", ".35em");
 
+    /*
     rate_svg.append("rect")
             .attr("class", "overlay")
             .attr("width", width)
             .attr("height", height)
             .on("mouseover", function() { focus.style("display", null); })
-            .on("mouseout", function() { focus.style("display", "none"); });
-            //.on("mousemove", mousemove);
+            .on("mouseout", function() { focus.style("display", "none"); })
+            .on("mousemove", mousemove);
 
-//    function mousemove() {
-//        var x0 = xScale.invert(d3.mouse(this)[0]),
-//                i = bisectTime(rate, x0, 1),
-//                d0 = rate[i - 1],
-//                d1 = rate[i],
-//                d = x0 - d0.x > d1.x - x0 ? d1 : d0;
-//        focus.attr("transform", "translate(" + xScale(d.x) + "," + yScale(d.y) + ")");
-//        focus.select("text").text(d.y.toFixed(2)+'Hz');
-//    }
+    function mousemove() {
+        var x0 = xScale.invert(d3.mouse(this)[0]),
+                i = bisectTime(rate, x0, 1),
+                d0 = rate[i - 1],
+                d1 = rate[i],
+                d = x0 - d0.x > d1.x - x0 ? d1 : d0;
+        focus.attr("transform", "translate(" + xScale(d.x) + "," + yScale(d.y) + ")");
+        focus.select("text").text(d.y.toFixed(2)+'Hz');
+    }*/
 
     function update(){
         binwidth = parseInt(d3.select("#binwidth").node().value);
         var align_event = d3.select("#align_event").node().value;
-        realigned_data=realign_spikes(data, trial_events, align_event);
-        realigned_trial_events=realign_events(trial_events, align_event);
+        var rate_data=new Map();
+        var min_time=10000;
+        var max_time=-10000;
+        var max_rate=0;
+        for(var i=0; i<unit_ids.length; i++)
+        {
+            var unit_id=unit_ids[i];
+            var realigned_unit_data=realign_spikes(unit_trials.get(unit_id), unit_trial_events.get(unit_id), align_event);
+            var rate=get_firing_rate(realigned_unit_data, binwidth, width);
+            var unit_min_time=d3.min(rate, function(d){ return d.x; });
+            var unit_max_time=d3.max(rate, function(d){ return d.x; });
+            if(unit_min_time<min_time)
+                min_time=unit_min_time;
+            if(unit_max_time>max_time)
+                max_time=unit_max_time;
+            var unit_max_rate=d3.max(rate, function(d){ return d.y+1 });
+            if(unit_max_rate>max_rate)
+                max_rate=unit_max_rate;
+            rate_data.set(unit_id, rate);
 
-        rate=get_firing_rate(realigned_data, binwidth, width);
+        }
 
-        var yMax=d3.max(rate, function(d) { return d.y+1; });
-        yScale.domain([0, yMax +.1*yMax])
+        yScale.domain([0, max_rate +.1*max_rate]);
         yAxis.scale(yScale);
-        xScale.domain([d3.min(rate, function(d) { return d.x; }), d3.max(rate, function(d) { return d.x; })]);
+        xScale.domain([min_time, max_time]);
         xAxis.scale(xScale);
 
         xBinwidth =  width / rate.length-1
@@ -740,11 +779,14 @@ function drawPopulationFiringRate(unit_trials, unit_trial_events, event_types)
         event_line.attr("x1", xScale(0))
                 .attr("x2", xScale(0));
 
-        rate_svg.selectAll('.data-line').datum(rate)
-                .transition().duration(1000)
-                .attr("class", "data-line")
-                .attr("d", line);
-
+        for(var i=0; i<unit_ids.length; i++)
+        {
+            var unit_id=unit_ids[i];
+            rate_svg.selectAll('#unit-'+unit_id).datum(rate_data.get(unit_id))
+                    .transition().duration(1000)
+                    .attr("class", "data-line")
+                    .attr("d", line);
+        }
         rate_svg.selectAll(".text").data(hist).remove();
         rate_svg.select(".y.axis").call(yAxis);
         rate_svg.select(".x.axis").call(xAxis);

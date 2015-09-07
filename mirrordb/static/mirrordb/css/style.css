@@ -1,0 +1,51 @@
+body {
+    font: 10px sans-serif;
+}
+
+.axis line, .axis path {
+    shape-rendering: crispEdges;
+    stroke: black;
+    fill: none;
+    stroke-width: 1.2px;
+}
+
+.histo-bar {
+    fill: black;
+    shape-rendering: crispEdges;
+}
+
+.raster circle {
+    fill: gray;
+}
+
+.data-line {
+    fill: none;
+    stroke: black;
+    stroke-width: 2px;
+}
+
+.overlay {
+    fill: none;
+    pointer-events: all;
+}
+
+.focus circle {
+    fill: none;
+    stroke: steelblue;
+}
+
+.annotation-line {
+    stroke: #000;
+    stroke-opacity: 0.15;
+    stroke-width: 1px;
+    pointer-events: none;
+}
+
+
+.annotation-text {
+    font-size: 14px;
+    font-family: Arial;
+    fill: #999;
+    text-anchor: middle;
+    pointer-events: none;
+}

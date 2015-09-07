@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from tastypie import fields
 from tastypie.resources import ModelResource
 from tastypie.authorization import Authorization
@@ -9,6 +10,13 @@ from django.conf.urls import patterns, url, include
 from django.http import Http404
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
 from tastypie.utils import trailing_slash
+
+class UserResource(ModelResource):
+    class Meta:
+        queryset = User.objects.all()
+        resource_name = 'user'
+        authorization = Authorization()
+
 
 class SpeciesResource(ModelResource):
     class Meta:
@@ -34,6 +42,7 @@ class NomenclatureResource(ModelResource):
 
 
 class ExperimentResource(ModelResource):
+    collator=fields.ForeignKey(UserResource, 'collator', full=True)
     class Meta:
         queryset = Experiment.objects.all()
         resource_name = 'experiment'
@@ -81,6 +90,8 @@ class GraspPerformanceConditionResource(ModelResource):
 
 
 class GraspObservationConditionResource(ModelResource):
+    demonstrator_species=fields.ForeignKey(SpeciesResource, 'demonstrator_species', full=True)
+    experiment=fields.ForeignKey(ExperimentResource, 'experiment', full=True)
     recording_trials=fields.ToManyField(RecordingTrialResource, 'recording_trials', full=True, null=True)
     class Meta:
         queryset = GraspObservationCondition.objects.all()

@@ -1,4 +1,19 @@
-body {
+.main {
+    padding: 13px 0;
+    font: 12px sans-serif;
+    line-height: 1.5em;
+    color: #333;
+    background-color: #fff;
+    width: 972px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+.axis-label {
+    font: 16px sans-serif;
+}
+
+.axis-tick-label {
     font: 10px sans-serif;
 }
 
@@ -34,9 +49,12 @@ body {
     stroke: steelblue;
 }
 
+.focus text {
+    font: 14px sans-serif;
+}
 .annotation-line {
     stroke: #000;
-    stroke-opacity: 0.15;
+    stroke-opacity: 0.25;
     stroke-width: 1px;
     pointer-events: none;
 }

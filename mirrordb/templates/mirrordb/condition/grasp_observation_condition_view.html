@@ -4,6 +4,7 @@
 
 <script type="text/javascript" src="{% static 'mirrordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/d3.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'mirrordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_functions.js' %}"></script>
 <script>
 var bisectTime = d3.bisector(function(d) { return d.x; }).left;
@@ -23,6 +24,20 @@ $(document).ready(function(){
 });
 
 function loadedData(resp){
+    $('.experiment_info').each(function(index, element){
+        $(this).empty();
+        var tmplMarkup = $('#experiment-template').html();
+        var compiledTmpl = _.template(tmplMarkup, resp.experiment);
+        $(this).append(compiledTmpl);
+    });
+
+    $('.condition_info').each(function(index, element){
+        $(this).empty();
+        var tmplMarkup = $('#grasp_observation_condition-template').html();
+        var compiledTmpl = _.template(tmplMarkup, resp);
+        $(this).append(compiledTmpl);
+    });
+
     var idx=1;
 
     var unit_trials=new Map();
@@ -90,11 +105,11 @@ function loadedData(resp){
 
 function drawRaster(data, trial_events, event_types)
 {
-    var margin = {top: 30, right: 20, bottom: 30, left: 50},
+    var margin = {top: 30, right: 20, bottom: 40, left: 50},
             width = 960 - margin.left - margin.right,
             height = 250 - margin.top - margin.bottom;
 
-    var raster_svg = d3.select('body').append('svg:svg')
+    var raster_svg = d3.select('#main').append('svg:svg')
             .attr('width', width + margin.right + margin.left)
             .attr('height', height + margin.top + margin.bottom)
             .append('g')
@@ -140,7 +155,6 @@ function drawRaster(data, trial_events, event_types)
             .attr("r", 6);
 
     focus.append("text")
-            .style("font", "14px sans-serif")
             .attr("x", 9)
             .attr("dy", ".5em");
 
@@ -177,21 +191,19 @@ function drawRaster(data, trial_events, event_types)
             .call(yAxis);
 
     raster_svg.append("text")
-            .attr("class", "x label")
+            .attr("class", "axis-label")
             .attr("text-anchor", "middle")
             .attr("x", width/2)
             .attr("y", height + margin.bottom)
-            .style("font", "16px sans-serif")
             .text("Time (ms)");
 
     raster_svg.append("text")
-            .attr("class", "y label")
+            .attr("class", "axis-label")
             .attr("text-anchor", "middle")
             .attr("x", -height/2)
             .attr("y", -(margin.left-3))
             .attr("dy", ".75em")
             .attr("transform", "rotate(-90)")
-            .style("font", "16px sans-serif")
             .text("Trial");
 
     function update()
@@ -220,11 +232,11 @@ function drawRaster(data, trial_events, event_types)
 
 function drawHistogram(data, trial_events, event_types)
 {
-    var margin = {top: 30, right: 20, bottom: 30, left: 50}
+    var margin = {top: 30, right: 20, bottom: 40, left: 50}
             , width = 960 - margin.left - margin.right
             , height = 200 - margin.top - margin.bottom;
 
-    var histo_svg = d3.select('body').append('svg:svg')
+    var histo_svg = d3.select('#main').append('svg:svg')
             .attr('width', width + margin.right + margin.left)
             .attr('height', height + margin.top + margin.bottom)
             .append('g')
@@ -279,21 +291,19 @@ function drawHistogram(data, trial_events, event_types)
             .attr("y", function(d) {return yScale(d.y)});
 
     histo_svg.append("text")
-            .attr("class", "x label")
+            .attr("class", "axis-label")
             .attr("text-anchor", "middle")
             .attr("x", width/2)
             .attr("y", height + margin.bottom)
-            .style("font", "16px sans-serif")
             .text("Time (ms)");
 
     histo_svg.append("text")
-            .attr("class", "y label")
+            .attr("class", "axis-label")
             .attr("text-anchor", "middle")
             .attr("x", -height/2)
             .attr("y", -(margin.left-3))
             .attr("dy", ".75em")
             .attr("transform", "rotate(-90)")
-            .style("font", "16px sans-serif")
             .text("Firing Rate (Hz)");
 
     // Events
@@ -409,11 +419,11 @@ function drawHistogram(data, trial_events, event_types)
 
 function drawFiringRate(data, trial_events, event_types)
 {
-    var margin = {top: 30, right: 20, bottom: 30, left: 50}
+    var margin = {top: 30, right: 20, bottom: 40, left: 50}
             , width = 960 - margin.left - margin.right
             , height = 400 - margin.top - margin.bottom;
 
-    var rate_svg = d3.select("body").append("svg:svg")
+    var rate_svg = d3.select("#main").append("svg:svg")
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
@@ -468,21 +478,19 @@ function drawFiringRate(data, trial_events, event_types)
             .attr("d", line);
 
     rate_svg.append("text")
-            .attr("class", "x label")
+            .attr("class", "axis-label")
             .attr("text-anchor", "middle")
             .attr("x", width/2)
             .attr("y", height + margin.bottom)
-            .style("font", "16px sans-serif")
             .text("Time (ms)");
 
     rate_svg.append("text")
-            .attr("class", "y label")
+            .attr("class", "axis-label")
             .attr("text-anchor", "middle")
             .attr("x", -height/2)
             .attr("y", -(margin.left-3))
             .attr("dy", ".75em")
             .attr("transform", "rotate(-90)")
-            .style("font", "16px sans-serif")
             .text("Firing Rate (Hz)");
 
     // Events
@@ -511,7 +519,6 @@ function drawFiringRate(data, trial_events, event_types)
             .attr("r", 4.5);
 
     focus.append("text")
-            .style("font", "14px sans-serif")
             .attr("x", 9)
             .attr("dy", ".35em");
 
@@ -572,16 +579,21 @@ function drawFiringRate(data, trial_events, event_types)
 </script>
 {%  endblock %}
 {% block content %}
-<form>
-    <label for="binwidth">Binwidth</label>
-    <select id="binwidth">
-        <option value="10">10</option>
-        <option selected value="20">20</option>
-        <option value="50">50</option>
-        <option value="100">100</option>
-        <option value="200">200</option>
-    </select>
-    <input id="align_event" type="hidden" value="start"/>
-</form>
-</body>
+    <div id="main" class="main">
+        <div class="experiment_info"></div>
+        <div class="condition_info"></div>
+        <form>
+            <label for="binwidth">Binwidth</label>
+            <select id="binwidth">
+                <option value="10">10</option>
+                <option selected value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+            </select>
+            <input id="align_event" type="hidden" value="start"/>
+        </form>
+    </div>
+    {% include "mirrordb/experiment/experiment_template.html" %}
+    {% include "mirrordb/condition/grasp_observation_condition_template.html" %}
 {%  endblock %}

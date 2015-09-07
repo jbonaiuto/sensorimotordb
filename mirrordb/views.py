@@ -1,7 +1,7 @@
 from django.views.generic import DetailView
-from mirrordb.models import Condition
+from mirrordb.models import Condition, GraspObservationCondition
 
-class ConditionDetailView(DetailView):
-    model = Condition
-    template_name = 'mirrordb/condition_view.html'
+class GraspObservationConditionDetailView(DetailView):
+    model = GraspObservationCondition
+    template_name = 'mirrordb/condition/grasp_observation_condition_view.html'
     permission_required = 'view'

@@ -1,0 +1,36 @@
+<script type="text/html" id="grasp_observation_condition-template">
+    <div id="condition-<%= id %>">
+        <table>
+            <tr>
+                <td colspan="2"><%= name %></td>
+            </tr>
+            <tr>
+                <td colspan="2"><%= description %></td>
+            </tr>
+            <tr>
+                <td>Demonstrator</td>
+                <td><%= demonstration_type %>: <%= demonstrator_species.genus_name %> <%= demonstrator_species.species_name %></td>
+            </tr>
+            <tr>
+                <td>Viewing angle</td>
+                <td><%= viewing_angle %></td>
+            </tr>
+            <tr>
+                <td>Whole body visible</td>
+                <td><%= whole_body_visible %></td>
+            </tr>
+            <tr>
+                <td>Object</td>
+                <td><%= object %></td>
+            </tr>
+            <tr>
+                <td>Distance (eye to object)</td>
+                <td><%= object_distance %>cm</td>
+            </tr>
+            <tr>
+                <td>Grasp</td>
+                <td><%= grasp %></td>
+            </tr>
+        </table>
+    </div>
+</script>

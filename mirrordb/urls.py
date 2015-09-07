@@ -1,10 +1,11 @@
 # urls.py
 from django.conf.urls import patterns, include
 from tastypie.api import Api
-from mirrordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource
-from mirrordb.views import ConditionDetailView
+from mirrordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource
+from mirrordb.views import GraspObservationConditionDetailView
 
 v1_api = Api(api_name='v1')
+v1_api.register(UserResource())
 v1_api.register(SpeciesResource())
 v1_api.register(NomenclatureResource())
 v1_api.register(BrainRegionResource())
@@ -18,5 +19,5 @@ v1_api.register(EventResource())
 
 urlpatterns = patterns('',
     (r'^api/', include(v1_api.urls)),
-    (r'^condition/(?P<pk>\d+)/$', ConditionDetailView.as_view(), {}, 'condition_view'),
+    (r'^grasp_observation_condition/(?P<pk>\d+)/$', GraspObservationConditionDetailView.as_view(), {}, 'grasp_observation_condition_view'),
 )

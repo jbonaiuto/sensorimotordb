@@ -4,7 +4,6 @@
 
 <script type="text/javascript" src="{% static 'mirrordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/d3.min.js' %}"></script>
-<script type="text/javascript" src="{% static 'mirrordb/js/colorbrewer.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_functions.js' %}"></script>
 <script>
@@ -720,7 +719,6 @@ function drawPopulationFiringRate(unit_trials, unit_trial_events, event_types)
             .attr("x", 9)
             .attr("dy", ".35em");
 
-    /*
     rate_svg.append("rect")
             .attr("class", "overlay")
             .attr("width", width)
@@ -730,19 +728,32 @@ function drawPopulationFiringRate(unit_trials, unit_trial_events, event_types)
             .on("mousemove", mousemove);
 
     function mousemove() {
-        var x0 = xScale.invert(d3.mouse(this)[0]),
-                i = bisectTime(rate, x0, 1),
-                d0 = rate[i - 1],
-                d1 = rate[i],
-                d = x0 - d0.x > d1.x - x0 ? d1 : d0;
-        focus.attr("transform", "translate(" + xScale(d.x) + "," + yScale(d.y) + ")");
-        focus.select("text").text(d.y.toFixed(2)+'Hz');
-    }*/
+        var x0 = xScale.invert(d3.mouse(this)[0]);
+        var y0 = yScale.invert(d3.mouse(this)[1]);
+        min_y_dist=10000;
+        min_y_d=null;
+        for(var j=0; j<unit_ids.length; j++)
+        {
+            rate=rate_data.get(unit_ids[j]);
+            var i = bisectTime(rate, x0, 1);
+            d0 = rate[i - 1];
+            d1 = rate[i];
+            d = x0 - d0.x > d1.x - x0 ? d1 : d0;
+            y_dist=Math.abs(d.y-y0);
+            if(y_dist<min_y_dist)
+            {
+                min_y_dist=y_dist;
+                min_y_d=d;
+            }
+        }
+        focus.attr("transform", "translate(" + xScale(min_y_d.x) + "," + yScale(min_y_d.y) + ")");
+        focus.select("text").text(min_y_d.y.toFixed(2)+'Hz');
+    }
 
     function update(){
         binwidth = parseInt(d3.select("#binwidth").node().value);
         var align_event = d3.select("#align_event").node().value;
-        var rate_data=new Map();
+        rate_data=new Map();
         var min_time=10000;
         var max_time=-10000;
         var max_rate=0;

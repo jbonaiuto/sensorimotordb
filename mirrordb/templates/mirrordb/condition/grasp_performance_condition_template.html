@@ -1,4 +1,4 @@
-<script type="text/html" id="grasp_observation_condition-template">
+<script type="text/html" id="grasp_performance_condition-template">
     <div id="condition-<%= id %>">
         <table>
             <tr>
@@ -27,16 +27,12 @@
                 <td><%= experiment.title %> (<%= experiment.collator.first_name %> <%= experiment.collator.last_name %>)</td>
             </tr>
             <tr>
-                <td><strong>Demonstrator</strong></td>
-                <td><%= demonstration_type %>: <%= demonstrator_species.genus_name %> <%= demonstrator_species.species_name %></td>
+                <td><strong>Hand visible</strong></td>
+                <td><%= hand_visible %></td>
             </tr>
             <tr>
-                <td><strong>Viewing angle</strong></td>
-                <td><%= viewing_angle %>&deg;</td>
-            </tr>
-            <tr>
-                <td><strong>Whole body visible</strong></td>
-                <td><%= whole_body_visible %></td>
+                <td><strong>Object visible</strong></td>
+                <td><%= object_visible %></td>
             </tr>
             <tr>
                 <td><strong>Object</strong></td>

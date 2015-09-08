@@ -83,6 +83,8 @@ class RecordingTrialResource(ModelResource):
 
 
 class GraspPerformanceConditionResource(ModelResource):
+    experiment=fields.ForeignKey(ExperimentResource, 'experiment', full=True)
+    recording_trials=fields.ToManyField(RecordingTrialResource, 'recording_trials', full=True, null=True)
     class Meta:
         queryset = GraspPerformanceCondition.objects.all()
         resource_name = 'grasp_performance_condition'

@@ -11,14 +11,14 @@
 <script type="text/javascript" src="{% static 'mirrordb/js/video-js/video.dev.js' %}"></script>
 <script>
 
-    videojs.options.flash.swf = "{{ site_url }}/static/mirrordb/js/video-js/video-js.swf";
+    videojs.options.flash.swf = "{{ site_url }}/static/mirrordb/scripts/video-js/video-js.swf";
     document.createElement('video');document.createElement('audio');document.createElement('track');
 
     $(document).ready(function(){
         var data = {};
         var args = {
             type: "GET",
-            url: "/mirrordb/api/v1/grasp_observation_condition/{{ object.id }}/?format=json",
+            url: "/mirrordb/api/v1/grasp_performance_condition/{{ object.id }}/?format=json",
             data: data,
             success: loadedData,
             error: function(data) {
@@ -33,7 +33,7 @@
         resp.video_url_mp4='{{ video_url_mp4 }}';
         $('.condition_info').each(function(index, element){
             $(this).empty();
-            var tmplMarkup = $('#grasp_observation_condition-template').html();
+            var tmplMarkup = $('#grasp_performance_condition-template').html();
             var compiledTmpl = _.template(tmplMarkup, resp);
             $(this).append(compiledTmpl);
         });
@@ -119,11 +119,11 @@
 </script>
 {% endblock %}
 {% block content %}
-    <div id="main" class="main">
-        <div class="condition_info"></div>
-        <h3>Unit Recordings</h3>
-        <div class="unit_list"></div>
-    </div>
-    {% include "mirrordb/condition/grasp_observation_condition_template.html" %}
-    {% include "mirrordb/unit/unit_template.html" %}
+<div id="main" class="main">
+    <div class="condition_info"></div>
+    <h3>Unit Recordings</h3>
+    <div class="unit_list"></div>
+</div>
+{% include "mirrordb/condition/grasp_performance_condition_template.html" %}
+{% include "mirrordb/unit/unit_template.html" %}
 {% endblock %}

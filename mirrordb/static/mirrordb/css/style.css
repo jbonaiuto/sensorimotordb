@@ -33,6 +33,11 @@
     fill: gray;
 }
 
+.events circle {
+    fill: gray;
+    cursor: pointer;
+}
+
 .data-line {
     fill: none;
     stroke: black;
@@ -61,9 +66,9 @@
 
 
 .annotation-text {
-    font-size: 14px;
+    font-size: 16px;
     font-family: Arial;
     fill: #999;
     text-anchor: middle;
-    pointer-events: none;
+    cursor: pointer;
 }

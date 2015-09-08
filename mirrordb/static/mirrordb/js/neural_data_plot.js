@@ -1,6 +1,21 @@
 var bisectTime = d3.bisector(function(d) { return d.x; }).left;
 var p=d3.scale.category10();
 
+function align_all_events(align_to)
+{
+    d3.select("#align_event").node().value= align_to;
+    func=d3.select('#align_event').on("change.rate.population");
+    func();
+    for(var j=0; j<unit_ids.length; j++)
+    {
+        func=d3.select("#align_event").on("change.raster.unit."+unit_ids[j]);
+        func();
+        func=d3.select('#align_event').on("change.histo.unit."+unit_ids[j]);
+        func();
+        func=d3.select('#align_event').on("change.rate.unit."+unit_ids[j]);
+        func();
+    }
+}
 function drawUnitRaster(unit_id, data, trial_events, event_types)
 {
     var margin = {top: 30, right: 20, bottom: 40, left: 50},
@@ -37,7 +52,7 @@ function drawUnitRaster(unit_id, data, trial_events, event_types)
     yScale.domain([0, d3.max(realigned_data, function(d) { return d.y; })]);
 
     var raster=raster_svg.append("g")
-        .attr("class", "raster")
+        .attr("class", "raster");
 
     raster.selectAll("circle")
         .data(realigned_data)
@@ -56,7 +71,8 @@ function drawUnitRaster(unit_id, data, trial_events, event_types)
         .attr("x", 9)
         .attr("dy", ".5em");
 
-    var events = raster_svg.append("g");
+    var events = raster_svg.append("g")
+        .attr("class","events");
 
     var event_circles=events.selectAll("circle")
         .data(realigned_trial_events)
@@ -70,18 +86,7 @@ function drawUnitRaster(unit_id, data, trial_events, event_types)
             focus.style("display","")
         })
         .on("click", function(d) {
-            d3.select("#align_event").node().value= d.name;
-            func=d3.select('#align_event').on("change.rate.population");
-            func();
-            for(var j=0; j<unit_ids.length; j++)
-            {
-                func=d3.select("#align_event").on("change.raster.unit."+unit_ids[j]);
-                func();
-                func=d3.select('#align_event').on("change.histo.unit."+unit_ids[j]);
-                func();
-                func=d3.select('#align_event').on("change.rate.unit."+unit_ids[j]);
-                func();
-            }
+            align_all_events(d.name);
         });
 
     raster_svg.append("svg:g")
@@ -245,6 +250,7 @@ function drawUnitHistogram(unit_id, data, trial_events, event_types)
                 .style("stroke", p(i))
                 .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px")
         );
+        var event_note=
         event_notes.push(
             histo_svg.selectAll(".g-note")
                 .data([event_type])
@@ -255,6 +261,9 @@ function drawUnitHistogram(unit_id, data, trial_events, event_types)
                 .attr("y", yScale(yMax +.1*yMax))
                 .attr("dy", function(d, i) { return i * 1.3 + "em"; })
                 .text(function(d) { return d; })
+                .on("click", function(d) {
+                    align_all_events(d);
+                })
         );
     }
 
@@ -476,6 +485,9 @@ function drawUnitFiringRate(unit_id, data, trial_events, event_types)
                 .attr("y", yScale(yMax +.1*yMax))
                 .attr("dy", function(d, i) { return i * 1.3 + "em"; })
                 .text(function(d) { return d; })
+                .on("click", function(d) {
+                    align_all_events(d);
+                })
         );
     }
 
@@ -712,6 +724,9 @@ function drawPopulationFiringRate(unit_trials, unit_trial_events, event_types)
                 .attr("y", yScale(max_rate +.1*max_rate))
                 .attr("dy", function(d, i) { return i * 1.3 + "em"; })
                 .text(function(d) { return d; })
+                .on("click", function(d) {
+                    align_all_events(d);
+                })
         );
     }
 

@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from tastypie import fields
+from tastypie.constants import ALL, ALL_WITH_RELATIONS
 from tastypie.resources import ModelResource
 from tastypie.authorization import Authorization
 from tastypie.paginator import Paginator
@@ -64,6 +65,9 @@ class UnitRecordingResource(ModelResource):
         queryset = UnitRecording.objects.all()
         resource_name = 'unit_recording'
         authorization= Authorization()
+        filtering={
+            'unit': ALL_WITH_RELATIONS
+        }
 
 
 class EventResource(ModelResource):
@@ -80,6 +84,9 @@ class RecordingTrialResource(ModelResource):
         queryset = RecordingTrial.objects.all()
         resource_name = 'recording_trial'
         authorization= Authorization()
+        filtering={
+            'unit_recordings': ALL_WITH_RELATIONS
+        }
 
 
 class GraspPerformanceConditionResource(ModelResource):
@@ -89,6 +96,9 @@ class GraspPerformanceConditionResource(ModelResource):
         queryset = GraspPerformanceCondition.objects.all()
         resource_name = 'grasp_performance_condition'
         authorization= Authorization()
+        filtering={
+            'recording_trials': ALL_WITH_RELATIONS
+        }
 
 
 class GraspObservationConditionResource(ModelResource):
@@ -99,6 +109,9 @@ class GraspObservationConditionResource(ModelResource):
         queryset = GraspObservationCondition.objects.all()
         resource_name = 'grasp_observation_condition'
         authorization= Authorization()
+        filtering={
+            'recording_trials': ALL_WITH_RELATIONS
+        }
 
     def prepend_urls(self):
         return [

@@ -1,24 +1,19 @@
 {% extends "base_generic.html" %}
 {% load staticfiles %}
 {% block extrahead %}
-<title>MirrorDB - View Condition: {{ object.name }}</title>
-<link href="{% static 'mirrordb/js/video-js/video-js.css' %}" rel="stylesheet">
+<title>MirrorDB - View Unit: {{ object.id }}</title>
 <script type="text/javascript" src="{% static 'mirrordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/d3.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_functions.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_plot.js' %}"></script>
-<script type="text/javascript" src="{% static 'mirrordb/js/video-js/video.dev.js' %}"></script>
 <script>
-
-    videojs.options.flash.swf = "{{ site_url }}/static/mirrordb/scripts/video-js/video-js.swf";
-    document.createElement('video');document.createElement('audio');document.createElement('track');
 
     $(document).ready(function(){
         var data = {};
         var args = {
             type: "GET",
-            url: "/mirrordb/api/v1/grasp_performance_condition/{{ object.id }}/?format=json",
+            url: "/mirrordb/api/v1/unit/{{ object.id }}/?format=json",
             data: data,
             success: loadedData,
             error: function(data) {
@@ -29,15 +24,16 @@
 
     var unit_ids=[];
 
-    function loadedData(resp){
-        resp.video_url_mp4='{{ video_url_mp4 }}';
-        $('.condition_info').each(function(index, element){
+    function loadedUnitData(resp){
+        $('.unit_info').each(function(index, element){
             $(this).empty();
-            var tmplMarkup = $('#grasp_performance_condition-template').html();
+            var tmplMarkup = $('#unit-template').html();
             var compiledTmpl = _.template(tmplMarkup, resp);
             $(this).append(compiledTmpl);
         });
 
+
+        /*
         var idx=1;
 
         var unit_trials=new Map();
@@ -115,15 +111,15 @@
 
             drawUnitFiringRate(unit.id, single_unit_trials, single_unit_trial_events, event_types);
         }
+        */
     }
 </script>
 {% endblock %}
 {% block content %}
 <div id="main" class="main">
-    <div class="condition_info"></div>
-    <h2>Unit Recordings</h2>
-    <div class="unit_list"></div>
+    <div class="unit_info"></div>
+    <h3>Conditions</h3>
+    <div class="condition_list"></div>
 </div>
-{% include "mirrordb/condition/grasp_performance_condition_template.html" %}
 {% include "mirrordb/unit/unit_template.html" %}
 {% endblock %}

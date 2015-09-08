@@ -1,7 +1,7 @@
 from django.contrib.sites.shortcuts import get_current_site
 from django.views.generic import DetailView
 import os
-from mirrordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition
+from mirrordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit
 from uscbp import settings
 
 class ConditionView(DetailView):
@@ -26,3 +26,7 @@ class GraspPerformanceConditionDetailView(ConditionView):
     model = GraspPerformanceCondition
     template_name = 'mirrordb/condition/grasp_performance_condition_view.html'
 
+
+class UnitDetailView(DetailView):
+    model = Unit
+    template_name = 'mirrordb/unit/unit_view.html'

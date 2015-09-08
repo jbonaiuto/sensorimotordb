@@ -240,11 +240,12 @@ function drawUnitHistogram(unit_id, data, trial_events, event_types)
                 .attr("y2", yScale(yMax +.1*yMax))
                 .classed("annotation-line",true)
         );
+        var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
         event_areas.push(
             histo_svg.append("line")
-                .attr("x1", xScale(mean_time))
+                .attr("x1", area_x)
                 .attr("y1", yScale(0))
-                .attr("x2", xScale(mean_time))
+                .attr("x2", area_x)
                 .attr("y2", yScale(yMax +.1*yMax))
                 .classed("annotation-line",true)
                 .style("stroke", p(i))
@@ -349,9 +350,10 @@ function drawUnitHistogram(unit_id, data, trial_events, event_types)
             event_lines[i]
                 .attr("x1", xScale(mean_time))
                 .attr("x2",xScale(mean_time));
+            var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
             event_areas[i]
-                .attr("x1", xScale(mean_time))
-                .attr("x2",xScale(mean_time))
+                .attr("x1", area_x)
+                .attr("x2", area_x)
                 .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
             event_notes[i].attr("x", xScale(mean_time))
         }
@@ -465,11 +467,12 @@ function drawUnitFiringRate(unit_id, data, trial_events, event_types)
                 .attr("y2", yScale(yMax +.1*yMax))
                 .classed("annotation-line",true)
         );
+        var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
         event_areas.push(
             rate_svg.append("line")
-                .attr("x1", xScale(mean_time))
+                .attr("x1", area_x)
                 .attr("y1", yScale(0))
-                .attr("x2", xScale(mean_time))
+                .attr("x2", area_x)
                 .attr("y2", yScale(yMax +.1*yMax))
                 .classed("annotation-line",true)
                 .style("stroke", p(i))
@@ -550,9 +553,10 @@ function drawUnitFiringRate(unit_id, data, trial_events, event_types)
             event_lines[i]
                 .attr("x1", xScale(mean_time))
                 .attr("x2",xScale(mean_time));
+            var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
             event_areas[i]
-                .attr("x1", xScale(mean_time))
-                .attr("x2",xScale(mean_time))
+                .attr("x1", area_x)
+                .attr("x2", area_x)
                 .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
             event_notes[i].attr("x", xScale(mean_time))
         }
@@ -704,11 +708,12 @@ function drawPopulationFiringRate(unit_trials, unit_trial_events, event_types)
                 .attr("y2", yScale(max_rate +.1*max_rate))
                 .classed("annotation-line",true)
         );
+        var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
         event_areas.push(
             rate_svg.append("line")
-                .attr("x1", xScale(mean_time))
+                .attr("x1", area_x)
                 .attr("y1", yScale(0))
-                .attr("x2", xScale(mean_time))
+                .attr("x2", area_x)
                 .attr("y2", yScale(max_rate +.1*max_rate))
                 .classed("annotation-line",true)
                 .style("stroke", p(i))
@@ -828,9 +833,10 @@ function drawPopulationFiringRate(unit_trials, unit_trial_events, event_types)
             event_lines[i]
                 .attr("x1", xScale(mean_time))
                 .attr("x2",xScale(mean_time));
+            var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
             event_areas[i]
-                .attr("x1", xScale(mean_time))
-                .attr("x2",xScale(mean_time))
+                .attr("x1", area_x)
+                .attr("x2", area_x)
                 .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
             event_notes[i].attr("x", xScale(mean_time))
         }

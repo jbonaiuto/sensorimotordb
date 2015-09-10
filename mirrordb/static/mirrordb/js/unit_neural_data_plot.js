@@ -59,7 +59,25 @@ function drawRaster(condition_id, data, trial_events, event_types)
         .data(realigned_data)
         .enter().append("svg:circle")
         .attr("transform", function (d) { return "translate("+xScale(d.x)+", "+yScale(d.y)+")"})
-        .attr("r", 3);
+        .attr("r", 1);
+
+    var events = raster_svg.append("g")
+        .attr("class","events");
+
+    var event_circles=events.selectAll("circle")
+        .data(realigned_trial_events)
+        .enter().append("svg:circle")
+        .attr("transform", function (d) { return "translate("+xScale(d.t)+", "+yScale(d.trial)+")"})
+        .attr("r", 4)
+        .style('fill', function (d) {return p(event_types.indexOf(d.name))})
+        .on("mouseover", function(d) {
+            focus.attr("transform", "translate(" + xScale(d.t) + "," + yScale(d.trial) + ")");
+            focus.select("text").text(d.name);
+            focus.style("display","")
+        })
+        .on("click", function(d) {
+            align_all_events(d.name);
+        });
 
     var focus = raster_svg.append("g")
         .attr("class", "focus")
@@ -71,24 +89,6 @@ function drawRaster(condition_id, data, trial_events, event_types)
     focus.append("text")
         .attr("x", 9)
         .attr("dy", ".5em");
-
-    var events = raster_svg.append("g")
-        .attr("class","events");
-
-    var event_circles=events.selectAll("circle")
-        .data(realigned_trial_events)
-        .enter().append("svg:circle")
-        .attr("transform", function (d) { return "translate("+xScale(d.t)+", "+yScale(d.trial)+")"})
-        .attr("r", 5)
-        .style('fill', function (d) {return p(event_types.indexOf(d.name))})
-        .on("mouseover", function(d) {
-            focus.attr("transform", "translate(" + xScale(d.t) + "," + yScale(d.trial) + ")");
-            focus.select("text").text(d.name);
-            focus.style("display","")
-        })
-        .on("click", function(d) {
-            align_all_events(d.name);
-        });
 
     raster_svg.append("svg:g")
         .attr("class", "x axis")
@@ -189,7 +189,7 @@ function drawHistogram(condition_id, data, trial_events, event_types)
             y: hist[j].y/numTrials/(binwidth/1000.0)
         });
 
-    var xBinwidth = width / scaledHist.length -1;
+    var xBinwidth = width / (scaledHist.length -1);
     var yMax=d3.max(scaledHist, function(d) { return d.y+1; });
     yScale.domain([0, yMax +.1*yMax])
 
@@ -306,7 +306,7 @@ function drawHistogram(condition_id, data, trial_events, event_types)
         xAxis.scale(xScale);
         var yMax=d3.max(scaledHist, function(d) { return d.y+1; });
         yScale.domain([0, yMax +.1*yMax]);
-        xBinwidth =  width / scaledHist.length-1;
+        xBinwidth =  width / (scaledHist.length-1);
 
         var xEase = "cubic-in-out";
         var yEase = "bounce";
@@ -540,7 +540,7 @@ function drawFiringRate(condition_id, data, trial_events, event_types)
         xScale.domain([d3.min(rate, function(d) { return d.x; }), d3.max(rate, function(d) { return d.x; })]);
         xAxis.scale(xScale);
 
-        xBinwidth =  width / rate.length-1
+        xBinwidth =  width / (rate.length-1);
 
         for(var i=0; i<event_types.length; i++)
         {
@@ -815,7 +815,7 @@ function drawPopulationFiringRate(condition_trials, condition_trial_events, even
         xScale.domain([min_time, max_time]);
         xAxis.scale(xScale);
 
-        xBinwidth =  width / rate.length-1
+        xBinwidth =  width / (rate.length-1)
         var realigned_condition_trials_events=new Map();
         for(var i=0; i<event_types.length; i++)
         {

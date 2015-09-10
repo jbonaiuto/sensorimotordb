@@ -7,7 +7,7 @@
 <script type="text/javascript" src="{% static 'mirrordb/js/d3.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_functions.js' %}"></script>
-<script type="text/javascript" src="{% static 'mirrordb/js/neural_data_plot.js' %}"></script>
+<script type="text/javascript" src="{% static 'mirrordb/js/condition_neural_data_plot.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/video-js/video.dev.js' %}"></script>
 <script>
 
@@ -20,7 +20,7 @@
             type: "GET",
             url: "/mirrordb/api/v1/grasp_performance_condition/{{ object.id }}/?format=json",
             data: data,
-            success: loadedData,
+            success: loadedConditionData,
             error: function(data) {
                 alert("Something went wrong!");
             } };
@@ -29,7 +29,7 @@
 
     var unit_ids=[];
 
-    function loadedData(resp){
+    function loadedConditionData(resp){
         resp.video_url_mp4='{{ video_url_mp4 }}';
         $('.condition_info').each(function(index, element){
             $(this).empty();
@@ -38,8 +38,6 @@
             $(this).append(compiledTmpl);
         });
 
-        var idx=1;
-
         var unit_trials=new Map();
         var unit_trial_events=new Map();
         var units=new Map();
@@ -47,13 +45,13 @@
 
         for(var i=0; i<resp.recording_trials.length; i++)
         {
-            var recording_trial=resp.recording_trials[i];
+            var recording_trial=loadObject(resp.recording_trials[i]);
             var trial_number=recording_trial.trial_number;
             var start_time=parseFloat(recording_trial.start_time);
 
             for(var j=0; j<recording_trial.unit_recordings.length; j++)
             {
-                var unit_recording=recording_trial.unit_recordings[j];
+                var unit_recording=loadObject(recording_trial.unit_recordings[j]);
                 var unit=unit_recording.unit;
 
                 if(unit_ids.indexOf(unit.id)<0)
@@ -103,17 +101,19 @@
         {
             var unit=units.get(unit_ids[i]);
             $('.unit_list').each(function(index, element){
+                unit.level=3;
+                unit.idx=i;
                 var tmplMarkup = $('#unit-template').html();
                 var compiledTmpl = _.template(tmplMarkup, unit);
                 $(this).append(compiledTmpl);
             });
             var single_unit_trials=unit_trials.get(unit.id);
             var single_unit_trial_events=unit_trial_events.get(unit.id);
-            drawUnitRaster(unit.id, single_unit_trials, single_unit_trial_events, event_types);
+            drawRaster(unit.id, single_unit_trials, single_unit_trial_events, event_types);
 
-            drawUnitHistogram(unit.id, single_unit_trials, single_unit_trial_events, event_types);
+            drawHistogram(unit.id, single_unit_trials, single_unit_trial_events, event_types);
 
-            drawUnitFiringRate(unit.id, single_unit_trials, single_unit_trial_events, event_types);
+            drawFiringRate(unit.id, single_unit_trials, single_unit_trial_events, event_types);
         }
     }
 </script>
@@ -125,5 +125,5 @@
     <div class="unit_list"></div>
 </div>
 {% include "mirrordb/condition/grasp_performance_condition_template.html" %}
-{% include "mirrordb/unit/unit_template.html" %}
+{% include "mirrordb/unit/unit_list_item_template.html" %}
 {% endblock %}

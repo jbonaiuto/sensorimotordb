@@ -59,64 +59,34 @@ class UnitResource(ModelResource):
         authorization= Authorization()
 
 
-class UnitRecordingResource(ModelResource):
-    unit = fields.ForeignKey(UnitResource, 'unit', full=True)
-    class Meta:
-        queryset = UnitRecording.objects.all()
-        resource_name = 'unit_recording'
-        authorization= Authorization()
-        filtering={
-            'unit': ALL_WITH_RELATIONS
-        }
-
-
-class EventResource(ModelResource):
-    class Meta:
-        queryset = Event.objects.all()
-        resource_name = 'event'
-        authorization= Authorization()
-
-
-class RecordingTrialResource(ModelResource):
-    unit_recordings= fields.ToManyField(UnitRecordingResource, 'unit_recordings', full=True, null=True)
-    events=fields.ToManyField(EventResource, 'events', full=True, null=True)
-    class Meta:
-        queryset = RecordingTrial.objects.all()
-        resource_name = 'recording_trial'
-        authorization= Authorization()
-        filtering={
-            'unit_recordings': ALL_WITH_RELATIONS
-        }
-
-
-class GraspPerformanceConditionResource(ModelResource):
+class ConditionResource(ModelResource):
     experiment=fields.ForeignKey(ExperimentResource, 'experiment', full=True)
-    recording_trials=fields.ToManyField(RecordingTrialResource, 'recording_trials', full=True, null=True)
+    recording_trials=fields.ToManyField('mirrordb.api.RecordingTrialResource', 'recording_trials', null=False)
+    class Meta:
+        queryset = Condition.objects.all()
+        resource_name = 'condition'
+        authorization= Authorization()
+        filtering={
+            'recording_trials': ALL_WITH_RELATIONS,
+            'name': ALL
+        }
+
+class GraspPerformanceConditionResource(ConditionResource):
     class Meta:
         queryset = GraspPerformanceCondition.objects.all()
         resource_name = 'grasp_performance_condition'
-        authorization= Authorization()
-        filtering={
-            'recording_trials': ALL_WITH_RELATIONS
-        }
 
 
-class GraspObservationConditionResource(ModelResource):
+class GraspObservationConditionResource(ConditionResource):
     demonstrator_species=fields.ForeignKey(SpeciesResource, 'demonstrator_species', full=True)
-    experiment=fields.ForeignKey(ExperimentResource, 'experiment', full=True)
-    recording_trials=fields.ToManyField(RecordingTrialResource, 'recording_trials', full=True, null=True)
     class Meta:
         queryset = GraspObservationCondition.objects.all()
         resource_name = 'grasp_observation_condition'
-        authorization= Authorization()
-        filtering={
-            'recording_trials': ALL_WITH_RELATIONS
-        }
 
     def prepend_urls(self):
         return [
             url(r"^(?P<resource_name>%s)/search/?$" % (self._meta.resource_name), self.wrap_view('get_search'), name="api_get_search"),
-        ]
+            ]
 
     def get_search(self, request, **kwargs):
         '''
@@ -131,12 +101,12 @@ class GraspObservationConditionResource(ModelResource):
         if not query:
             raise BadRequest('Please supply the search parameter (e.g. "/mirrordb/api/v1/grasp_observation_condition/search/?demonstration_type=css")')
 
-        print query 
-        
+        print query
+
         results = SearchQuerySet().models(GraspObservationCondition).filter(demonstration_type=query)
         if not results:
             results = EmptySearchQuerySet()
-        
+
         paginator = Paginator(request.GET, results, resource_uri='/mirrordb/api/v1/grasp_observation_condition/search/')
 
         bundles = []
@@ -152,3 +122,38 @@ class GraspObservationConditionResource(ModelResource):
 
         self.log_throttled_access(request)
         return self.create_response(request, object_list)
+
+
+class EventResource(ModelResource):
+    class Meta:
+        queryset = Event.objects.all()
+        resource_name = 'event'
+        authorization= Authorization()
+
+
+class RecordingTrialResource(ModelResource):
+    events=fields.ToManyField(EventResource, 'events', full=True, null=True)
+    condition=fields.ForeignKey(ConditionResource, 'condition')
+    unit_recordings=fields.ToManyField('mirrordb.api.UnitRecordingResource', 'unit_recordings', null=False)
+    class Meta:
+        queryset = RecordingTrial.objects.all()
+        resource_name = 'recording_trial'
+        authorization= Authorization()
+        filtering={
+            'unit_recordings': ALL_WITH_RELATIONS,
+            'condition': ALL_WITH_RELATIONS
+        }
+
+
+class UnitRecordingResource(ModelResource):
+    unit = fields.ForeignKey(UnitResource, 'unit', full=True, null=False)
+    trial = fields.ForeignKey(RecordingTrialResource, 'trial')
+    class Meta:
+        queryset = UnitRecording.objects.all()
+        resource_name = 'unit_recording'
+        authorization= Authorization()
+        filtering={
+            'unit': ALL_WITH_RELATIONS,
+            'trial': ALL_WITH_RELATIONS
+        }
+

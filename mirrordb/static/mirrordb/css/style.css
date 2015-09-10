@@ -13,6 +13,11 @@
     font: 16px sans-serif;
 }
 
+.legend-label {
+    font: 16px sans-serif;
+    cursor: pointer;
+}
+
 .axis-tick-label {
     font: 10px sans-serif;
 }
@@ -71,4 +76,11 @@
     fill: #999;
     text-anchor: middle;
     cursor: pointer;
+}
+
+.odd_row {
+    background: #F4F4F4;
+}
+.even_row {
+    background: #ffffff;
 }

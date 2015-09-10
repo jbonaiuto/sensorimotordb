@@ -1,3 +1,23 @@
+function loadObject(resource_uri)
+{
+    var obj=null;
+    var data = {};
+    var args = {
+        type: "GET",
+        async: false,
+        url: resource_uri,
+        data: data,
+        success: function(data){
+            obj=data;
+        },
+        error: function(data) {
+            alert("Something went wrong!");
+        } };
+    $.ajax(args);
+    return obj;
+}
+
+
 function realign_spikes(trials, trial_events, event_name)
 {
     var realigned=[];

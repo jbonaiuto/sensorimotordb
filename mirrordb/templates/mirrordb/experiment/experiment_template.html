@@ -1,13 +1,13 @@
 <script type="text/html" id="experiment-template">
+    <h1><%= title %> (<%= collator.first_name %> <%= collator.last_name %>)</h1>
     <div id="experiment-<%= id %>">
         <table>
             <tr>
-                <td><%= title %> (<%= collator.first_name %> <%= collator.last_name %>)</td>
-            </tr>
-            <tr>
+                <td><strong>Description</strong></td>
                 <td><%= brief_description %></td>
             </tr>
             <tr>
+                <td><strong>Narrative</strong></td>
                 <td><%= narrative %></td>
             </tr>
         </table>

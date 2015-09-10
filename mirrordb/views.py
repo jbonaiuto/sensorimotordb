@@ -1,7 +1,7 @@
 from django.contrib.sites.shortcuts import get_current_site
 from django.views.generic import DetailView
 import os
-from mirrordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit
+from mirrordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment
 from uscbp import settings
 
 class ConditionDetailView(DetailView):
@@ -31,3 +31,7 @@ class ConditionDetailView(DetailView):
 class UnitDetailView(DetailView):
     model = Unit
     template_name = 'mirrordb/unit/unit_view.html'
+
+class ExperimentDetailView(DetailView):
+    model = Experiment
+    template_name = 'mirrordb/experiment/experiment_view.html'

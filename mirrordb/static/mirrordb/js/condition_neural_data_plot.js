@@ -16,6 +16,7 @@ function align_all_events(align_to)
         func();
     }
 }
+
 function drawRaster(unit_id, data, trial_events, event_types)
 {
     var scaleFactor=0.5;

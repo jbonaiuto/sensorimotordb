@@ -68,7 +68,7 @@ class ConditionResource(ModelResource):
         authorization= Authorization()
         filtering={
             'recording_trials': ALL_WITH_RELATIONS,
-            'name': ALL
+            'experiment': ALL_WITH_RELATIONS
         }
 
 class GraspPerformanceConditionResource(ConditionResource):

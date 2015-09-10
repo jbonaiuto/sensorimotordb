@@ -24,14 +24,12 @@
 
     var condition_ids=[];
     var condition_names=[];
-    var unit=null;
     var condition_trials=new Map();
     var condition_trial_events=new Map();
     var conditions=new Map();
     var event_types=['start'];
 
     function loadedUnitData(resp){
-        unit=resp;
         $('.unit_info').each(function(index, element){
             $(this).empty();
             var tmplMarkup = $('#unit-template').html();
@@ -98,7 +96,7 @@
                         conditions.set(condition.id, condition);
                         condition_trials.set(condition.id, []);
                         condition_trial_events.set(condition.id, []);
-                        condition_trial_map.set(condition.id,[])
+                        condition_trial_map.set(condition.id,[]);
 
                         $('.condition_list').each(function(index, element){
                             condition.level=3;

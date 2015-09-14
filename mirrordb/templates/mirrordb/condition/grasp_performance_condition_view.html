@@ -28,6 +28,7 @@
         $.ajax(args)
     });
 
+    var condition_id={{ object.id }};
     var unit_ids=[];
 
     function loadedConditionData(resp){
@@ -53,6 +54,7 @@
 
     function loadedRecordingTrialData(resp)
     {
+        var unit_labels=[];
         var unit_trials=new Map();
         var unit_trial_events=new Map();
         var units=new Map();
@@ -75,6 +77,7 @@
                     units.set(unit.id, unit);
                     unit_trials.set(unit.id,[]);
                     unit_trial_events.set(unit.id,[]);
+                    unit_labels.push('Unit '+unit.id);
                 }
 
                 unit_trial_events.get(unit.id).push({
@@ -107,7 +110,7 @@
                 }
             }
         }
-        drawPopulationFiringRate(unit_trials, unit_trial_events, event_types);
+        drawPopulationFiringRate('condition-'+condition_id, unit_trials, unit_trial_events, event_types, unit_ids, unit_labels, 1.0);
 
         $('.unit_list').each(function(index, element){
             $(this).empty();
@@ -126,9 +129,9 @@
             var single_unit_trial_events=unit_trial_events.get(unit.id);
             drawRaster('unit-'+unit.id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
 
-            drawHistogram(unit.id, single_unit_trials, single_unit_trial_events, event_types);
+            drawHistogram('unit-'+unit.id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
 
-            drawFiringRate(unit.id, single_unit_trials, single_unit_trial_events, event_types);
+            drawFiringRate('unit-'+unit.id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
         }
     }
 </script>

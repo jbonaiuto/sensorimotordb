@@ -23,6 +23,7 @@
         $.ajax(args);
     });
 
+    var unit_id={{ object.id }};
     var condition_ids=[];
     var condition_names=[];
     var condition_trials=new Map();
@@ -150,7 +151,7 @@
                 alert('Couldnt get recording trial!');
         }
 
-        drawPopulationFiringRate(condition_trials, condition_trial_events, event_types, condition_names);
+        drawPopulationFiringRate('unit-{{ object.id }}', condition_trials, condition_trial_events, event_types, condition_ids, condition_names, 1.0);
         for(var i=0; i<condition_ids.length; i++)
         {
             var condition_id=condition_ids[i];
@@ -158,9 +159,9 @@
             var single_condition_trial_events=condition_trial_events.get(condition_id);
             drawRaster('condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
 
-            drawHistogram(condition_id, single_condition_trials, single_condition_trial_events, event_types);
+            drawHistogram('condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
 
-            drawFiringRate(condition_id, single_condition_trials, single_condition_trial_events, event_types);
+            drawFiringRate('condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
         }
 
     }

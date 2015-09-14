@@ -7,6 +7,7 @@
 <script type="text/javascript" src="{% static 'mirrordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_functions.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/experiment_neural_data_plot.js' %}"></script>
+<script type="text/javascript" src="{% static 'mirrordb/js/neural_data_plot.js' %}"></script>
 <script>
 
     $(document).ready(function(){
@@ -92,6 +93,7 @@
     function loadedRecordingTrialData(resp)
     {
         var condition_unit_ids=[];
+        var condition_unit_labels=[];
         var unit_trials=new Map();
         var unit_trial_events=new Map();
         var units=new Map();
@@ -112,6 +114,7 @@
                 if(condition_unit_ids.indexOf(unit.id)<0)
                 {
                     condition_unit_ids.push(unit.id);
+                    condition_unit_labels.push('Unit '+unit.id);
                     units.set(unit.id, unit);
                     unit_trials.set(unit.id,[]);
                     unit_trial_events.set(unit.id,[]);
@@ -186,7 +189,7 @@
                 }
             }
         }
-        drawConditionPopulationFiringRate(condition_id, unit_trials, unit_trial_events, event_types, condition_unit_ids);
+        drawPopulationFiringRate('condition-'+condition_id+'-plots', unit_trials, unit_trial_events, event_types, condition_unit_ids, condition_unit_labels, 0.5);
 
         conditions_to_load=conditions_to_load-1;
 
@@ -195,8 +198,7 @@
             for(var i=0; i<unit_ids.length; i++)
             {
                 var unit_id=unit_ids[i];
-                drawUnitPopulationFiringRate(unit_id, all_unit_condition_trials.get(unit_id),
-                        all_unit_condition_trial_events.get(unit_id), event_types, condition_names);
+                drawPopulationFiringRate('unit-'+unit_id+'-plots', all_unit_condition_trials.get(unit_id), all_unit_condition_trial_events.get(unit_id), event_types, condition_ids, condition_names, 0.5);
             }
         }
     }

@@ -54,12 +54,14 @@
         $.ajax(args);
     }
 
+    var condition_names=[];
+    var all_unit_condition_trials=new Map();
+    var all_unit_condition_trial_events=new Map();
+    var conditions_to_load=0;
+
     function loadedConditionData(resp)
     {
-        var condition_names=[];
-        var all_unit_condition_trials=new Map();
-        var all_unit_condition_trial_events=new Map();
-
+        conditions_to_load = resp.objects.length;
         for(var i=0; i<resp.objects.length; i++)
         {
             var condition=resp.objects[i];
@@ -73,106 +75,129 @@
                 var compiledTmpl = _.template(tmplMarkup, condition);
                 $(this).append(compiledTmpl);
             });
-            var condition_unit_ids=[];
-            var unit_trials=new Map();
-            var unit_trial_events=new Map();
-            var units=new Map();
-            var event_types=['start'];
 
-            for(var j=0; j<condition.recording_trials.length; j++)
+            var data = {};
+            var args = {
+                type: "GET",
+                url: "/mirrordb/api/v1/full_recording_trial/?condition="+condition.id+"&limit=0&format=json",
+                data: data,
+                success: loadedRecordingTrialData,
+                error: function(data) {
+                    alert("Something went wrong!");
+                } };
+            $.ajax(args);
+        }
+    }
+
+    function loadedRecordingTrialData(resp)
+    {
+        var condition_unit_ids=[];
+        var unit_trials=new Map();
+        var unit_trial_events=new Map();
+        var units=new Map();
+        var event_types=['start'];
+
+        for(var j=0; j<resp.objects.length; j++)
+        {
+            var recording_trial=resp.objects[j];
+            var condition_id=parseInt(recording_trial.condition.split('/')[5]);
+            var trial_number=recording_trial.trial_number;
+            var start_time=parseFloat(recording_trial.start_time);
+
+            for(var k=0; k<recording_trial.unit_recordings.length; k++)
             {
-                var recording_trial=loadObject(condition.recording_trials[j]);
-                var trial_number=recording_trial.trial_number;
-                var start_time=parseFloat(recording_trial.start_time);
+                var unit_recording=recording_trial.unit_recordings[k];
+                var unit=unit_recording.unit;
 
-                for(var k=0; k<recording_trial.unit_recordings.length; k++)
+                if(condition_unit_ids.indexOf(unit.id)<0)
                 {
-                    var unit_recording=loadObject(recording_trial.unit_recordings[k]);
-                    var unit=unit_recording.unit;
-
-                    if(condition_unit_ids.indexOf(unit.id)<0)
+                    condition_unit_ids.push(unit.id);
+                    units.set(unit.id, unit);
+                    unit_trials.set(unit.id,[]);
+                    unit_trial_events.set(unit.id,[]);
+                    if(unit_ids.indexOf(unit.id)<0)
                     {
-                        condition_unit_ids.push(unit.id);
-                        units.set(unit.id, unit);
-                        unit_trials.set(unit.id,[]);
-                        unit_trial_events.set(unit.id,[]);
-                        if(unit_ids.indexOf(unit.id)<0)
-                        {
-                            unit_ids.push(unit.id);
-                            all_unit_condition_trials.set(unit.id, new Map());
-                            all_unit_condition_trial_events.set(unit.id, new Map());
-                            $('.unit_list').each(function(index, element){
-                                unit.level=3;
-                                unit.idx=unit_ids.length-1;
-                                var tmplMarkup = $('#unit-template').html();
-                                var compiledTmpl = _.template(tmplMarkup, unit);
-                                $(this).append(compiledTmpl);
-                            });
-                        }
-                    }
-
-                    unit_trial_events.get(unit.id).push({
-                        t: start_time,
-                        trial: trial_number,
-                        name: 'start',
-                        description: 'trial start'
-                    });
-                    for(var l=0; l<recording_trial.events.length; l++)
-                    {
-                        var event=recording_trial.events[l];
-                        unit_trial_events.get(unit.id).push({
-                            t: parseFloat(event.time),
-                            trial: trial_number,
-                            name: event.name,
-                            description: event.description
-                        });
-                        if(event_types.indexOf(event.name)<0)
-                            event_types.push(event.name);
-                    }
-
-                    if(all_unit_condition_trial_events.get(unit.id).get(condition.id)==null)
-                        all_unit_condition_trial_events.get(unit.id).set(condition.id,[]);
-                    all_unit_condition_trial_events.get(unit.id).get(condition.id).push({
-                        t: start_time,
-                        trial: trial_number,
-                        name: 'start',
-                        description: 'trial start'
-                    });
-                    for(var l=0; l<recording_trial.events.length; l++)
-                    {
-                        var event=recording_trial.events[l];
-                        all_unit_condition_trial_events.get(unit.id).get(condition.id).push({
-                            t: parseFloat(event.time),
-                            trial: trial_number,
-                            name: event.name,
-                            description: event.description
-                        });
-                    }
-
-                    if(all_unit_condition_trials.get(unit.id).get(condition.id)==null)
-                        all_unit_condition_trials.get(unit.id).set(condition.id,[]);
-
-                    var unit_data=[];
-                    var spike_times=unit_recording.spike_times.split(',');
-                    for(var l=0; l<spike_times.length; l++)
-                    {
-                        unit_trials.get(unit.id).push({
-                            x: parseFloat(spike_times[l]),
-                            y: trial_number
-                        });
-                        all_unit_condition_trials.get(unit.id).get(condition.id).push({
-                            x: parseFloat(spike_times[l]),
-                            y: trial_number
+                        unit_ids.push(unit.id);
+                        all_unit_condition_trials.set(unit.id, new Map());
+                        all_unit_condition_trial_events.set(unit.id, new Map());
+                        $('.unit_list').each(function(index, element){
+                            unit.level=3;
+                            unit.idx=unit_ids.length-1;
+                            var tmplMarkup = $('#unit-template').html();
+                            var compiledTmpl = _.template(tmplMarkup, unit);
+                            $(this).append(compiledTmpl);
                         });
                     }
                 }
+
+                unit_trial_events.get(unit.id).push({
+                    t: start_time,
+                    trial: trial_number,
+                    name: 'start',
+                    description: 'trial start'
+                });
+                for(var l=0; l<recording_trial.events.length; l++)
+                {
+                    var event=recording_trial.events[l];
+                    unit_trial_events.get(unit.id).push({
+                        t: parseFloat(event.time),
+                        trial: trial_number,
+                        name: event.name,
+                        description: event.description
+                    });
+                    if(event_types.indexOf(event.name)<0)
+                        event_types.push(event.name);
+                }
+
+                if(all_unit_condition_trial_events.get(unit.id).get(condition_id)==null)
+                    all_unit_condition_trial_events.get(unit.id).set(condition_id,[]);
+                all_unit_condition_trial_events.get(unit.id).get(condition_id).push({
+                    t: start_time,
+                    trial: trial_number,
+                    name: 'start',
+                    description: 'trial start'
+                });
+                for(var l=0; l<recording_trial.events.length; l++)
+                {
+                    var event=recording_trial.events[l];
+                    all_unit_condition_trial_events.get(unit.id).get(condition_id).push({
+                        t: parseFloat(event.time),
+                        trial: trial_number,
+                        name: event.name,
+                        description: event.description
+                    });
+                }
+
+                if(all_unit_condition_trials.get(unit.id).get(condition_id)==null)
+                    all_unit_condition_trials.get(unit.id).set(condition_id,[]);
+
+                var unit_data=[];
+                var spike_times=unit_recording.spike_times.split(',');
+                for(var l=0; l<spike_times.length; l++)
+                {
+                    unit_trials.get(unit.id).push({
+                        x: parseFloat(spike_times[l]),
+                        y: trial_number
+                    });
+                    all_unit_condition_trials.get(unit.id).get(condition_id).push({
+                        x: parseFloat(spike_times[l]),
+                        y: trial_number
+                    });
+                }
             }
-            drawConditionPopulationFiringRate(condition.id, unit_trials, unit_trial_events, event_types, condition_unit_ids);
         }
-        for(var i=0; i<unit_ids.length; i++)
+        drawConditionPopulationFiringRate(condition_id, unit_trials, unit_trial_events, event_types, condition_unit_ids);
+
+        conditions_to_load=conditions_to_load-1;
+
+        if(conditions_to_load==0)
         {
-            var unit_id=unit_ids[i];
-            drawUnitPopulationFiringRate(unit_id, all_unit_condition_trials.get(unit_id), all_unit_condition_trial_events.get(unit_id), event_types, condition_names);
+            for(var i=0; i<unit_ids.length; i++)
+            {
+                var unit_id=unit_ids[i];
+                drawUnitPopulationFiringRate(unit_id, all_unit_condition_trials.get(unit_id),
+                        all_unit_condition_trial_events.get(unit_id), event_types, condition_names);
+            }
         }
     }
 </script>

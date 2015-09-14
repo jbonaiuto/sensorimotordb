@@ -157,3 +157,15 @@ class UnitRecordingResource(ModelResource):
             'trial': ALL_WITH_RELATIONS
         }
 
+class FullRecordingTrialResource(ModelResource):
+    events=fields.ToManyField(EventResource, 'events', full=True, null=True)
+    condition=fields.ForeignKey(ConditionResource, 'condition')
+    unit_recordings=fields.ToManyField('mirrordb.api.UnitRecordingResource', 'unit_recordings', null=False, full=True)
+    class Meta:
+        queryset = RecordingTrial.objects.all()
+        resource_name = 'full_recording_trial'
+        authorization= Authorization()
+        filtering={
+            'unit_recordings': ALL_WITH_RELATIONS,
+            'condition': ALL_WITH_RELATIONS
+        }

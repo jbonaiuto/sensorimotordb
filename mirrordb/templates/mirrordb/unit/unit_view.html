@@ -7,6 +7,7 @@
 <script type="text/javascript" src="{% static 'mirrordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_functions.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/unit_neural_data_plot.js' %}"></script>
+<script type="text/javascript" src="{% static 'mirrordb/js/neural_data_plot.js' %}"></script>
 <script>
 
     $(document).ready(function(){
@@ -155,7 +156,7 @@
             var condition_id=condition_ids[i];
             var single_condition_trials=condition_trials.get(condition_id);
             var single_condition_trial_events=condition_trial_events.get(condition_id);
-            drawRaster(condition_id, single_condition_trials, single_condition_trial_events, event_types);
+            drawRaster('condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
 
             drawHistogram(condition_id, single_condition_trials, single_condition_trial_events, event_types);
 

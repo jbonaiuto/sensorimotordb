@@ -8,6 +8,7 @@
 <script type="text/javascript" src="{% static 'mirrordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_functions.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/condition_neural_data_plot.js' %}"></script>
+<script type="text/javascript" src="{% static 'mirrordb/js/neural_data_plot.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/video-js/video.dev.js' %}"></script>
 <script>
 
@@ -38,20 +39,34 @@
             $(this).append(compiledTmpl);
         });
 
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/mirrordb/api/v1/full_recording_trial/?condition="+resp.id+"&limit=0&format=json",
+            data: data,
+            success: loadedRecordingTrialData,
+            error: function(data) {
+                alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+
+    function loadedRecordingTrialData(resp)
+    {
         var unit_trials=new Map();
         var unit_trial_events=new Map();
         var units=new Map();
         var event_types=['start'];
 
-        for(var i=0; i<resp.recording_trials.length; i++)
+        for(var i=0; i<resp.objects.length; i++)
         {
-            var recording_trial=loadObject(resp.recording_trials[i]);
+            var recording_trial=resp.objects[i];
             var trial_number=recording_trial.trial_number;
             var start_time=parseFloat(recording_trial.start_time);
 
             for(var j=0; j<recording_trial.unit_recordings.length; j++)
             {
-                var unit_recording=loadObject(recording_trial.unit_recordings[j]);
+                var unit_recording=recording_trial.unit_recordings[j];
                 var unit=unit_recording.unit;
 
                 if(unit_ids.indexOf(unit.id)<0)
@@ -92,6 +107,7 @@
                 }
             }
         }
+
         drawPopulationFiringRate(unit_trials, unit_trial_events, event_types);
 
         $('.unit_list').each(function(index, element){
@@ -109,7 +125,7 @@
             });
             var single_unit_trials=unit_trials.get(unit.id);
             var single_unit_trial_events=unit_trial_events.get(unit.id);
-            drawRaster(unit.id, single_unit_trials, single_unit_trial_events, event_types);
+            drawRaster('unit-'+unit.id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
 
             drawHistogram(unit.id, single_unit_trials, single_unit_trial_events, event_types);
 

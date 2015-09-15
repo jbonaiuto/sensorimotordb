@@ -6,7 +6,6 @@
 <script type="text/javascript" src="{% static 'mirrordb/js/d3.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_functions.js' %}"></script>
-<script type="text/javascript" src="{% static 'mirrordb/js/unit_neural_data_plot.js' %}"></script>
 <script type="text/javascript" src="{% static 'mirrordb/js/neural_data_plot.js' %}"></script>
 <script>
 
@@ -38,6 +37,7 @@
             var compiledTmpl = _.template(tmplMarkup, resp);
             $(this).append(compiledTmpl);
         });
+        d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
         var data = {};
         var args = {
             type: "GET",

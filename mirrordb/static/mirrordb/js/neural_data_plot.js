@@ -1,3 +1,8 @@
+var bisectTime = d3.bisector(function(d) { return d.x; }).left;
+var p=d3.scale.category10();
+
+var dispatch=d3.dispatch("statechange");
+
 function drawRaster(parent_id, data, trial_events, event_types)
 {
     var scaleFactor=0.5;
@@ -12,7 +17,6 @@ function drawRaster(parent_id, data, trial_events, event_types)
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
     var align_event = d3.select("#align_event").node().value;
-    d3.selectAll("#align_event").on("change.raster."+parent_id, update);
     var realigned_data=realign_spikes(data, trial_events, align_event);
     var realigned_trial_events=realign_events(trial_events, align_event);
 
@@ -58,7 +62,8 @@ function drawRaster(parent_id, data, trial_events, event_types)
             focus.style("display","")
         })
         .on("click", function(d) {
-            align_all_events(d.name);
+            d3.select("#align_event").node().value= d.name;
+            dispatch.statechange();
         });
 
     var focus = raster_svg.append("g")
@@ -97,6 +102,7 @@ function drawRaster(parent_id, data, trial_events, event_types)
         .attr("transform", "rotate(-90)")
         .text("Trial");
 
+    dispatch.on("statechange.raster."+parent_id, update);
     function update()
     {
         var align_event = d3.select("#align_event").node().value;
@@ -135,9 +141,7 @@ function drawHistogram(parent_id, data, trial_events, event_types)
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
     var binwidth = parseInt(d3.select("#binwidth").node().value);
-    d3.selectAll("#binwidth").on("change.histo."+parent_id, update);
     var align_event = d3.select("#align_event").node().value;
-    d3.selectAll("#align_event").on("change.histo."+parent_id, update);
     var realigned_data=realign_spikes(data, trial_events, align_event);
     var realigned_trial_events=realign_events(trial_events, align_event);
 
@@ -247,7 +251,8 @@ function drawHistogram(parent_id, data, trial_events, event_types)
                     .attr("dy", function(d, i) { return i * 1.3 + "em"; })
                     .text(function(d) { return d; })
                     .on("click", function(d) {
-                        align_all_events(d);
+                        d3.select("#align_event").node().value= d;
+                        dispatch.statechange();
                     })
             );
     }
@@ -266,6 +271,7 @@ function drawHistogram(parent_id, data, trial_events, event_types)
 
     var old_binwidth = binwidth;
     var old_xBinwidth = xBinwidth;
+    dispatch.on("statechange.histo."+parent_id, update);
     function update() {
         binwidth = parseInt(d3.select("#binwidth").node().value);
         var align_event = d3.select("#align_event").node().value;
@@ -366,10 +372,7 @@ function drawFiringRate(parent_id, data, trial_events, event_types)
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var binwidth = parseInt(d3.select("#binwidth").node().value);
-    d3.selectAll("#binwidth").on("change.rate."+parent_id, update);
-
     var align_event = d3.select("#align_event").node().value;
-    d3.selectAll("#align_event").on("change.rate."+parent_id, update);
     var realigned_data=realign_spikes(data, trial_events, align_event);
     var realigned_trial_events=realign_events(trial_events, align_event);
 
@@ -474,7 +477,8 @@ function drawFiringRate(parent_id, data, trial_events, event_types)
                 .attr("dy", function(d, i) { return i * 1.3 + "em"; })
                 .text(function(d) { return d; })
                 .on("click", function(d) {
-                    align_all_events(d);
+                    d3.select("#align_event").node().value= d;
+                    dispatch.statechange();
                 })
         );
     }
@@ -508,6 +512,7 @@ function drawFiringRate(parent_id, data, trial_events, event_types)
         focus.select("text").text(d.y.toFixed(2)+'Hz');
     }
 
+    dispatch.on("statechange.rate."+parent_id, update);
     function update(){
         binwidth = parseInt(d3.select("#binwidth").node().value);
         var align_event = d3.select("#align_event").node().value;
@@ -571,10 +576,7 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var binwidth = parseInt(d3.select("#binwidth").node().value);
-    d3.selectAll("#binwidth").on("change.rate.population."+parent_id, update);
-
     var align_event = d3.select("#align_event").node().value;
-    d3.selectAll("#align_event").on("change.rate.population."+parent_id, update);
     var rate_data=new Map();
     var min_time=10000;
     var max_time=-10000;
@@ -717,7 +719,8 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
                 .attr("dy", function(d, i) { return i * 1.3 + "em"; })
                 .text(function(d) { return d; })
                 .on("click", function(d) {
-                    align_all_events(d);
+                    d3.select("#align_event").node().value= d;
+                    dispatch.statechange();
                 })
         );
     }
@@ -764,6 +767,7 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
         focus.select("text").text(min_y_d.y.toFixed(2)+'Hz');
     }
 
+    dispatch.on("statechange.rate.population."+parent_id, update);
     function update(){
         binwidth = parseInt(d3.select("#binwidth").node().value);
         var align_event = d3.select("#align_event").node().value;

@@ -37,7 +37,7 @@ class NomenclatureResource(ModelResource):
     species=fields.ManyToManyField(SpeciesResource, 'species')
 
     class Meta:
-        queryset=Nomenclature.objects.all()
+        queryset=Nomenclature.objects.all().prefetch_related('species')
         resource_name='nomenclature'
         authorization=Authorization()
 
@@ -45,7 +45,7 @@ class NomenclatureResource(ModelResource):
 class ExperimentResource(ModelResource):
     collator=fields.ForeignKey(UserResource, 'collator', full=True)
     class Meta:
-        queryset = Experiment.objects.all()
+        queryset = Experiment.objects.all().prefetch_related('collator')
         resource_name = 'experiment'
         authorization= Authorization()
 
@@ -54,7 +54,7 @@ class UnitResource(ModelResource):
     area = fields.ForeignKey(BrainRegionResource, 'area',full=True)
 
     class Meta:
-        queryset = Unit.objects.all()
+        queryset = Unit.objects.all().prefetch_related('area')
         resource_name = 'unit'
         authorization= Authorization()
 
@@ -63,7 +63,7 @@ class ConditionResource(ModelResource):
     experiment=fields.ForeignKey(ExperimentResource, 'experiment', full=True)
     recording_trials=fields.ToManyField('mirrordb.api.RecordingTrialResource', 'recording_trials', null=False)
     class Meta:
-        queryset = Condition.objects.all()
+        queryset = Condition.objects.all().prefetch_related('experiment','recording_trials')
         resource_name = 'condition'
         authorization= Authorization()
         filtering={
@@ -73,14 +73,14 @@ class ConditionResource(ModelResource):
 
 class GraspPerformanceConditionResource(ConditionResource):
     class Meta:
-        queryset = GraspPerformanceCondition.objects.all()
+        queryset = GraspPerformanceCondition.objects.all().prefetch_related('experiment','recording_trials')
         resource_name = 'grasp_performance_condition'
 
 
 class GraspObservationConditionResource(ConditionResource):
     demonstrator_species=fields.ForeignKey(SpeciesResource, 'demonstrator_species', full=True)
     class Meta:
-        queryset = GraspObservationCondition.objects.all()
+        queryset = GraspObservationCondition.objects.all().prefetch_related('experiment','recording_trials','demonstrator_species')
         resource_name = 'grasp_observation_condition'
 
     def prepend_urls(self):
@@ -136,7 +136,7 @@ class RecordingTrialResource(ModelResource):
     condition=fields.ForeignKey(ConditionResource, 'condition')
     unit_recordings=fields.ToManyField('mirrordb.api.UnitRecordingResource', 'unit_recordings', null=False)
     class Meta:
-        queryset = RecordingTrial.objects.all()
+        queryset = RecordingTrial.objects.all().prefetch_related('events','condition','unit_recordings')
         resource_name = 'recording_trial'
         authorization= Authorization()
         filtering={
@@ -149,7 +149,7 @@ class UnitRecordingResource(ModelResource):
     unit = fields.ForeignKey(UnitResource, 'unit', full=True, null=False)
     trial = fields.ForeignKey(RecordingTrialResource, 'trial')
     class Meta:
-        queryset = UnitRecording.objects.all()
+        queryset = UnitRecording.objects.all().prefetch_related('unit','trial')
         resource_name = 'unit_recording'
         authorization= Authorization()
         filtering={
@@ -162,7 +162,7 @@ class FullRecordingTrialResource(ModelResource):
     condition=fields.ForeignKey(ConditionResource, 'condition')
     unit_recordings=fields.ToManyField('mirrordb.api.UnitRecordingResource', 'unit_recordings', null=False, full=True)
     class Meta:
-        queryset = RecordingTrial.objects.all()
+        queryset = RecordingTrial.objects.all().prefetch_related('events','condition','unit_recordings')
         resource_name = 'full_recording_trial'
         authorization= Authorization()
         filtering={

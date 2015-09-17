@@ -97,13 +97,9 @@ class GraspObservationConditionResource(ConditionResource):
         self.is_authenticated(request)
         self.throttle_check(request)
 
-        query = request.GET.get('demonstration_type', None)
-        if not query:
-            raise BadRequest('Please supply the search parameter (e.g. "/mirrordb/api/v1/grasp_observation_condition/search/?demonstration_type=css")')
+        query = request.GET.get('q', '')
 
-        print query
-
-        results = SearchQuerySet().models(GraspObservationCondition).filter(demonstration_type=query)
+        results = SearchQuerySet().models(GraspObservationCondition).auto_query(query)
         if not results:
             results = EmptySearchQuerySet()
 

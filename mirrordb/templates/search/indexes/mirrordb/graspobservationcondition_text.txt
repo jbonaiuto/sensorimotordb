@@ -1,0 +1,14 @@
+{{ object.demonstrator_species.species_name }}
+{{ object.demonstration_type }}
+{{ object.viewing_angle }}
+{{ object.object }}
+{{ object.object_distance }}
+{{ object.grasp }}
+{{ object.name }}
+{{ object.description }}
+{{ object.type }}
+{{ object.experiment.title }}
+{{ object.experiment.brief_description }}
+{{ object.experiment.collator.last_name }}
+{{ object.experiment.collator.first_name }}
+{{ object.experiment.collator.username }}

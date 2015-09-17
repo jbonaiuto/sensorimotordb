@@ -3,11 +3,19 @@ from mirrordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event
 
 class GraspObservationConditionIndex(indexes.SearchIndex, indexes.Indexable):
 
-    text = indexes.CharField(document=True)
-    #demonstrator_species = indexes.CharField(model_attr='species')
+    text = indexes.CharField(document=True, use_template=True)
+    demonstrator_species = indexes.CharField(model_attr='demonstrator_species__species_name')
     demonstration_type = indexes.CharField(model_attr='demonstration_type')
-    #viewing_angle = indexes.DecimalField(model_attr='viewing_angle')
-    #whole_body_visible = indexes.BooleanField(model_attr='whole_body_visible')
+    viewing_angle = indexes.DecimalField(model_attr='viewing_angle')
+    whole_body_visible = indexes.BooleanField(model_attr='whole_body_visible')
+    object=indexes.CharField(model_attr='object')
+    object_distance=indexes.DecimalField(model_attr='object_distance')
+    grasp=indexes.CharField(model_attr='grasp')
+    experiment_title=indexes.CharField(model_attr='experiment__title')
+    experiment_brief_description=indexes.CharField(model_attr='experiment__brief_description')
+    collator_last_name=indexes.CharField(model_attr='experiment__collator__last_name')
+    collator_first_name=indexes.CharField(model_attr='experiment__collator__first_name')
+    collator_username=indexes.CharField(model_attr='experiment__collator__username')
 
     def get_model(self):
         return GraspObservationCondition

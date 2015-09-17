@@ -1,9 +1,9 @@
 var bisectTime = d3.bisector(function(d) { return d.x; }).left;
 var p=d3.scale.category10();
 
-var dispatch=d3.dispatch("statechange");
+var dispatch=d3.dispatch("statechange","realigned");
 
-function drawRaster(parent_id, data, trial_events, event_types)
+function drawRaster(id, parent_id, trial_spikes, trial_events, event_types)
 {
     var scaleFactor=0.5;
     var margin = {top: 30, right: 20, bottom: 40, left: 50},
@@ -15,10 +15,6 @@ function drawRaster(parent_id, data, trial_events, event_types)
         .attr('height', height + margin.top + margin.bottom)
         .append('g')
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-
-    var align_event = d3.select("#align_event").node().value;
-    var realigned_data=realign_spikes(data, trial_events, align_event);
-    var realigned_trial_events=realign_events(trial_events, align_event);
 
     var xScale = d3.scale.linear()
         .range([0, width]);
@@ -35,14 +31,14 @@ function drawRaster(parent_id, data, trial_events, event_types)
         .orient("left").ticks(5);
 
     // Scale the range of the data
-    xScale.domain([d3.min(realigned_data, function(d) { return d.x; }), d3.max(realigned_data, function(d) { return d.x; })]);
-    yScale.domain([0, d3.max(realigned_data, function(d) { return d.y; })]);
+    xScale.domain([d3.min(trial_spikes, function(d) { return d.x; }), d3.max(trial_spikes, function(d) { return d.x; })]);
+    yScale.domain([0, d3.max(trial_spikes, function(d) { return d.y; })]);
 
     var raster=raster_svg.append("g")
         .attr("class", "raster");
 
     raster.selectAll("circle")
-        .data(realigned_data)
+        .data(trial_spikes)
         .enter().append("svg:circle")
         .attr("transform", function (d) { return "translate("+xScale(d.x)+", "+yScale(d.y)+")"})
         .attr("r", 1);
@@ -51,7 +47,7 @@ function drawRaster(parent_id, data, trial_events, event_types)
         .attr("class","events");
 
     var event_circles=events.selectAll("circle")
-        .data(realigned_trial_events)
+        .data(trial_events)
         .enter().append("svg:circle")
         .attr("transform", function (d) { return "translate("+xScale(d.t)+", "+yScale(d.trial)+")"})
         .attr("r", 4)
@@ -102,24 +98,22 @@ function drawRaster(parent_id, data, trial_events, event_types)
         .attr("transform", "rotate(-90)")
         .text("Trial");
 
-    dispatch.on("statechange.raster."+parent_id, update);
-    function update()
+    dispatch.on("realigned.raster."+parent_id, update);
+    function update(realigned_data, realigned_trial_events)
     {
-        var align_event = d3.select("#align_event").node().value;
-
+        var data=realigned_data.get(id);
+        var trial_events=realigned_trial_events.get(id);
         focus.style("display","none");
-        realigned_data=realign_spikes(data, trial_events, align_event);
-        realigned_trial_events=realign_events(trial_events, align_event);
 
-        xScale.domain([d3.min(realigned_data, function(d) { return d.x; }), d3.max(realigned_data, function(d) { return d.x; })]);
+        xScale.domain([d3.min(data, function(d) { return d.x; }),d3.max(data, function(d) { return d.x; })]);
         xAxis.scale(xScale);
 
         raster_svg.selectAll("circle")
-            .data(realigned_data)
+            .data(data)
             .attr("transform", function (d) { return "translate("+xScale(d.x)+", "+yScale(d.y)+")"});
 
         events.selectAll("circle")
-            .data(realigned_trial_events)
+            .data(trial_events)
             .attr("transform", function (d) { return "translate("+xScale(d.t)+", "+yScale(d.trial)+")"})
 
         raster_svg.selectAll(".text").data(hist).remove();
@@ -127,7 +121,7 @@ function drawRaster(parent_id, data, trial_events, event_types)
     }
 }
 
-function drawHistogram(parent_id, data, trial_events, event_types)
+function drawHistogram(id, parent_id, data, trial_events, event_types)
 {
     var scaleFactor=0.5;
     var margin = {top: 30, right: 20, bottom: 40, left: 50}
@@ -141,12 +135,9 @@ function drawHistogram(parent_id, data, trial_events, event_types)
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
     var binwidth = parseInt(d3.select("#binwidth").node().value);
-    var align_event = d3.select("#align_event").node().value;
-    var realigned_data=realign_spikes(data, trial_events, align_event);
-    var realigned_trial_events=realign_events(trial_events, align_event);
 
-    var timeMin=d3.min(realigned_data, function(d) { return d.x; });
-    var timeMax=d3.max(realigned_data, function(d) { return d.x; })
+    var timeMin=d3.min(data, function(d) { return d.x; });
+    var timeMax=d3.max(data, function(d) { return d.x; })
     var xScale = d3.scale.linear()
         .range([0, width])
         .domain([timeMin, timeMax]);
@@ -162,11 +153,11 @@ function drawHistogram(parent_id, data, trial_events, event_types)
         .scale(yScale)
         .orient("left").ticks(5);
 
-    var numTrials=d3.max(realigned_data, function(d){ return d.y});
+    var numTrials=d3.max(data, function(d){ return d.y});
 
     hist = d3.layout.histogram()
         .bins(d3.range(xScale.domain()[0], xScale.domain()[1]+binwidth, binwidth))
-        (realigned_data.map(function(d) {return d.x; }));
+        (data.map(function(d) {return d.x; }));
 
     var scaledHist=[];
     for(var j=0; j<hist.length; j++)
@@ -212,10 +203,10 @@ function drawHistogram(parent_id, data, trial_events, event_types)
     {
         var event_type=event_types[i];
         var times=[];
-        for(var j=0; j<realigned_trial_events.length; j++)
+        for(var j=0; j<trial_events.length; j++)
         {
-            if(realigned_trial_events[j].name==event_type)
-                times.push(realigned_trial_events[j].t);
+            if(trial_events[j].name==event_type)
+                times.push(trial_events[j].t);
         }
         var mean_time=d3.mean(times);
         var min_time=d3.min(times);
@@ -271,18 +262,18 @@ function drawHistogram(parent_id, data, trial_events, event_types)
 
     var old_binwidth = binwidth;
     var old_xBinwidth = xBinwidth;
-    dispatch.on("statechange.histo."+parent_id, update);
-    function update() {
-        binwidth = parseInt(d3.select("#binwidth").node().value);
-        var align_event = d3.select("#align_event").node().value;
-        realigned_data=realign_spikes(data, trial_events, align_event);
-        realigned_trial_events=realign_events(trial_events, align_event);
+    dispatch.on("realigned.histo."+parent_id, update);
+    function update(realigned_data, realigned_trial_events) {
+        var data=realigned_data.get(id);
+        var trial_events=realigned_trial_events.get(id);
 
-        xScale.domain([d3.min(realigned_data, function(d) { return d.x; }), d3.max(realigned_data, function(d) { return d.x; })]);
+        binwidth = parseInt(d3.select("#binwidth").node().value);
+
+        xScale.domain([d3.min(data, function(d) { return d.x; }), d3.max(data, function(d) { return d.x; })]);
 
         hist = d3.layout.histogram()
             .bins(d3.range(xScale.domain()[0], xScale.domain()[1]+binwidth, binwidth))
-            (realigned_data.map(function(d) {return d.x; }));
+            (data.map(function(d) {return d.x; }));
 
         scaledHist=[];
         for(var j=0; j<hist.length; j++)
@@ -329,10 +320,10 @@ function drawHistogram(parent_id, data, trial_events, event_types)
         for(var i=0; i<event_types.length; i++)
         {
             var times=[];
-            for(var j=0; j<realigned_trial_events.length; j++)
+            for(var j=0; j<trial_events.length; j++)
             {
-                if(realigned_trial_events[j].name==event_types[i])
-                    times.push(realigned_trial_events[j].t);
+                if(trial_events[j].name==event_types[i])
+                    times.push(trial_events[j].t);
             }
             var mean_time=d3.mean(times);
             var min_time=d3.min(times);
@@ -358,7 +349,7 @@ function drawHistogram(parent_id, data, trial_events, event_types)
     }
 }
 
-function drawFiringRate(parent_id, data, trial_events, event_types)
+function drawFiringRate(id, parent_id, data, trial_events, event_types)
 {
     var scaleFactor=0.5;
     var margin = {top: 30, right: 20, bottom: 40, left: 50}
@@ -372,11 +363,8 @@ function drawFiringRate(parent_id, data, trial_events, event_types)
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var binwidth = parseInt(d3.select("#binwidth").node().value);
-    var align_event = d3.select("#align_event").node().value;
-    var realigned_data=realign_spikes(data, trial_events, align_event);
-    var realigned_trial_events=realign_events(trial_events, align_event);
 
-    var rate=get_firing_rate(realigned_data, binwidth, width);
+    var rate=get_firing_rate(data, binwidth, width);
 
     var xScale = d3.scale.linear()
         .range([0, width])
@@ -439,10 +427,10 @@ function drawFiringRate(parent_id, data, trial_events, event_types)
     {
         var event_type=event_types[i];
         var times=[];
-        for(var j=0; j<realigned_trial_events.length; j++)
+        for(var j=0; j<trial_events.length; j++)
         {
-            if(realigned_trial_events[j].name==event_type)
-                times.push(realigned_trial_events[j].t);
+            if(trial_events[j].name==event_type)
+                times.push(trial_events[j].t);
         }
         var mean_time=d3.mean(times);
         var min_time=d3.min(times);
@@ -512,14 +500,14 @@ function drawFiringRate(parent_id, data, trial_events, event_types)
         focus.select("text").text(d.y.toFixed(2)+'Hz');
     }
 
-    dispatch.on("statechange.rate."+parent_id, update);
-    function update(){
-        binwidth = parseInt(d3.select("#binwidth").node().value);
-        var align_event = d3.select("#align_event").node().value;
-        realigned_data=realign_spikes(data, trial_events, align_event);
-        realigned_trial_events=realign_events(trial_events, align_event);
+    dispatch.on("realigned.rate."+parent_id, update);
+    function update(realigned_data, realigned_trial_events){
+        var data=realigned_data.get(id);
+        var trial_events=realigned_trial_events.get(id);
 
-        rate=get_firing_rate(realigned_data, binwidth, width);
+        binwidth = parseInt(d3.select("#binwidth").node().value);
+
+        rate=get_firing_rate(data, binwidth, width);
 
         var yMax=d3.max(rate, function(d) { return d.y+1; });
         yScale.domain([0, yMax +.1*yMax])
@@ -532,10 +520,10 @@ function drawFiringRate(parent_id, data, trial_events, event_types)
         for(var i=0; i<event_types.length; i++)
         {
             var times=[];
-            for(var j=0; j<realigned_trial_events.length; j++)
+            for(var j=0; j<trial_events.length; j++)
             {
-                if(realigned_trial_events[j].name==event_types[i])
-                    times.push(realigned_trial_events[j].t);
+                if(trial_events[j].name==event_types[i])
+                    times.push(trial_events[j].t);
             }
             var mean_time=d3.mean(times);
             var min_time=d3.min(times);
@@ -576,16 +564,14 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var binwidth = parseInt(d3.select("#binwidth").node().value);
-    var align_event = d3.select("#align_event").node().value;
-    var rate_data=new Map();
     var min_time=10000;
     var max_time=-10000;
     var max_rate=0;
+    var rate_data=new Map();
     for(var i=0; i<group_ids.length; i++)
     {
         var group_id=group_ids[i];
-        var realigned_group_data=realign_spikes(group_trials.get(group_id), group_trial_events.get(group_id), align_event);
-        var rate=get_firing_rate(realigned_group_data, binwidth, width);
+        var rate=get_firing_rate(group_trials.get(group_id), binwidth, width);
         rate_data.set(group_id,rate);
         var group_min_time=d3.min(rate, function(d){ return d.x; });
         var group_max_time=d3.max(rate, function(d){ return d.x; });
@@ -667,7 +653,6 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
     var event_notes=[];
     var event_lines=[];
     var event_areas=[];
-    var realigned_group_trials_events=new Map();
     for(var i=0; i<event_types.length; i++)
     {
         var event_type=event_types[i];
@@ -676,9 +661,7 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
         {
             var group_id=group_ids[k];
             var group_times=[];
-            if(realigned_group_trials_events.get(group_id)==null)
-                realigned_group_trials_events.set(group_id,realign_events(group_trial_events.get(group_id), align_event));
-            var realigned_trial_events=realigned_group_trials_events.get(group_id)
+            var realigned_trial_events=group_trial_events.get(group_id)
             for(var j=0; j<realigned_trial_events.length; j++)
             {
                 if(realigned_trial_events[j].name==event_type)
@@ -767,10 +750,8 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
         focus.select("text").text(min_y_d.y.toFixed(2)+'Hz');
     }
 
-    dispatch.on("statechange.rate.population."+parent_id, update);
-    function update(){
+    rate_svg.update=function update(realigned_data, realigned_trial_events){
         binwidth = parseInt(d3.select("#binwidth").node().value);
-        var align_event = d3.select("#align_event").node().value;
         rate_data=new Map();
         var min_time=10000;
         var max_time=-10000;
@@ -778,8 +759,7 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
         for(var i=0; i<group_ids.length; i++)
         {
             var group_id=group_ids[i];
-            var realigned_group_data=realign_spikes(group_trials.get(group_id), group_trial_events.get(group_id), align_event);
-            var rate=get_firing_rate(realigned_group_data, binwidth, width);
+            var rate=get_firing_rate(realigned_data.get(group_id), binwidth, width);
             var group_min_time=d3.min(rate, function(d){ return d.x; });
             var group_max_time=d3.max(rate, function(d){ return d.x; });
             if(group_min_time<min_time)
@@ -799,7 +779,6 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
         xAxis.scale(xScale);
 
         xBinwidth =  width / (rate.length-1)
-        var realigned_group_trials_events=new Map();
         for(var i=0; i<event_types.length; i++)
         {
             var event_type=event_types[i];
@@ -808,13 +787,11 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
             {
                 var group_id=group_ids[k];
                 var group_times=[];
-                if(realigned_group_trials_events.get(group_id)==null)
-                    realigned_group_trials_events.set(group_id,realign_events(group_trial_events.get(group_id), align_event));
-                var realigned_trial_events=realigned_group_trials_events.get(group_id);
-                for(var j=0; j<realigned_trial_events.length; j++)
+                var trial_events=realigned_trial_events.get(group_id);
+                for(var j=0; j<trial_events.length; j++)
                 {
-                    if(realigned_trial_events[j].name==event_type)
-                        group_times.push(realigned_trial_events[j].t);
+                    if(trial_events[j].name==event_type)
+                        group_times.push(trial_events[j].t);
                 }
                 times.push(d3.mean(group_times));
             }
@@ -845,4 +822,6 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
         rate_svg.select(".x.axis").call(xAxis);
 
     }
+    dispatch.on("realigned.rate.population."+parent_id, rate_svg.update);
+    return rate_svg;
 }

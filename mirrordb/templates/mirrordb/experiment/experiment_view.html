@@ -24,7 +24,31 @@
 
     var condition_ids=[];
     var unit_ids=[];
+    var condition_names=[];
+    var unit_labels=[];
+    var condition_unit_ids=new Map();
+    var unit_condition_ids=new Map();
 
+    var unit_condition_trials=new Map();
+    var unit_condition_trial_events=new Map();
+    var condition_unit_trials=new Map();
+    var condition_unit_trial_events=new Map();
+
+    var realigned_unit_condition_spikes=new Map();
+    var realigned_unit_condition_trial_events=new Map();
+    var realigned_condition_unit_spikes=new Map();
+    var realigned_condition_unit_trial_events=new Map();
+
+    var condition_plots=new Map();
+    var unit_plots=new Map();
+
+    var conditions_to_load=0;
+    var event_types=['start'];
+
+    /**
+     * Loaded experiment
+     * @param resp
+     */
     function loadedExperimentData(resp){
         $('.experiment_info').each(function(index, element){
             $(this).empty();
@@ -33,9 +57,15 @@
             $(this).append(compiledTmpl);
         });
         d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
+        dispatch.on("statechange", update);
+
+        // Load conditions for experiment
         loadConditions();
     }
 
+    /**
+     * Load experiment conditions
+     */
     function loadConditions(){
         $('.condition_list').each(function(index, element){
             $(this).empty();
@@ -48,27 +78,27 @@
             type: "GET",
             url: "/mirrordb/api/v1/condition/?experiment={{ object.id }}&limit=0&format=json",
             data: data,
-            success: loadedConditionData,
+            success: loadedConditionsData,
             error: function(data) {
                 alert("Something went wrong!");
             } };
         $.ajax(args);
     }
 
-    var condition_names=[];
-    var all_unit_condition_trials=new Map();
-    var all_unit_condition_trial_events=new Map();
-    var conditions_to_load=0;
-
-    function loadedConditionData(resp)
+    /**
+     * Loaded conditions
+     * @param resp
+     */
+    function loadedConditionsData(resp)
     {
+        // Number of conditions to load recording trials for
         conditions_to_load = resp.objects.length;
         for(var i=0; i<resp.objects.length; i++)
         {
+            // Add condition to list
             var condition=resp.objects[i];
             condition_ids.push(condition.id);
             condition_names.push(condition.name);
-
             $('.condition_list').each(function(index, element){
                 condition.level=3;
                 condition.idx=i;
@@ -77,6 +107,14 @@
                 $(this).append(compiledTmpl);
             });
 
+            // Initialize map of condition-unit recordings
+            condition_unit_trials.set(condition.id, new Map());
+            condition_unit_trial_events.set(condition.id, new Map());
+            realigned_condition_unit_spikes.set(condition.id, new Map());
+            realigned_condition_unit_trial_events.set(condition.id, new Map());
+            condition_unit_ids.set(condition.id, []);
+
+            // Load recording trials for condition
             var data = {};
             var args = {
                 type: "GET",
@@ -90,116 +128,186 @@
         }
     }
 
+    /**
+     * Loaded recording trials for a condition
+     * @param resp
+     */
     function loadedRecordingTrialData(resp)
     {
-        var condition_unit_ids=[];
-        var condition_unit_labels=[];
-        var unit_trials=new Map();
-        var unit_trial_events=new Map();
-        var units=new Map();
-        var event_types=['start'];
-
+        // For each recording trial
         for(var j=0; j<resp.objects.length; j++)
         {
             var recording_trial=resp.objects[j];
-            var condition_id=parseInt(recording_trial.condition.split('/')[5]);
             var trial_number=recording_trial.trial_number;
             var start_time=parseFloat(recording_trial.start_time);
 
+            // Get condition ID
+            var condition_id=parseInt(recording_trial.condition.split('/')[5]);
+
+            // Iterate through unit recordings
             for(var k=0; k<recording_trial.unit_recordings.length; k++)
             {
                 var unit_recording=recording_trial.unit_recordings[k];
                 var unit=unit_recording.unit;
 
-                if(condition_unit_ids.indexOf(unit.id)<0)
+                // If this is the first instance of this unit in this experiment
+                if(unit_ids.indexOf(unit.id)<0)
                 {
-                    condition_unit_ids.push(unit.id);
-                    condition_unit_labels.push('Unit '+unit.id);
-                    units.set(unit.id, unit);
-                    unit_trials.set(unit.id,[]);
-                    unit_trial_events.set(unit.id,[]);
-                    if(unit_ids.indexOf(unit.id)<0)
-                    {
-                        unit_ids.push(unit.id);
-                        all_unit_condition_trials.set(unit.id, new Map());
-                        all_unit_condition_trial_events.set(unit.id, new Map());
-                        $('.unit_list').each(function(index, element){
-                            unit.level=3;
-                            unit.idx=unit_ids.length-1;
-                            var tmplMarkup = $('#unit-template').html();
-                            var compiledTmpl = _.template(tmplMarkup, unit);
-                            $(this).append(compiledTmpl);
-                        });
-                    }
+                    // Add to list of units
+                    unit_ids.push(unit.id);
+                    unit_labels.push('Unit '+unit_id)
+                    $('.unit_list').each(function(index, element){
+                        unit.level=3;
+                        unit.idx=unit_ids.length-1;
+                        var tmplMarkup = $('#unit-template').html();
+                        var compiledTmpl = _.template(tmplMarkup, unit);
+                        $(this).append(compiledTmpl);
+                    });
+
+                    // Initialize map of unit - condition recordings
+                    unit_condition_trials.set(unit.id, new Map());
+                    unit_condition_trial_events.set(unit.id, new Map());
+                    realigned_unit_condition_spikes.set(unit.id, new Map());
+                    realigned_unit_condition_trial_events.set(unit.id, new Map());
+                    unit_condition_ids.set(unit.id, []);
                 }
 
-                unit_trial_events.get(unit.id).push({
+                // If this is the first instance of this unit in this condition
+                if(condition_unit_ids.get(condition_id).indexOf(unit.id)<0)
+                {
+                    condition_unit_ids.get(condition_id).push(unit.id);
+                    condition_unit_trial_events.get(condition_id).set(unit.id, []);
+                    condition_unit_trials.get(condition_id).set(unit.id, []);
+                }
+
+                // If this is the first instance of this condition in this unit
+                if(unit_condition_ids.get(unit.id).indexOf(condition_id)<0)
+                {
+                    unit_condition_ids.get(unit.id).push(condition_id);
+                    unit_condition_trial_events.get(unit.id).set(condition_id,[]);
+                    unit_condition_trials.get(unit.id).set(condition_id,[]);
+                }
+
+                var start_event={
                     t: start_time,
                     trial: trial_number,
                     name: 'start',
                     description: 'trial start'
-                });
+                };
+                condition_unit_trial_events.get(condition_id).get(unit.id).push(start_event);
+                unit_condition_trial_events.get(unit.id).get(condition_id).push(start_event);
                 for(var l=0; l<recording_trial.events.length; l++)
                 {
-                    var event=recording_trial.events[l];
-                    unit_trial_events.get(unit.id).push({
-                        t: parseFloat(event.time),
+                    var evt=recording_trial.events[l];
+                    var current_event={
+                        t: parseFloat(evt.time),
                         trial: trial_number,
-                        name: event.name,
-                        description: event.description
-                    });
-                    if(event_types.indexOf(event.name)<0)
-                        event_types.push(event.name);
+                        name: evt.name,
+                        description: evt.description
+                    };
+                    condition_unit_trial_events.get(condition_id).get(unit.id).push(current_event);
+                    unit_condition_trial_events.get(unit.id).get(condition_id).push(current_event);
+                    if(event_types.indexOf(evt.name)<0)
+                        event_types.push(evt.name);
                 }
 
-                if(all_unit_condition_trial_events.get(unit.id).get(condition_id)==null)
-                    all_unit_condition_trial_events.get(unit.id).set(condition_id,[]);
-                all_unit_condition_trial_events.get(unit.id).get(condition_id).push({
-                    t: start_time,
-                    trial: trial_number,
-                    name: 'start',
-                    description: 'trial start'
-                });
-                for(var l=0; l<recording_trial.events.length; l++)
-                {
-                    var event=recording_trial.events[l];
-                    all_unit_condition_trial_events.get(unit.id).get(condition_id).push({
-                        t: parseFloat(event.time),
-                        trial: trial_number,
-                        name: event.name,
-                        description: event.description
-                    });
-                }
-
-                if(all_unit_condition_trials.get(unit.id).get(condition_id)==null)
-                    all_unit_condition_trials.get(unit.id).set(condition_id,[]);
-
-                var unit_data=[];
                 var spike_times=unit_recording.spike_times.split(',');
                 for(var l=0; l<spike_times.length; l++)
                 {
-                    unit_trials.get(unit.id).push({
+                    var spk={
                         x: parseFloat(spike_times[l]),
                         y: trial_number
-                    });
-                    all_unit_condition_trials.get(unit.id).get(condition_id).push({
-                        x: parseFloat(spike_times[l]),
-                        y: trial_number
-                    });
+                    };
+                    condition_unit_trials.get(condition_id).get(unit.id).push(spk);
+                    unit_condition_trials.get(unit.id).get(condition_id).push(spk);
                 }
             }
         }
-        drawPopulationFiringRate('condition-'+condition_id+'-plots', unit_trials, unit_trial_events, event_types, condition_unit_ids, condition_unit_labels, 0.5);
+
+        var align_event = d3.select("#align_event").node().value;
+        var condition_unit_labels=[];
+        for(var i=0; i<condition_unit_ids.get(condition_id).length; i++)
+        {
+            var unit_id=condition_unit_ids.get(condition_id)[i];
+            condition_unit_labels.push(unit_labels[unit_ids.indexOf(unit_id)]);
+            realigned_condition_unit_spikes.get(condition_id).set(unit_id,
+                    realign_spikes(condition_unit_trials.get(condition_id).get(unit_id),
+                            condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
+            realigned_condition_unit_trial_events.get(condition_id).set(unit_id,
+                    realign_events(condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
+        }
+
+        var rate_svg=drawPopulationFiringRate('condition-'+condition_id+'-plots', realigned_condition_unit_spikes.get(condition_id),
+                realigned_condition_unit_trial_events.get(condition_id), event_types,
+                condition_unit_ids.get(condition_id), condition_unit_labels, 0.5);
+        condition_plots.set(condition_id, rate_svg)
 
         conditions_to_load=conditions_to_load-1;
 
+        for(var i=0; i<condition_unit_ids.get(condition_id).length; i++)
+        {
+            var unit_id=condition_unit_ids.get(condition_id)[i];
+            realigned_unit_condition_spikes.get(unit_id).set(condition_id,
+                    realign_spikes(unit_condition_trials.get(unit_id).get(condition_id),
+                            unit_condition_trial_events.get(unit_id).get(condition_id), align_event));
+            realigned_unit_condition_trial_events.get(unit_id).set(condition_id,
+                    realign_events(unit_condition_trial_events.get(unit_id).get(condition_id), align_event));
+        }
         if(conditions_to_load==0)
         {
-            for(var i=0; i<unit_ids.length; i++)
+            for(var i=0; i<condition_unit_ids.get(condition_id).length; i++)
             {
-                var unit_id=unit_ids[i];
-                drawPopulationFiringRate('unit-'+unit_id+'-plots', all_unit_condition_trials.get(unit_id), all_unit_condition_trial_events.get(unit_id), event_types, condition_ids, condition_names, 0.5);
+                var unit_id=condition_unit_ids.get(condition_id)[i];
+                var rate_svg=drawPopulationFiringRate('unit-'+unit_id+'-plots', realigned_unit_condition_spikes.get(unit_id),
+                        realigned_unit_condition_trial_events.get(unit_id), event_types, condition_ids,
+                        condition_names, 0.5);
+                unit_plots.set(unit_id, rate_svg);
             }
+        }
+    }
+
+    function update()
+    {
+        var align_event = d3.select("#align_event").node().value;
+
+        for(var i=0; i<condition_ids.length; i++)
+        {
+            var condition_id=condition_ids[i];
+            for(var j=0; j<condition_unit_ids.get(condition_id).length; j++)
+            {
+                var unit_id=condition_unit_ids.get(condition_id)[j];
+
+                if(condition_unit_trials.get(condition_id)!=null && condition_unit_trials.get(condition_id).get(unit_id)!=null)
+                {
+                    realigned_condition_unit_spikes.get(condition_id).set(unit_id,
+                            realign_spikes(condition_unit_trials.get(condition_id).get(unit_id),
+                                    condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
+                    realigned_condition_unit_trial_events.get(condition_id).set(unit_id,
+                            realign_events(condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
+
+                }
+            }
+            condition_plots.get(condition_id).update(realigned_condition_unit_spikes.get(condition_id),
+                    realigned_condition_unit_trial_events.get(condition_id));
+        }
+        for(var j=0; j<unit_ids.length; j++)
+        {
+            var unit_id=unit_ids[j];
+            for(var i=0; i<unit_condition_ids.get(unit_id).length; i++)
+            {
+                var condition_id=unit_condition_ids.get(unit_id)[i];
+
+                if(unit_condition_trials.get(unit_id)!=null && unit_condition_trials.get(unit_id).get(condition_id)!=null)
+                {
+                    realigned_unit_condition_spikes.get(unit_id).set(condition_id,
+                            realign_spikes(unit_condition_trials.get(unit_id).get(condition_id),
+                                    unit_condition_trial_events.get(unit_id).get(condition_id), align_event));
+                    realigned_unit_condition_trial_events.get(unit_id).set(condition_id,
+                            realign_events(unit_condition_trial_events.get(unit_id).get(condition_id), align_event));
+                }
+            }
+            unit_plots.get(unit_id).update(realigned_unit_condition_spikes.get(unit_id),
+                realigned_unit_condition_trial_events.get(unit_id));
         }
     }
 </script>

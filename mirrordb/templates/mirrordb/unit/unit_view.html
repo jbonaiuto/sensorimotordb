@@ -28,6 +28,8 @@
     var condition_trials=new Map();
     var condition_trial_events=new Map();
     var conditions=new Map();
+    var realigned_condition_spikes=new Map();
+    var realigned_condition_trial_events=new Map();
     var event_types=['start'];
 
     function loadedUnitData(resp){
@@ -38,6 +40,7 @@
             $(this).append(compiledTmpl);
         });
         d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
+        dispatch.on("statechange", update);
         var data = {};
         var args = {
             type: "GET",
@@ -151,19 +154,38 @@
                 alert('Couldnt get recording trial!');
         }
 
-        drawPopulationFiringRate('unit-{{ object.id }}', condition_trials, condition_trial_events, event_types, condition_ids, condition_names, 1.0);
+        var align_event = d3.select("#align_event").node().value;
+
         for(var i=0; i<condition_ids.length; i++)
         {
             var condition_id=condition_ids[i];
-            var single_condition_trials=condition_trials.get(condition_id);
-            var single_condition_trial_events=condition_trial_events.get(condition_id);
-            drawRaster('condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
+            realigned_condition_spikes.set(condition_id, realign_spikes(condition_trials.get(condition_id), condition_trial_events.get(condition_id), align_event));
+            realigned_condition_trial_events.set(condition_id, realign_events(condition_trial_events.get(condition_id), align_event));
 
-            drawHistogram('condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
+            var single_condition_trials=realigned_condition_spikes.get(condition_id);
+            var single_condition_trial_events=realigned_condition_trial_events.get(condition_id);
 
-            drawFiringRate('condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
+            drawRaster(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
+
+            drawHistogram(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
+
+            drawFiringRate(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
         }
+        drawPopulationFiringRate('unit-{{ object.id }}', realigned_condition_spikes, realigned_condition_trial_events, event_types, condition_ids, condition_names, 1.0);
 
+    }
+
+    function update()
+    {
+        var align_event = d3.select("#align_event").node().value;
+
+        for(var i=0; i<condition_ids.length; i++)
+        {
+            var condition_id=condition_ids[i];
+            realigned_condition_spikes.set(condition_id, realign_spikes(condition_trials.get(condition_id), condition_trial_events.get(condition_id), align_event));
+            realigned_condition_trial_events.set(condition_id, realign_events(condition_trial_events.get(condition_id), align_event));
+        }
+        dispatch.realigned(realigned_condition_spikes, realigned_condition_trial_events);
     }
 
 </script>

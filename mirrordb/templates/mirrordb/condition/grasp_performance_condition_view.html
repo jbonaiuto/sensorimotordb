@@ -29,6 +29,10 @@
 
     var condition_id={{ object.id }};
     var unit_ids=[];
+    var unit_trials=new Map();
+    var unit_trial_events=new Map();
+    var realigned_unit_spikes=new Map();
+    var realigned_unit_trial_events=new Map();
 
     function loadedConditionData(resp){
         resp.video_url_mp4='{{ video_url_mp4 }}';
@@ -38,7 +42,13 @@
             var compiledTmpl = _.template(tmplMarkup, resp);
             $(this).append(compiledTmpl);
         });
+
         d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
+        dispatch.on("statechange", update);
+
+        $('.unit_list').each(function(index, element){
+            $(this).empty();
+        });
 
         var data = {};
         var args = {
@@ -55,8 +65,6 @@
     function loadedRecordingTrialData(resp)
     {
         var unit_labels=[];
-        var unit_trials=new Map();
-        var unit_trial_events=new Map();
         var units=new Map();
         var event_types=['start'];
 
@@ -78,6 +86,13 @@
                     unit_trials.set(unit.id,[]);
                     unit_trial_events.set(unit.id,[]);
                     unit_labels.push('Unit '+unit.id);
+                    $('.unit_list').each(function(index, element){
+                        unit.level=3;
+                        unit.idx=i;
+                        var tmplMarkup = $('#unit-template').html();
+                        var compiledTmpl = _.template(tmplMarkup, unit);
+                        $(this).append(compiledTmpl);
+                    });
                 }
 
                 unit_trial_events.get(unit.id).push({
@@ -110,29 +125,37 @@
                 }
             }
         }
-        drawPopulationFiringRate('condition-'+condition_id, unit_trials, unit_trial_events, event_types, unit_ids, unit_labels, 1.0);
 
-        $('.unit_list').each(function(index, element){
-            $(this).empty();
-        });
+        var align_event = d3.select("#align_event").node().value;
+        
         for(var i=0; i<unit_ids.length; i++)
         {
-            var unit=units.get(unit_ids[i]);
-            $('.unit_list').each(function(index, element){
-                unit.level=3;
-                unit.idx=i;
-                var tmplMarkup = $('#unit-template').html();
-                var compiledTmpl = _.template(tmplMarkup, unit);
-                $(this).append(compiledTmpl);
-            });
-            var single_unit_trials=unit_trials.get(unit.id);
-            var single_unit_trial_events=unit_trial_events.get(unit.id);
-            drawRaster('unit-'+unit.id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
+            var unit_id=unit_ids[i];
+            
+            realigned_unit_spikes.set(unit_id, realign_spikes(unit_trials.get(unit_id), unit_trial_events.get(unit_id), align_event));
+            realigned_unit_trial_events.set(unit_id, realign_events(unit_trial_events.get(unit_id), align_event));
+            
+            var single_unit_trials=realigned_unit_spikes.get(unit_id);
+            var single_unit_trial_events=realigned_unit_trial_events.get(unit_id);
+            drawRaster(unit_id, 'unit-'+unit_id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
 
-            drawHistogram('unit-'+unit.id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
+            drawHistogram(unit_id, 'unit-'+unit_id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
 
-            drawFiringRate('unit-'+unit.id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
+            drawFiringRate(unit_id, 'unit-'+unit_id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
         }
+        drawPopulationFiringRate('condition-'+condition_id, realigned_unit_spikes, realigned_unit_trial_events, event_types, unit_ids, unit_labels, 1.0);
+    }
+
+    function update()
+    {
+        var align_event = d3.select("#align_event").node().value;
+        for(var i=0; i<unit_ids.length; i++)
+        {
+            var unit_id=unit_ids[i];
+            realigned_unit_spikes.set(unit_id, realign_spikes(unit_trials.get(unit_id), unit_trial_events.get(unit_id), align_event));
+            realigned_unit_trial_events.set(unit_id, realign_events(unit_trial_events.get(unit_id), align_event));
+        }
+        dispatch.realigned(realigned_unit_spikes, realigned_unit_trial_events);
     }
 </script>
 {% endblock %}

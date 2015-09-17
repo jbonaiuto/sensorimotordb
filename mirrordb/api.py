@@ -71,10 +71,83 @@ class ConditionResource(ModelResource):
             'experiment': ALL_WITH_RELATIONS
         }
 
+    def prepend_urls(self):
+        return [
+            url(r"^(?P<resource_name>%s)/search/?$" % (self._meta.resource_name), self.wrap_view('get_search'), name="api_get_search"),
+            ]
+
+    def get_search(self, request, **kwargs):
+        '''
+        Custom endpoint for search
+        '''
+
+        self.method_check(request, allowed=['get'])
+        self.is_authenticated(request)
+        self.throttle_check(request)
+
+        query = request.GET.get('q', '')
+
+        results = SearchQuerySet().models(Condition).auto_query(query)
+        if not results:
+            results = EmptySearchQuerySet()
+
+        paginator = Paginator(request.GET, results, resource_uri='/mirrordb/api/v1/condition/search/')
+
+        bundles = []
+        for result in paginator.page()['objects']:
+            bundle = self.build_bundle(obj=result.object, request=request)
+            bundles.append(self.full_dehydrate(bundle))
+
+        object_list = {
+            'meta': paginator.page()['meta'],
+            'objects': bundles
+        }
+        object_list['meta']['search_query'] = query
+
+        self.log_throttled_access(request)
+        return self.create_response(request, object_list)
+
+
 class GraspPerformanceConditionResource(ConditionResource):
     class Meta:
         queryset = GraspPerformanceCondition.objects.all().prefetch_related('experiment','recording_trials')
         resource_name = 'grasp_performance_condition'
+
+    def prepend_urls(self):
+        return [
+            url(r"^(?P<resource_name>%s)/search/?$" % (self._meta.resource_name), self.wrap_view('get_search'), name="api_get_search"),
+            ]
+
+    def get_search(self, request, **kwargs):
+        '''
+        Custom endpoint for search
+        '''
+
+        self.method_check(request, allowed=['get'])
+        self.is_authenticated(request)
+        self.throttle_check(request)
+
+        query = request.GET.get('q', '')
+
+        results = SearchQuerySet().models(GraspPerformanceCondition).auto_query(query)
+        if not results:
+            results = EmptySearchQuerySet()
+
+        paginator = Paginator(request.GET, results, resource_uri='/mirrordb/api/v1/grasp_performance_condition/search/')
+
+        bundles = []
+        for result in paginator.page()['objects']:
+            bundle = self.build_bundle(obj=result.object, request=request)
+            bundles.append(self.full_dehydrate(bundle))
+
+        object_list = {
+            'meta': paginator.page()['meta'],
+            'objects': bundles
+        }
+        object_list['meta']['search_query'] = query
+
+        self.log_throttled_access(request)
+        return self.create_response(request, object_list)
 
 
 class GraspObservationConditionResource(ConditionResource):

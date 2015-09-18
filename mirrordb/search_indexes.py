@@ -61,3 +61,19 @@ class ConditionIndex(indexes.SearchIndex, indexes.Indexable):
     def index_queryset(self, using=None):
         """Used when the entire index for model is updated."""
         return self.get_model().objects.all()
+
+
+class ExperimentIndex(indexes.SearchIndex, indexes.Indexable):
+    text = indexes.CharField(document=True, use_template=True)
+    title=indexes.CharField(model_attr='title')
+    brief_description=indexes.CharField(model_attr='brief_description')
+    collator_last_name=indexes.CharField(model_attr='collator__last_name')
+    collator_first_name=indexes.CharField(model_attr='collator__first_name')
+    collator_username=indexes.CharField(model_attr='collator__username')
+
+    def get_model(self):
+        return Experiment
+
+    def index_queryset(self, using=None):
+        """Used when the entire index for model is updated."""
+        return self.get_model().objects.all()

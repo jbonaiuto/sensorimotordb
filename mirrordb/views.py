@@ -1,5 +1,6 @@
 from django.contrib.sites.shortcuts import get_current_site
-from django.views.generic import DetailView
+from django.views.generic import DetailView, View, TemplateView
+from django.views.generic.base import TemplateResponseMixin
 import os
 from mirrordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment
 from uscbp import settings
@@ -35,3 +36,6 @@ class UnitDetailView(DetailView):
 class ExperimentDetailView(DetailView):
     model = Experiment
     template_name = 'mirrordb/experiment/experiment_view.html'
+
+class SearchView(TemplateView):
+    template_name = 'mirrordb/search.html'

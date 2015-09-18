@@ -1,0 +1,112 @@
+{% extends "base_generic.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>MirrorDB - View Experiment: {{ object.title }}</title>
+<script type="text/javascript" src="{% static 'mirrordb/js/jquery-1.10.1.js' %}"></script>
+<script type="text/javascript" src="{% static 'mirrordb/js/d3.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'mirrordb/js/underscore-min.js' %}"></script>
+<script type="text/javascript" src="{% static 'mirrordb/js/neural_data_functions.js' %}"></script>
+<script type="text/javascript" src="{% static 'mirrordb/js/neural_data_plot.js' %}"></script>
+<script>
+
+    $(document).ready(function(){
+        $('#id_q').keypress(function (e) {
+            if (e.which == 13) {
+                submitSearch();
+                return false;
+            }
+        });
+    });
+
+    function search(query, list_class, type, success_func)
+    {
+        $('.'+list_class).each(function(index, element){
+            $(this).empty();
+        });
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/mirrordb/api/v1/"+type+"/search/?format=json&q="+query,
+            data: data,
+            success: success_func,
+            error: function(data) {
+                alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+
+    function submitSearch()
+    {
+        var searchQuery=$('#id_q').val();
+        $('.experiment_results').hide();
+        search(searchQuery, 'experiment_list', 'experiment', loadedExperiments);
+        $('.grasp_observation_condition_results').hide();
+        search(searchQuery, 'grasp_observation_condition_list', 'grasp_observation_condition', loadedGraspObservationConditions);
+        $('.grasp_performance_condition_results').hide();
+        search(searchQuery, 'grasp_performance_condition_list', 'grasp_performance_condition', loadedGraspPerformanceConditions);
+        return false;
+    }
+
+    function loadedResults(resp, results_class, list_class, template_id)
+    {
+        if(resp.objects.length>0)
+            $('.'+results_class).show();
+
+        for(var i=0; i<resp.objects.length; i++)
+        {
+            // Add condition to list
+            var obj=resp.objects[i];
+            $('.'+list_class).each(function(index, element){
+                obj.level=3;
+                obj.idx=i;
+                var tmplMarkup = $('#'+template_id).html();
+                var compiledTmpl = _.template(tmplMarkup, obj);
+                $(this).append(compiledTmpl);
+            });
+        }
+    }
+
+    function loadedExperiments(resp)
+    {
+        loadedResults(resp, 'experiment_results', 'experiment_list', 'experiment-template');
+    }
+
+    function loadedGraspObservationConditions(resp)
+    {
+        loadedResults(resp, 'grasp_observation_condition_results', 'grasp_observation_condition_list', 'condition-template');
+    }
+
+    function loadedGraspPerformanceConditions(resp)
+    {
+        loadedResults(resp, 'grasp_performance_condition_results', 'grasp_performance_condition_list', 'condition-template');
+    }
+</script>
+{% endblock %}
+{% block content %}
+<div id="main" class="main">
+    <h1>Search</h1>
+    <form>
+        <input id="id_q" name="q" onkeydown="keydown(e){if (e.keyCode == 13) { submitSearch(); }}"/>
+        <input type="button" id="id_submit" name="submit" value="Search" onclick="return submitSearch();">
+    </form>
+    <div class="experiment_results" style="display: none;">
+        <h2>Experiments</h2>
+        <div class="experiment_list"></div>
+    </div>
+    <div class="grasp_observation_condition_results" style="display: none;">
+        <h2>Grasp Observation Conditions</h2>
+        <div class="grasp_observation_condition_list"></div>
+    </div>
+    <div class="grasp_performance_condition_results" style="display: none;">
+        <h2>Grasp Performance Conditions</h2>
+        <div class="grasp_performance_condition_list"></div>
+    </div>
+    <div class="unit_results" style="display: none;">
+        <h2>Units</h2>
+        <div class="unit_list"></div>
+    </div>
+</div>
+{% include "mirrordb/experiment/experiment_list_item_template.html" %}
+{% include "mirrordb/condition/condition_list_item_template.html" %}
+{% include "mirrordb/unit/unit_list_item_template.html" %}
+{% endblock %}

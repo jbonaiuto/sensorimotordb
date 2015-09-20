@@ -35,8 +35,11 @@
         $.ajax(args);
     }
 
+    var searches_left=0;
+    
     function submitSearch()
     {
+        searches_left=4;
         var searchQuery=$('#id_q').val();
         $('.experiment_results').hide();
         search(searchQuery, 'experiment_list', 'experiment', loadedExperiments);
@@ -44,6 +47,8 @@
         search(searchQuery, 'grasp_observation_condition_list', 'grasp_observation_condition', loadedGraspObservationConditions);
         $('.grasp_performance_condition_results').hide();
         search(searchQuery, 'grasp_performance_condition_list', 'grasp_performance_condition', loadedGraspPerformanceConditions);
+        $('.unit_results').hide();
+        search(searchQuery, 'unit_list', 'unit', loadedUnits);
         return false;
     }
 
@@ -69,24 +74,55 @@
     function loadedExperiments(resp)
     {
         loadedResults(resp, 'experiment_results', 'experiment_list', 'experiment-template');
+        searches_left-=1;
+        if(searches_left==0)
+            highlight(resp.meta.search_query);
     }
 
     function loadedGraspObservationConditions(resp)
     {
         loadedResults(resp, 'grasp_observation_condition_results', 'grasp_observation_condition_list', 'condition-template');
+        searches_left-=1;
+        if(searches_left==0)
+            highlight(resp.meta.search_query);
     }
 
     function loadedGraspPerformanceConditions(resp)
     {
         loadedResults(resp, 'grasp_performance_condition_results', 'grasp_performance_condition_list', 'condition-template');
+        searches_left-=1;
+        if(searches_left==0)
+            highlight(resp.meta.search_query);
     }
+
+    function loadedUnits(resp)
+    {
+        loadedResults(resp, 'unit_results', 'unit_list', 'unit-template');
+        searches_left-=1;
+        if(searches_left==0)
+            highlight(resp.meta.search_query);
+    }
+
+    RegExp.escape = function(str)
+    {
+        var specials = /[.*+?|()\[\]{}\\$^]/g; // .*+?|()[]{}\$^
+        return str.replace(specials, "\\$&");
+    }
+
+    /* highlight matches text */
+    var highlight = function (string) {
+        $(".search_result").each(function () {
+            $(this).html($(this).html().replace(new RegExp('('+RegExp.escape(string)+')', 'gi'), '<em>$1</em>'));
+        });
+    };
+
 </script>
 {% endblock %}
 {% block content %}
 <div id="main" class="main">
     <h1>Search</h1>
     <form>
-        <input id="id_q" name="q" onkeydown="keydown(e){if (e.keyCode == 13) { submitSearch(); }}"/>
+        <input id="id_q" name="q"/>
         <input type="button" id="id_submit" name="submit" value="Search" onclick="return submitSearch();">
     </form>
     <div class="experiment_results" style="display: none;">
@@ -106,7 +142,7 @@
         <div class="unit_list"></div>
     </div>
 </div>
-{% include "mirrordb/experiment/experiment_list_item_template.html" %}
-{% include "mirrordb/condition/condition_list_item_template.html" %}
-{% include "mirrordb/unit/unit_list_item_template.html" %}
+{% include "mirrordb/experiment/experiment_search_result_template.html" %}
+{% include "mirrordb/condition/condition_search_result_template.html" %}
+{% include "mirrordb/unit/unit_search_result_template.html" %}
 {% endblock %}

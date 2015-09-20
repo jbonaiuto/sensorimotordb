@@ -84,3 +84,9 @@
 .even_row {
     background: #ffffff;
 }
+
+.search_result em {
+    background:#ff6;
+    font-weight:bold;
+    font-style:normal;
+}

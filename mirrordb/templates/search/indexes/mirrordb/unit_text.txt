@@ -1,0 +1,4 @@
+{{ object.type }}
+{{ object.area.name }}
+{{ object.area.abbreviation }}
+{{ object.area.nomenclature.species_name }}

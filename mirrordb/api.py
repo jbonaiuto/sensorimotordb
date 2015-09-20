@@ -87,7 +87,7 @@ class ExperimentResource(SearchResourceMixin, ModelResource):
         authorization= Authorization()
 
 
-class UnitResource(ModelResource):
+class UnitResource(SearchResourceMixin, ModelResource):
     area = fields.ForeignKey(BrainRegionResource, 'area',full=True)
 
     class Meta:

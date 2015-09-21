@@ -13,9 +13,9 @@
         var data = {};
         var args = {
             type: "GET",
-            url: "/mirrordb/api/v1/unit/{{ object.id }}/?limit=0&format=json",
+            url: "/mirrordb/api/v1/condition/?recording_trials__unit_recordings__unit={{ object.id }}&limit=0&format=json",
             data: data,
-            success: loadedUnitData,
+            success: loadedConditionData,
             error: function(data) {
                 alert("Something went wrong!");
             } };
@@ -31,6 +31,41 @@
     var realigned_condition_spikes=new Map();
     var realigned_condition_trial_events=new Map();
     var event_types=['start'];
+    var recording_trial_map=new Map();
+    var condition_map=new Map();
+    var condition_trial_map=new Map();
+
+    function loadedConditionData(resp){
+        for(var i=0; i<resp.objects.length; i++)
+            condition_map.set(resp.objects[i].resource_uri, resp.objects[i]);
+
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/mirrordb/api/v1/recording_trial/?unit_recordings__unit={{ object.id }}&limit=0&format=json",
+            data: data,
+            success: loadedRecordingTrialData,
+            error: function(data) {
+                alert("Something went wrong!");
+            } };
+        $.ajax(args);
+
+    }
+    function loadedRecordingTrialData(resp)
+    {
+        for(var i=0; i<resp.objects.length; i++)
+            recording_trial_map.set(resp.objects[i].resource_uri, resp.objects[i]);
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/mirrordb/api/v1/unit/{{ object.id }}/?limit=0&format=json",
+            data: data,
+            success: loadedUnitData,
+            error: function(data) {
+                alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
 
     function loadedUnitData(resp){
         $('.unit_info').each(function(index, element){
@@ -53,27 +88,7 @@
         $.ajax(args);
     }
 
-    var recording_trial_map=new Map();
 
-    function getRecordingTrial(resource_uri)
-    {
-        if(recording_trial_map.get(resource_uri)==null)
-            recording_trial_map.set(resource_uri, loadObject(resource_uri));
-        var recording_trial=recording_trial_map.get(resource_uri);
-        return recording_trial;
-    }
-
-    var condition_map=new Map();
-
-    function getCondition(resource_uri)
-    {
-        if(condition_map.get(resource_uri)==null)
-            condition_map.set(resource_uri, loadObject(resource_uri));
-        var condition=condition_map.get(resource_uri);
-        return condition;
-    }
-
-    var condition_trial_map=new Map();
     function loadedUnitRecordingData(resp)
     {
         $('.condition_list').each(function(index, element){
@@ -88,10 +103,10 @@
             // Current unit recording
             var unit_recording=resp.objects[i];
 
-            var recording_trial=getRecordingTrial(unit_recording.trial);
+            var recording_trial=recording_trial_map.get(unit_recording.trial);
             if(recording_trial!=null)
             {
-                var condition=getCondition(recording_trial.condition);
+                var condition=condition_map.get(recording_trial.condition);
                 if(condition!=null)
                 {
                     if(condition_ids.indexOf(condition.id)<0)

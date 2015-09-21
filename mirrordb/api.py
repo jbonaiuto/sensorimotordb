@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from tastypie import fields
+from tastypie.cache import SimpleCache
 from tastypie.constants import ALL, ALL_WITH_RELATIONS
 from tastypie.resources import ModelResource
 from tastypie.authorization import Authorization
@@ -107,6 +108,7 @@ class ConditionResource(SearchResourceMixin, ModelResource):
             'recording_trials': ALL_WITH_RELATIONS,
             'experiment': ALL_WITH_RELATIONS
         }
+        cache = SimpleCache(timeout=10)
 
 
 class GraspPerformanceConditionResource(ConditionResource):
@@ -141,6 +143,7 @@ class RecordingTrialResource(ModelResource):
             'unit_recordings': ALL_WITH_RELATIONS,
             'condition': ALL_WITH_RELATIONS
         }
+        cache = SimpleCache(timeout=10)
 
 
 class UnitRecordingResource(ModelResource):
@@ -154,6 +157,7 @@ class UnitRecordingResource(ModelResource):
             'unit': ALL_WITH_RELATIONS,
             'trial': ALL_WITH_RELATIONS
         }
+        cache = SimpleCache(timeout=10)
 
 class FullRecordingTrialResource(ModelResource):
     events=fields.ToManyField(EventResource, 'events', full=True, null=True)
@@ -167,3 +171,4 @@ class FullRecordingTrialResource(ModelResource):
             'unit_recordings': ALL_WITH_RELATIONS,
             'condition': ALL_WITH_RELATIONS
         }
+        cache = SimpleCache(timeout=10)

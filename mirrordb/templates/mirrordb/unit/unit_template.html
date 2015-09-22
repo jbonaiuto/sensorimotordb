@@ -1,3 +1,4 @@
+{% load staticfiles %}
 <script type="text/html" id="unit-template">
     <div id="unit-<%= id %>">
         <table>
@@ -14,4 +15,16 @@
             </tr>
         </table>
     </div>
+    <form>
+        <label for="binwidth">Bin width</label>
+        <select id="binwidth">
+            <option selected value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+        </select>
+        <input id="align_event" type="hidden" value="start"/>
+    </form>
+    <div id="unit-<%= id %>-plots" style="text-align:center"><img src="{% static 'mirrordb/img/loading.gif' %}"></div>
 </script>

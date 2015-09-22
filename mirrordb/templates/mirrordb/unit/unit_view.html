@@ -10,6 +10,7 @@
 <script>
 
     $(document).ready(function(){
+        $('<img src="{% static 'mirrordb/img/loading.gif' %}"/>');
         var data = {};
         var args = {
             type: "GET",
@@ -180,13 +181,15 @@
             var single_condition_trials=realigned_condition_spikes.get(condition_id);
             var single_condition_trial_events=realigned_condition_trial_events.get(condition_id);
 
+            $('#condition-'+condition_id+'-plots').empty();
             drawRaster(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
 
             drawHistogram(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
 
             drawFiringRate(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
         }
-        drawPopulationFiringRate('unit-{{ object.id }}', realigned_condition_spikes, realigned_condition_trial_events, event_types, condition_ids, condition_names, 1.0);
+        $('#unit-{{ object.id }}-plots').empty();
+        drawPopulationFiringRate('unit-{{ object.id }}-plots', realigned_condition_spikes, realigned_condition_trial_events, event_types, condition_ids, condition_names, 1.0);
 
     }
 
@@ -208,17 +211,6 @@
 {% block content %}
 <div id="main" class="main">
     <div class="unit_info"></div>
-    <form>
-        <label for="binwidth">Bin width</label>
-        <select id="binwidth">
-            <option selected value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-            <option value="200">200</option>
-        </select>
-        <input id="align_event" type="hidden" value="start"/>
-    </form>
     <h2>Conditions</h2>
     <div class="condition_list"></div>
 </div>

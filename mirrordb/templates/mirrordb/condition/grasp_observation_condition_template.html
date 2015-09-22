@@ -1,3 +1,4 @@
+{% load staticfiles %}
 <script type="text/html" id="grasp_observation_condition-template">
     <div id="condition-<%= id %>">
         <table>
@@ -62,5 +63,6 @@
             </select>
             <input id="align_event" type="hidden" value="start"/>
         </form>
+        <div id="condition-<%= id %>-plots" style="text-align:center"><img src="{% static 'mirrordb/img/loading.gif' %}"></div>
     </div>
 </script>

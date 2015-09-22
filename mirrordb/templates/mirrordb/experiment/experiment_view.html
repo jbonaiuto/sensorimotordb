@@ -10,6 +10,7 @@
 <script>
 
     $(document).ready(function(){
+        $('<img src="{% static 'mirrordb/img/loading.gif' %}"/>');
         var data = {};
         var args = {
             type: "GET",
@@ -237,6 +238,7 @@
                     realign_events(condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
         }
 
+        $('#condition-'+condition_id+'-plots').empty();
         var rate_svg=drawPopulationFiringRate('condition-'+condition_id+'-plots', realigned_condition_unit_spikes.get(condition_id),
                 realigned_condition_unit_trial_events.get(condition_id), event_types,
                 condition_unit_ids.get(condition_id), condition_unit_labels, 0.5);
@@ -258,6 +260,7 @@
             for(var i=0; i<condition_unit_ids.get(condition_id).length; i++)
             {
                 var unit_id=condition_unit_ids.get(condition_id)[i];
+                $('#unit-'+unit_id+'-plots').empty();
                 var rate_svg=drawPopulationFiringRate('unit-'+unit_id+'-plots', realigned_unit_condition_spikes.get(unit_id),
                         realigned_unit_condition_trial_events.get(unit_id), event_types, condition_ids,
                         condition_names, 0.5);

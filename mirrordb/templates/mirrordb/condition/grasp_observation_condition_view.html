@@ -15,6 +15,7 @@
     document.createElement('video');document.createElement('audio');document.createElement('track');
 
     $(document).ready(function(){
+        $('<img src="{% static 'mirrordb/img/loading.gif' %}"/>');
         var data = {};
         var args = {
             type: "GET",
@@ -137,15 +138,16 @@
             
             var single_unit_trials=realigned_unit_spikes.get(unit_id);
             var single_unit_trial_events=realigned_unit_trial_events.get(unit_id);
-            
+
+            $('#unit-'+unit_id+'-plots').empty();
             drawRaster(unit_id, 'unit-'+unit_id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
 
             drawHistogram(unit_id, 'unit-'+unit_id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
 
             drawFiringRate(unit_id, 'unit-'+unit_id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
         }
-        
-        drawPopulationFiringRate('condition-'+condition_id, realigned_unit_spikes, realigned_unit_trial_events, event_types, unit_ids, unit_labels, 1.0);
+        $('#condition-'+condition_id+'-plots').empty();
+        drawPopulationFiringRate('condition-'+condition_id+'-plots', realigned_unit_spikes, realigned_unit_trial_events, event_types, unit_ids, unit_labels, 1.0);
     }
 
     function update()

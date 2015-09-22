@@ -55,6 +55,7 @@ class UserResource(ModelResource):
         queryset = User.objects.all()
         resource_name = 'user'
         authorization = Authorization()
+        cache = SimpleCache(timeout=10)
 
 
 class SpeciesResource(ModelResource):
@@ -62,6 +63,7 @@ class SpeciesResource(ModelResource):
         queryset = Species.objects.all()
         resource_name = 'species'
         authorization= Authorization()
+        cache = SimpleCache(timeout=10)
 
 
 class BrainRegionResource(ModelResource):
@@ -69,6 +71,7 @@ class BrainRegionResource(ModelResource):
         queryset = BrainRegion.objects.all()
         resource_name = 'brain_region'
         authorization= Authorization()
+        cache = SimpleCache(timeout=10)
 
 
 class NomenclatureResource(ModelResource):
@@ -78,6 +81,7 @@ class NomenclatureResource(ModelResource):
         queryset=Nomenclature.objects.all().prefetch_related('species')
         resource_name='nomenclature'
         authorization=Authorization()
+        cache = SimpleCache(timeout=10)
 
 
 class ExperimentResource(SearchResourceMixin, ModelResource):
@@ -86,6 +90,7 @@ class ExperimentResource(SearchResourceMixin, ModelResource):
         queryset = Experiment.objects.all().prefetch_related('collator')
         resource_name = 'experiment'
         authorization= Authorization()
+        cache = SimpleCache(timeout=10)
 
 
 class UnitResource(SearchResourceMixin, ModelResource):
@@ -95,6 +100,7 @@ class UnitResource(SearchResourceMixin, ModelResource):
         queryset = Unit.objects.all().prefetch_related('area')
         resource_name = 'unit'
         authorization= Authorization()
+        cache = SimpleCache(timeout=10)
 
 
 class ConditionResource(SearchResourceMixin, ModelResource):
@@ -115,6 +121,7 @@ class GraspPerformanceConditionResource(ConditionResource):
     class Meta:
         queryset = GraspPerformanceCondition.objects.all().prefetch_related('experiment','recording_trials')
         resource_name = 'grasp_performance_condition'
+        cache = SimpleCache(timeout=10)
 
 
 class GraspObservationConditionResource(ConditionResource):
@@ -122,6 +129,7 @@ class GraspObservationConditionResource(ConditionResource):
     class Meta:
         queryset = GraspObservationCondition.objects.all().prefetch_related('experiment','recording_trials','demonstrator_species')
         resource_name = 'grasp_observation_condition'
+        cache = SimpleCache(timeout=10)
 
 
 class EventResource(ModelResource):
@@ -129,6 +137,7 @@ class EventResource(ModelResource):
         queryset = Event.objects.all()
         resource_name = 'event'
         authorization= Authorization()
+        cache = SimpleCache(timeout=10)
 
 
 class RecordingTrialResource(ModelResource):

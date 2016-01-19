@@ -1,2 +1,2 @@
 # mirrordb
-Mirror Neuron Database
+SensoriMotorDatabase

@@ -794,6 +794,8 @@ def import_bonini_data(nex_files, db='default'):
     pretrial_padding=0.25
     posttrial_padding=0.25
 
+    overall_trial_idx=1
+
     for nex_idx, nex_file in enumerate(nex_files):
         r=io.NeuroExplorerIO(filename=nex_file)
         block=r.read(cascade=True, lazy=False)[0]
@@ -946,11 +948,11 @@ def import_bonini_data(nex_files, db='default'):
                     for trial_idx in range(len(trial_start_times)):
                         # create trial
                         trial=RecordingTrial()
-                        trial.trial_number=trial_idx+1
+                        trial.trial_number=overall_trial_idx
                         trial.start_time=trial_start_times[trial_idx]
                         trial.end_time=trial_end_times[trial_idx]
                         trial.save(using=db)
-                        print('importing trial %d, %.3f-%.3f' % (trial_idx,trial.start_time,trial.end_time))
+                        print('importing trial %d, %.3f-%.3f' % (overall_trial_idx,trial.start_time,trial.end_time))
 
                         for event,evt_idx in events.iteritems():
                             for evt_time in seg.eventarrays[evt_idx].times:
@@ -1010,6 +1012,8 @@ def import_bonini_data(nex_files, db='default'):
                             if len(spike_times)>0:
                                 unit_recording.spike_times=','.join([str(x) for x in sorted(spike_times)])
                             unit_recording.save(using=db)
+
+                        overall_trial_idx=overall_trial_idx+1
     return exp
 
 

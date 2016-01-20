@@ -111,9 +111,12 @@
 
     /* highlight matches text */
     var highlight = function (string) {
-        $(".search_result").each(function () {
-            $(this).html($(this).html().replace(new RegExp('('+RegExp.escape(string)+')', 'gi'), '<em>$1</em>'));
-        });
+        if(string.length>0)
+        {
+            $(".search_result").each(function () {
+                $(this).html($(this).html().replace(new RegExp('('+RegExp.escape(string)+')', 'gi'), '<em>$1</em>'));
+            });
+        }
     };
 
 </script>

@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from tastypie import fields
-from tastypie.authentication import BasicAuthentication
+from tastypie.authentication import SessionAuthentication
 from tastypie.cache import SimpleCache
 from tastypie.constants import ALL_WITH_RELATIONS
 from tastypie.resources import ModelResource
@@ -54,7 +54,7 @@ class UserResource(ModelResource):
         queryset = User.objects.all()
         resource_name = 'user'
         authorization = DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -63,7 +63,7 @@ class SpeciesResource(ModelResource):
         queryset = Species.objects.all()
         resource_name = 'species'
         authorization= DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -72,7 +72,7 @@ class BrainRegionResource(ModelResource):
         queryset = BrainRegion.objects.all()
         resource_name = 'brain_region'
         authorization= DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -83,7 +83,7 @@ class NomenclatureResource(ModelResource):
         queryset=Nomenclature.objects.all().prefetch_related('species')
         resource_name='nomenclature'
         authorization=DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -93,7 +93,7 @@ class ExperimentResource(SearchResourceMixin, ModelResource):
         queryset = Experiment.objects.all().prefetch_related('collator')
         resource_name = 'experiment'
         authorization = DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -104,7 +104,7 @@ class UnitResource(SearchResourceMixin, ModelResource):
         queryset = Unit.objects.all().prefetch_related('area')
         resource_name = 'unit'
         authorization= DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -115,7 +115,7 @@ class ConditionResource(SearchResourceMixin, ModelResource):
         queryset = Condition.objects.all().prefetch_related('experiment','recording_trials')
         resource_name = 'condition'
         authorization= DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         filtering={
             'recording_trials': ALL_WITH_RELATIONS,
             'experiment': ALL_WITH_RELATIONS
@@ -128,7 +128,7 @@ class GraspPerformanceConditionResource(ConditionResource):
         queryset = GraspPerformanceCondition.objects.all().prefetch_related('experiment','recording_trials')
         resource_name = 'grasp_performance_condition'
         authorization= DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -138,7 +138,7 @@ class GraspObservationConditionResource(ConditionResource):
         queryset = GraspObservationCondition.objects.all().prefetch_related('experiment','recording_trials','demonstrator_species')
         resource_name = 'grasp_observation_condition'
         authorization= DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -147,7 +147,7 @@ class EventResource(ModelResource):
         queryset = Event.objects.all()
         resource_name = 'event'
         authorization= DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -159,7 +159,7 @@ class RecordingTrialResource(ModelResource):
         queryset = RecordingTrial.objects.all().prefetch_related('events','condition','unit_recordings')
         resource_name = 'recording_trial'
         authorization= DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         filtering={
             'unit_recordings': ALL_WITH_RELATIONS,
             'condition': ALL_WITH_RELATIONS
@@ -174,7 +174,7 @@ class UnitRecordingResource(ModelResource):
         queryset = UnitRecording.objects.all().prefetch_related('unit','trial')
         resource_name = 'unit_recording'
         authorization= DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         filtering={
             'unit': ALL_WITH_RELATIONS,
             'trial': ALL_WITH_RELATIONS
@@ -189,7 +189,7 @@ class FullRecordingTrialResource(ModelResource):
         queryset = RecordingTrial.objects.all().prefetch_related('events','condition','unit_recordings')
         resource_name = 'full_recording_trial'
         authorization= DjangoAuthorization()
-        authentication = BasicAuthentication()
+        authentication = SessionAuthentication()
         filtering={
             'unit_recordings': ALL_WITH_RELATIONS,
             'condition': ALL_WITH_RELATIONS

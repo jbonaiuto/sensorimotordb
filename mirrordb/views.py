@@ -1,14 +1,25 @@
+from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.views.generic import DetailView, TemplateView
 import os
 from mirrordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment
 from uscbp import settings
 
-class IndexView(TemplateView):
+class LoginRequiredMixin(object):
+    redirect_field_name = 'next'
+    login_url = '/login/'
+
+    def dispatch(self, request, *args, **kwargs):
+        return login_required(redirect_field_name=self.redirect_field_name,
+            login_url=self.login_url)(
+            super(LoginRequiredMixin, self).dispatch
+        )(request, *args, **kwargs)
+
+class IndexView(LoginRequiredMixin, TemplateView):
     template_name = 'mirrordb/index.html'
 
 
-class ConditionDetailView(DetailView):
+class ConditionDetailView(LoginRequiredMixin, DetailView):
     model=Condition
     permission_required = 'view'
 
@@ -32,13 +43,15 @@ class ConditionDetailView(DetailView):
         return context
 
 
-class UnitDetailView(DetailView):
+class UnitDetailView(LoginRequiredMixin, DetailView):
     model = Unit
     template_name = 'mirrordb/unit/unit_view.html'
 
-class ExperimentDetailView(DetailView):
+
+class ExperimentDetailView(LoginRequiredMixin, DetailView):
     model = Experiment
     template_name = 'mirrordb/experiment/experiment_view.html'
 
-class SearchView(TemplateView):
+
+class SearchView(LoginRequiredMixin, TemplateView):
     template_name = 'mirrordb/search.html'

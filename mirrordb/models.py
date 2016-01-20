@@ -133,7 +133,7 @@ class Experiment(models.Model):
         f.attrs['subject_species']=np.string_(self.subject_species.__unicode__())
 
         f_conditions=f.create_group('conditions')
-        for condition in Condition.objects.filter(sed=self):
+        for condition in Condition.objects.filter(experiment=self):
             f_condition=f_conditions.create_group(str(condition.id))
 
             if condition.type=='grasp_observe':
@@ -143,14 +143,13 @@ class Experiment(models.Model):
             condition.export(f_condition)
 
         f_units=f.create_group('units')
-        for unit in Unit.objects.filter(unitrecording__trial__condition__sed=self).distinct():
+        for unit in Unit.objects.filter(unitrecording__trial__condition__experiment=self).distinct():
             f_unit=f_units.create_group(str(unit.id))
             unit.export(f_unit)
 
         f_trials=f.create_group('trials')
-        for trial in RecordingTrial.objects.filter(condition__sed=self).distinct():
-            f_trial=f_trials.create_group('condition_%d.unit_%d.trial_%d' % (trial.condition.id, trial.unit.id,
-                                                                             trial.trial_number))
+        for trial in RecordingTrial.objects.filter(condition__experiment=self).distinct():
+            f_trial=f_trials.create_group('condition_%d.trial_%d.unit_%d' % (trial.condition.id, trial.trial_number, ))
             trial.export(f_trial)
 
         f.close()

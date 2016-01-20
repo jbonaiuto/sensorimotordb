@@ -1,8 +1,8 @@
 # urls.py
-from django.conf.urls import patterns, include
+from django.conf.urls import patterns, include, url
 from tastypie.api import Api
 from mirrordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource
-from mirrordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView
+from mirrordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())
@@ -25,4 +25,5 @@ urlpatterns = patterns('',
     (r'^experiment/(?P<pk>\d+)/$', ExperimentDetailView.as_view(), {}, 'experiment_view'),
     (r'^condition/(?P<pk>\d+)/$', ConditionDetailView.as_view(), {}, 'condition_view'),
     (r'^unit/(?P<pk>\d+)/$', UnitDetailView.as_view(), {}, 'unit_view'),
+    url(r'', IndexView.as_view(), {}, 'index'),
 )

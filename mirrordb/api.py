@@ -1,17 +1,15 @@
 from django.contrib.auth.models import User
 from tastypie import fields
+from tastypie.authentication import BasicAuthentication
 from tastypie.cache import SimpleCache
-from tastypie.constants import ALL, ALL_WITH_RELATIONS
+from tastypie.constants import ALL_WITH_RELATIONS
 from tastypie.resources import ModelResource
-from tastypie.authorization import Authorization
+from tastypie.authorization import DjangoAuthorization
 from tastypie.paginator import Paginator
-from tastypie.exceptions import BadRequest
 from mirrordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature
 
-from django.conf.urls import patterns, url, include
-from django.http import Http404
+from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
-from tastypie.utils import trailing_slash
 
 class SearchResourceMixin:
     def prepend_urls(self):
@@ -50,11 +48,13 @@ class SearchResourceMixin:
         self.log_throttled_access(request)
         return self.create_response(request, object_list)
 
+
 class UserResource(ModelResource):
     class Meta:
         queryset = User.objects.all()
         resource_name = 'user'
-        authorization = Authorization()
+        authorization = DjangoAuthorization()
+        authentication = BasicAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -62,7 +62,8 @@ class SpeciesResource(ModelResource):
     class Meta:
         queryset = Species.objects.all()
         resource_name = 'species'
-        authorization= Authorization()
+        authorization= DjangoAuthorization()
+        authentication = BasicAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -70,7 +71,8 @@ class BrainRegionResource(ModelResource):
     class Meta:
         queryset = BrainRegion.objects.all()
         resource_name = 'brain_region'
-        authorization= Authorization()
+        authorization= DjangoAuthorization()
+        authentication = BasicAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -80,7 +82,8 @@ class NomenclatureResource(ModelResource):
     class Meta:
         queryset=Nomenclature.objects.all().prefetch_related('species')
         resource_name='nomenclature'
-        authorization=Authorization()
+        authorization=DjangoAuthorization()
+        authentication = BasicAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -89,7 +92,8 @@ class ExperimentResource(SearchResourceMixin, ModelResource):
     class Meta:
         queryset = Experiment.objects.all().prefetch_related('collator')
         resource_name = 'experiment'
-        authorization= Authorization()
+        authorization = DjangoAuthorization()
+        authentication = BasicAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -99,7 +103,8 @@ class UnitResource(SearchResourceMixin, ModelResource):
     class Meta:
         queryset = Unit.objects.all().prefetch_related('area')
         resource_name = 'unit'
-        authorization= Authorization()
+        authorization= DjangoAuthorization()
+        authentication = BasicAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -109,7 +114,8 @@ class ConditionResource(SearchResourceMixin, ModelResource):
     class Meta:
         queryset = Condition.objects.all().prefetch_related('experiment','recording_trials')
         resource_name = 'condition'
-        authorization= Authorization()
+        authorization= DjangoAuthorization()
+        authentication = BasicAuthentication()
         filtering={
             'recording_trials': ALL_WITH_RELATIONS,
             'experiment': ALL_WITH_RELATIONS
@@ -121,6 +127,8 @@ class GraspPerformanceConditionResource(ConditionResource):
     class Meta:
         queryset = GraspPerformanceCondition.objects.all().prefetch_related('experiment','recording_trials')
         resource_name = 'grasp_performance_condition'
+        authorization= DjangoAuthorization()
+        authentication = BasicAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -129,6 +137,8 @@ class GraspObservationConditionResource(ConditionResource):
     class Meta:
         queryset = GraspObservationCondition.objects.all().prefetch_related('experiment','recording_trials','demonstrator_species')
         resource_name = 'grasp_observation_condition'
+        authorization= DjangoAuthorization()
+        authentication = BasicAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -136,7 +146,8 @@ class EventResource(ModelResource):
     class Meta:
         queryset = Event.objects.all()
         resource_name = 'event'
-        authorization= Authorization()
+        authorization= DjangoAuthorization()
+        authentication = BasicAuthentication()
         cache = SimpleCache(timeout=10)
 
 
@@ -147,7 +158,8 @@ class RecordingTrialResource(ModelResource):
     class Meta:
         queryset = RecordingTrial.objects.all().prefetch_related('events','condition','unit_recordings')
         resource_name = 'recording_trial'
-        authorization= Authorization()
+        authorization= DjangoAuthorization()
+        authentication = BasicAuthentication()
         filtering={
             'unit_recordings': ALL_WITH_RELATIONS,
             'condition': ALL_WITH_RELATIONS
@@ -161,7 +173,8 @@ class UnitRecordingResource(ModelResource):
     class Meta:
         queryset = UnitRecording.objects.all().prefetch_related('unit','trial')
         resource_name = 'unit_recording'
-        authorization= Authorization()
+        authorization= DjangoAuthorization()
+        authentication = BasicAuthentication()
         filtering={
             'unit': ALL_WITH_RELATIONS,
             'trial': ALL_WITH_RELATIONS
@@ -175,7 +188,8 @@ class FullRecordingTrialResource(ModelResource):
     class Meta:
         queryset = RecordingTrial.objects.all().prefetch_related('events','condition','unit_recordings')
         resource_name = 'full_recording_trial'
-        authorization= Authorization()
+        authorization= DjangoAuthorization()
+        authentication = BasicAuthentication()
         filtering={
             'unit_recordings': ALL_WITH_RELATIONS,
             'condition': ALL_WITH_RELATIONS

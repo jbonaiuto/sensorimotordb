@@ -1,9 +1,12 @@
 from django.contrib.sites.shortcuts import get_current_site
-from django.views.generic import DetailView, View, TemplateView
-from django.views.generic.base import TemplateResponseMixin
+from django.views.generic import DetailView, TemplateView
 import os
 from mirrordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment
 from uscbp import settings
+
+class IndexView(TemplateView):
+    template_name = 'mirrordb/index.html'
+
 
 class ConditionDetailView(DetailView):
     model=Condition

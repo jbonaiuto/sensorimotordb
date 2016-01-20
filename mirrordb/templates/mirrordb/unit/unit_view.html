@@ -1,4 +1,4 @@
-{% extends "base_generic.html" %}
+{% extends "base.html" %}
 {% load staticfiles %}
 {% block extrahead %}
 <title>SensoriMotorDB - View Unit: {{ object.id }}</title>
@@ -209,11 +209,9 @@
 </script>
 {% endblock %}
 {% block content %}
-<div id="main" class="main">
     <div class="unit_info"></div>
     <h2>Conditions</h2>
     <div class="condition_list"></div>
-</div>
 {% include "mirrordb/unit/unit_template.html" %}
 {% include "mirrordb/condition/condition_list_item_template.html" %}
 {% endblock %}

@@ -1,4 +1,4 @@
-{% extends "base_generic.html" %}
+{% extends "base.html" %}
 {% load staticfiles %}
 {% block extrahead %}
 <title>SensoriMotorDB - View Experiment: {{ object.title }}</title>
@@ -316,7 +316,6 @@
 </script>
 {% endblock %}
 {% block content %}
-<div id="main" class="main">
     <div class="experiment_info"></div>
     <form>
         <label for="binwidth">Bin width</label>
@@ -333,7 +332,6 @@
     <div class="condition_list"></div>
     <h2>Units</h2>
     <div class="unit_list"></div>
-</div>
 {% include "mirrordb/experiment/experiment_template.html" %}
 {% include "mirrordb/condition/condition_list_item_template.html" %}
 {% include "mirrordb/unit/unit_list_item_template.html" %}

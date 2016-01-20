@@ -7,7 +7,7 @@ from uscbp import settings
 
 class LoginRequiredMixin(object):
     redirect_field_name = 'next'
-    login_url = '/login/'
+    login_url = '/accounts/login/'
 
     def dispatch(self, request, *args, **kwargs):
         return login_required(redirect_field_name=self.redirect_field_name,

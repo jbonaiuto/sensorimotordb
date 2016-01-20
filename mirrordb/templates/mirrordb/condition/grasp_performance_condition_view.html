@@ -1,4 +1,4 @@
-{% extends "base_generic.html" %}
+{% extends "base.html" %}
 {% load staticfiles %}
 {% block extrahead %}
 <title>SensoriMotorDB - View Condition: {{ object.name }}</title>
@@ -164,11 +164,9 @@
 </script>
 {% endblock %}
 {% block content %}
-<div id="main" class="main">
     <div class="condition_info"></div>
     <h2>Unit Recordings</h2>
     <div class="unit_list"></div>
-</div>
 {% include "mirrordb/condition/grasp_performance_condition_template.html" %}
 {% include "mirrordb/unit/unit_list_item_template.html" %}
 {% endblock %}

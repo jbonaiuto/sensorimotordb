@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<title>SensoriMotorDB - Experiment Export Request</title>
+{% endblock %}
+{% block content %}
+    <H2>Request Experiment Data</H2>
+    <form id="requestForm" method="post" action="">
+        {% csrf_token %}
+        <table class="tab_panel">
+            <tr valign=top>
+                <td>{{ form.name.label_tag }}*</td>
+                <td>{{ form.name }}</td>
+                {% if form.fname.errors %}<td class="myerrors">{{ form.name.errors }}</td>{% endif %}
+            </tr>
+            <tr valign=top>
+                <td>{{ form.rationale.label_tag }}*</td>
+                <td>{{ form.rationale }}</td>
+                {% if form.rationale.errors %}<td class="myerrors">{{ form.rationale.errors }}</td>{% endif %}
+            </tr>
+        </table>
+        <div id="errors" class="myerrors">
+            {{ form.errors }}
+        </div>
+        {{ form.experiment }}
+        {{ form.requesting_user }}
+        <br>
+        <input class="btn" type="submit" value="Submit" onmouseover="this.className='btn btnhov'" onmouseout="this.className='btn'"/>&nbsp;
+        <input class="btn" type="button" value="Cancel" onclick="document.location.href='/mirrordb/" onmouseover="this.className='btn btnhov'" onmouseout="this.className='btn'"/>
+    </form>
+{% endblock %}
+

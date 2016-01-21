@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<title>SensoriMotorDB - Experiment Export Request - Deny</title>
+{% endblock %}
+{% block content %}
+    <H2>Experiment Export Request - Denial</H2>
+    <table class="tab_panel">
+        <tr valign=top>
+            <td width=200px>Experiment</td>
+            <td>{{ object.experiment.title }}</td>
+        </tr>
+        <tr valign=top>
+            <td>User</td>
+            <td>{{ object.requesting_user }}</td>
+        </tr>
+        <tr valign=top>
+            <td>Rationale</td>
+            <td>{{ object.rationale }}</td>
+        </tr>
+    </table>
+    <form id="requestDeny" action="" method="post">
+        {% csrf_token %}
+        <table class="tab_panel">
+            <tr>
+                <td><strong>Reason for denial:</strong></td>
+            </tr>
+            <tr>
+                <td>
+                    {{ form.reason }}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input class="btn" type="submit" value="Submit" onmouseover="this.className='btn btnhov'" onmouseout="this.className='btn'"/>
+                </td>
+            </tr>
+        </table>
+    </form>
+{% endblock %}

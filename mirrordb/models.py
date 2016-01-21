@@ -149,7 +149,7 @@ class Experiment(models.Model):
 
         f_trials=f.create_group('trials')
         for trial in RecordingTrial.objects.filter(condition__experiment=self).distinct():
-            f_trial=f_trials.create_group('condition_%d.trial_%d.unit_%d' % (trial.condition.id, trial.trial_number, ))
+            f_trial=f_trials.create_group('condition_%d.trial_%d' % (trial.condition.id, trial.id))
             trial.export(f_trial)
 
         f.close()
@@ -299,7 +299,7 @@ class ExperimentExportRequest(models.Model):
         )
     experiment=models.ForeignKey('Experiment')
     requesting_user=models.ForeignKey(User, related_name='requesting_user')
-    request_body=models.CharField(max_length=1000, blank=False)
+    rationale=models.CharField(max_length=1000, blank=False)
     status=models.CharField(max_length=20, choices=STATUS_OPTIONS, blank=True)
     activation_key = models.CharField('activation key', max_length=40)
     sent=models.DateTimeField(auto_now=True, blank=True)
@@ -312,18 +312,20 @@ class ExperimentExportRequest(models.Model):
         subject = 'Request to export neurophysiology data'
         # message text
         text = 'You\'ve been sent a request by %s to export data from the Neurophysiology Experiment: %s.<br>' % (
-            self.requesting_user, self.experiment.__unicode__())
-        text += self.request_body
+            self.requesting_user, self.experiment.title)
+        text += self.rationale
         text += '<br>Click one of the following links to accept or decline the request:<br>'
-        accept_url = ''.join(
-            ['http://', get_current_site(None).domain, '/mirrordb/experiment/export_request/accept/%s/' % self.activation_key])
+        approve_url = ''.join(
+            ['http://', get_current_site(None).domain, '/mirrordb/experiment/%d/export_request/approve/%s/' %
+                                                       (self.experiment.id, self.activation_key)])
         decline_url = ''.join(
-            ['http://', get_current_site(None).domain, '/mirrordb/experiment/export_request/decline/%s/' % self.activation_key])
-        text += '<a href="%s">Accept</a><br>' % accept_url
+            ['http://', get_current_site(None).domain, '/mirrordb/experiment/%d/export_request/deny/%s/' %
+                                                       (self.experiment.id, self.activation_key)])
+        text += '<a href="%s">Approve</a><br>' % approve_url
         text += 'or<br>'
         text += '<a href="%s">Decline</a>' % decline_url
         self.sent=datetime.datetime.now()
-        msg = EmailMessage(subject, text, 'uscbrainproject@gmail.com', [self.sed.collator.email])
+        msg = EmailMessage(subject, text, 'uscbrainproject@gmail.com', [self.experiment.collator.email])
         msg.content_subtype = "html"  # Main content is now text/html
         msg.send(fail_silently=True)
 

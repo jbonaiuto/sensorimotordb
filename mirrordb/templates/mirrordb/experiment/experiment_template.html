@@ -10,6 +10,14 @@
                 <td><strong>Narrative</strong></td>
                 <td><%= narrative %></td>
             </tr>
+            <tr>
+                <td>{% if can_export %}
+                        <a href="/mirrordb/experiment/<%= id %>/export/">Download Data</a>
+                    {% else %}
+                        <a href="/mirrordb/experiment/<%= id %>/export_request/">Request Data Download</a>
+                    {% endif %}
+                </td>
+            </tr>
         </table>
     </div>
 </script>

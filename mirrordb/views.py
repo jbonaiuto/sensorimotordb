@@ -1,9 +1,19 @@
+from h5py import h5
+from wsgiref.util import FileWrapper
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
-from django.views.generic import DetailView, TemplateView
+from django.core.mail import EmailMessage
+from django.http import HttpResponse, HttpResponseForbidden
+from django.shortcuts import redirect
+from django.views.generic import DetailView, TemplateView, CreateView, UpdateView, View
+from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.edit import ModelFormMixin
+import h5py
 import os
-from mirrordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment
+from mirrordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm
+from mirrordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest
 from uscbp import settings
+from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
 
 class LoginRequiredMixin(object):
     redirect_field_name = 'next'
@@ -14,6 +24,7 @@ class LoginRequiredMixin(object):
             login_url=self.login_url)(
             super(LoginRequiredMixin, self).dispatch
         )(request, *args, **kwargs)
+
 
 class IndexView(LoginRequiredMixin, TemplateView):
     template_name = 'mirrordb/index.html'
@@ -52,6 +63,115 @@ class ExperimentDetailView(LoginRequiredMixin, DetailView):
     model = Experiment
     template_name = 'mirrordb/experiment/experiment_view.html'
 
+    def get_context_data(self, **kwargs):
+        context=super(ExperimentDetailView,self).get_context_data(**kwargs)
+        context['can_export']=False
+        if ExperimentExportRequest.objects.filter(experiment__id=self.object.id, requesting_user__id=self.request.user.id, status='approved').exists():
+            context['can_export']=True
+        return context
+
 
 class SearchView(LoginRequiredMixin, TemplateView):
     template_name = 'mirrordb/search.html'
+
+
+class ExperimentExportRequestView(LoginRequiredMixin,CreateView):
+    model = ExperimentExportRequest
+    form_class = ExperimentExportRequestForm
+    template_name = 'mirrordb/experiment/experiment_export_request_detail.html'
+
+    def get_initial(self):
+        initial=super(ExperimentExportRequestView,self).get_initial()
+        initial['experiment']=Experiment.objects.get(id = self.kwargs.get('pk', None))
+        initial['requesting_user']=self.request.user
+        return initial
+
+    def form_valid(self, form):
+        self.object=form.save(commit=False)
+        self.object.user=self.request.user
+        self.object.save()
+
+        return redirect('/mirrordb/experiment/%d/' % self.object.experiment.id)
+
+
+class ExperimentExportRequestDenyView(LoginRequiredMixin,UpdateView):
+    model=ExperimentExportRequest
+    template_name = 'mirrordb/experiment/experiment_export_request_deny.html'
+    pk_url_kwarg='activation_key'
+    form_class = ExperimentExportRequestDenyForm
+
+    def get_object(self, queryset=None):
+        return ExperimentExportRequest.objects.get(activation_key=self.kwargs.get('activation_key'),experiment__id=self.kwargs.get('pk'))
+
+    def get_form_kwargs(self):
+        """
+        Returns the keyword arguments for instantiating the form.
+        """
+        kwargs = super(ModelFormMixin, self).get_form_kwargs()
+        return kwargs
+
+    def form_valid(self, form):
+        self.object.status='denied'
+        self.object.save()
+
+        # message subject
+        subject='Experiment Export Request Denied'
+        # message text
+        text='Your request for exporting data from the experiment: %s has been denied.<br>' % self.object.experiment.title
+        text+='Reason for denial: %s' % self.request.POST['reason']
+
+        msg = EmailMessage(subject, text, 'uscbrainproject@gmail.com', [self.object.requesting_user.email])
+        msg.content_subtype = "html"  # Main content is now text/html
+        msg.send(fail_silently=True)
+
+        return redirect('/mirrordb/experiment/%d/' % self.object.experiment.id)
+
+
+class ExperimentExportRequestApproveView(LoginRequiredMixin, UpdateView):
+    model=ExperimentExportRequest
+    template_name = 'mirrordb/experiment/experiment_export_request_approve.html'
+    pk_url_kwarg='activation_key'
+    form_class = ExperimentExportRequestApproveForm
+
+    def get_object(self, queryset=None):
+        return ExperimentExportRequest.objects.get(activation_key=self.kwargs.get('activation_key'), experiment__id=self.kwargs.get('pk'))
+
+    def get_form_kwargs(self):
+        """
+        Returns the keyword arguments for instantiating the form.
+        """
+        kwargs = super(ModelFormMixin, self).get_form_kwargs()
+        return kwargs
+
+    def form_valid(self, form):
+        self.object.status='approved'
+        self.object.save()
+
+        # message subject
+        subject='Experiment Export Request Approved'
+        # message text
+        export_url = ''.join(
+            ['http://', get_current_site(None).domain, '/mirrordb/experiment/%d/export/' % self.object.experiment.id])
+        text='Your request for the data from the experiment: %s has been approved. Click <a href="%s">here</a> to download the data.<br>' % (self.object.experiment.title, export_url)
+
+        msg = EmailMessage(subject, text, 'uscbrainproject@gmail.com', [self.object.requesting_user.email])
+        msg.content_subtype = "html"  # Main content is now text/html
+        msg.send(fail_silently=True)
+
+        return redirect('/mirrordb/experiment/%d/' % self.object.experiment.id)
+
+
+class ExperimentExportView(LoginRequiredMixin, DetailView):
+    model=Experiment
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if ExperimentExportRequest.objects.filter(requesting_user=request.user, experiment=self.object, status='approved').exists():
+            exp_path=os.path.join(PROJECT_PATH,'..','data','experiment_%d.h5' % self.object.id)
+            if not os.path.exists(exp_path):
+                self.object.export(exp_path)
+            fsock = open(exp_path,"r")
+            response = HttpResponse(fsock, content_type='application/hdf')
+            response['Content-Disposition'] = 'attachment; filename=experiment_%d.h5' % self.object.id
+            return response
+        return HttpResponseForbidden()

@@ -2,7 +2,7 @@
 from django.conf.urls import patterns, include, url
 from tastypie.api import Api
 from mirrordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource
-from mirrordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView
+from mirrordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())
@@ -25,5 +25,11 @@ urlpatterns = patterns('',
     (r'^experiment/(?P<pk>\d+)/$', ExperimentDetailView.as_view(), {}, 'experiment_view'),
     (r'^condition/(?P<pk>\d+)/$', ConditionDetailView.as_view(), {}, 'condition_view'),
     (r'^unit/(?P<pk>\d+)/$', UnitDetailView.as_view(), {}, 'unit_view'),
-    url(r'', IndexView.as_view(), {}, 'index'),
+    (r'^experiment/(?P<pk>\d+)/export_request/$', ExperimentExportRequestView.as_view(), {}, 'experiment_export_request_view'),
+    (r'^experiment/(?P<pk>\d+)/export_request/deny/(?P<activation_key>\w+)/$', ExperimentExportRequestDenyView.as_view(),
+        {}, 'experiment_export_request_deny'),
+    (r'^experiment/(?P<pk>\d+)/export_request/approve/(?P<activation_key>\w+)/$', ExperimentExportRequestApproveView.as_view(),
+        {}, 'experiment_export_request_approve'),
+    (r'^experiment/(?P<pk>\d+)/export/$', ExperimentExportView.as_view(), {}, 'experiment_export_view'),
+    (r'', IndexView.as_view(), {}, 'index'),
 )

@@ -66,7 +66,7 @@ class ExperimentDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context=super(ExperimentDetailView,self).get_context_data(**kwargs)
         context['can_export']=False
-        if ExperimentExportRequest.objects.filter(experiment__id=self.object.id, requesting_user__id=self.request.user.id, status='approved').exists():
+        if self.request.user.is_superuser or ExperimentExportRequest.objects.filter(experiment__id=self.object.id, requesting_user__id=self.request.user.id, status='approved').exists():
             context['can_export']=True
         return context
 
@@ -166,7 +166,7 @@ class ExperimentExportView(LoginRequiredMixin, DetailView):
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
-        if ExperimentExportRequest.objects.filter(requesting_user=request.user, experiment=self.object, status='approved').exists():
+        if request.user.is_superuser or ExperimentExportRequest.objects.filter(requesting_user=request.user, experiment=self.object, status='approved').exists():
             exp_path=os.path.join(PROJECT_PATH,'..','data','experiment_%d.h5' % self.object.id)
             if not os.path.exists(exp_path):
                 self.object.export(exp_path)

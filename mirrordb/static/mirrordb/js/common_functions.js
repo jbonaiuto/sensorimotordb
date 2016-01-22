@@ -5,3 +5,10 @@ function getTRTag(idx)
     else
         return 'odd_row';
 }
+
+function clearSpan(doc, spanId)
+{
+    if(doc.getElementById(spanId)!=null)
+        doc.getElementById(spanId).innerHTML='';
+    return false;
+}

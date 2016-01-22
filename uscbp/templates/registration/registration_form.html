@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<title>SensoriMotorDB - Register for an account</title>
+{% endblock %}
+{% block content %}
+        <h2>New account</h2>
+<form method="post" action="">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Submit" />
+</form>
+{% endblock %}

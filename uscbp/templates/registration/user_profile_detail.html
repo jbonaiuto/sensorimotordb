@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<title>SensoriMotorDB - User Profile</title>
+<script type="text/javascript">
+    function checkPasswords()
+    {
+        if(document.getElementById('id_password1').value!=document.getElementById('id_password2').value)
+        {
+            document.getElementById('password_match').innerHTML='Passwords must match';
+            return false;
+        }
+        else
+        {
+            document.getElementById('password_match').innerHTML='&nbsp;';
+            return true;
+        }
+    }
+
+    function save()
+    {
+        clearSpan(document, 'msg');
+        if(checkPasswords())
+            document.getElementById('profileForm').submit();
+    }
+</script>
+{% endblock %}
+{% block content %}
+    <h2>Edit User Profile: {{ form.instance }}</h2>
+    <form id="profileForm" method="post" action="" enctype="multipart/form-data">
+        {% csrf_token %}
+        <table class="tab_panel">
+            <tr>
+                <td width=160px>{{ form.first_name.label_tag }} {% if form.first_name.field.required %}*{% endif %}</td>
+                <td width=320px><input type="text" name="first_name" id="id_first_name" value="{{ form.instance.first_name }}"/></td>
+                <td class="myerrors">{% if form.first_name.errors %}{{ form.first_name.errors }}{% endif %}</td>
+            </tr>
+            <tr>
+                <td>{{ form.last_name.label_tag }} {% if form.last_name.field.required %}*{% endif %}</td>
+                <td><input type="text" name="last_name" id="id_last_name" value="{{ form.instance.last_name }}"/></td>
+                <td class="myerrors">{% if form.last_name.errors %}{{ form.last_name.errors }}{% endif %}</td>
+            </tr>
+            <tr>
+                <td>{{ form.email.label_tag }} {% if form.email.field.required %}*{% endif %}</td>
+                <td><input type="text" name="email" id="id_email" value="{{ form.instance.email }}"/></td>
+                <td class="myerrors">{% if form.email.errors %}{{ form.email.errors }}{% endif %}</td>
+            </tr>
+            <tr>
+                <td>New password *</td>
+                <td><input type="password" name="password1" id="id_password1" onkeyup="checkPasswords()"/></td>
+                <td class="myerrors">{% if form.password1.errors %}{{ form.password1.errors }}{% endif %}</td>
+            </tr>
+            <tr>
+                <td>New password (again) *</td>
+                <td><input type="password" name="password2" id="id_password2" onkeyup="checkPasswords()"/></td>
+                <td class="myerrors">{% if form.password2.errors %}{{ form.password2.errors }}{% endif %}</td>
+            </tr>
+            <tr>
+                <td colspan=3>
+                    <span id="password_match" style="color:red">&nbsp;</span>
+                </td>
+            </tr>
+        </table>
+        {{ form.user }}
+        <input class="btn" type="button" value="Save" onmouseover="this.className='btn btnhov'" onmouseout="this.className='btn'" onclick="save()"/>
+    </form>
+    <div id="profile_errors" class="myerrors">{{ form.errors }}</div>
+    <div id="msg">{% if msg %}<h2>Profile saved.</h2>{% endif %}</div>
+</div>
+{% endblock %}
+

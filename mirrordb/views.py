@@ -10,7 +10,8 @@ from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.edit import ModelFormMixin
 import h5py
 import os
-from mirrordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm
+from registration.forms import User
+from mirrordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm
 from mirrordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest
 from uscbp import settings
 from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
@@ -175,3 +176,27 @@ class ExperimentExportView(LoginRequiredMixin, DetailView):
             response['Content-Disposition'] = 'attachment; filename=experiment_%d.h5' % self.object.id
             return response
         return HttpResponseForbidden()
+
+
+class UpdateUserProfileView(LoginRequiredMixin,UpdateView):
+    form_class = UserProfileForm
+    model = User
+    template_name = 'registration/user_profile_detail.html'
+    success_url = '/accounts/profile/?msg=saved'
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def get_context_data(self, **kwargs):
+        context = super(UpdateUserProfileView,self).get_context_data(**kwargs)
+        context['msg']=self.request.GET.get('msg',None)
+        return context
+
+    def form_valid(self, form):
+        # update user object
+        user=form.save()
+        if 'password1' in self.request.POST and len(self.request.POST['password1']):
+            user.set_password(self.request.POST['password1'])
+        user.save()
+
+        return redirect(self.success_url)

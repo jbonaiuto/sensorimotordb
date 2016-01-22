@@ -8,11 +8,6 @@
         {% csrf_token %}
         <table class="tab_panel">
             <tr valign=top>
-                <td>{{ form.name.label_tag }}*</td>
-                <td>{{ form.name }}</td>
-                {% if form.fname.errors %}<td class="myerrors">{{ form.name.errors }}</td>{% endif %}
-            </tr>
-            <tr valign=top>
                 <td>{{ form.rationale.label_tag }}*</td>
                 <td>{{ form.rationale }}</td>
                 {% if form.rationale.errors %}<td class="myerrors">{{ form.rationale.errors }}</td>{% endif %}

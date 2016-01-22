@@ -175,7 +175,7 @@ function drawHistogram(id, parent_id, data, trial_events, event_types)
         .enter().append("rect")
         .attr("class", "histo-bar")
         .attr("width", function(d) { return xBinwidth })
-        .attr("height", function(d) { return height- yScale(d.y)-1; })
+        .attr("height", function(d) { return d3.max([0,height- yScale(d.y)-1]); })
         .attr("x", function(d) {return xScale(d.x)})
         .attr("y", function(d) {return yScale(d.y)});
 

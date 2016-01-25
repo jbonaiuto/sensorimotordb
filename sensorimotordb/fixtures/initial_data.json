@@ -1,0 +1,557 @@
+[
+    {
+        "model": "sensorimotordb.Species",
+        "pk": 1,
+        "fields": {
+            "genus_name": "Macaca",
+            "species_name": "fascicularis",
+            "common_name": "crab-eating macaque"
+        }
+    },
+    {
+        "model": "sensorimotordb.Species",
+        "pk": 2,
+        "fields": {
+            "genus_name": "Macaca",
+            "species_name": "nemestrina",
+            "common_name": "southern pig-tailed macaque"
+        }
+    },
+    {
+        "model": "sensorimotordb.Species",
+        "pk": 3,
+        "fields": {
+            "genus_name": "Macaca",
+            "species_name": "mulatta",
+            "common_name": "rhesus macaque"
+        }
+    },
+    {
+        "model": "sensorimotordb.Species",
+        "pk": 4,
+        "fields": {
+            "genus_name": "Macaca",
+            "species_name": "fuscata",
+            "common_name": "Japanese macaque"
+        }
+    },
+    {
+        "model": "sensorimotordb.Species",
+        "pk": 5,
+        "fields": {
+            "genus_name": "Macaca",
+            "species_name": "irus",
+            "common_name": ""
+        }
+    },
+    {
+        "model": "sensorimotordb.Species",
+        "pk": 6,
+        "fields": {
+            "genus_name": "Homo",
+            "species_name": "sapiens",
+            "common_name": "human"
+        }
+    },
+    {
+        "model": "sensorimotordb.Nomenclature",
+        "pk": 1,
+        "fields": {
+            "name": "LMGM",
+            "version": "99",
+            "pubmed_id": "10473756",
+            "species": [2,4]
+        }
+    },
+    {
+        "model": "sensorimotordb.Nomenclature",
+        "pk": 2,
+        "fields": {
+            "name": "PG",
+            "version": "91a",
+            "pubmed_id": "1939732",
+            "species": [3]
+        }
+    },
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 1,
+        "fields": {
+            "nomenclature": 1,
+            "name": "Area 7b",
+            "abbreviation": "7b",
+            "brain_region_type": "neural region"
+        }
+    },
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 2,
+        "fields": {
+            "nomenclature": 1,
+            "name": "Anterior intraparietal area",
+            "abbreviation": "AIP",
+            "brain_region_type": "neural region"
+        }
+    },
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 3,
+        "fields": {
+            "nomenclature": 1,
+            "name": "Agranular frontal area 4 (= caudal ventrolateral premotor area)",
+            "abbreviation": "F4",
+            "brain_region_type": "neural region"
+        }
+    },
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 4,
+        "fields": {
+            "nomenclature": 1,
+            "name": "Agranular frontal area 5 (= rostral ventrolateral premotor area)",
+            "abbreviation": "F5",
+            "brain_region_type": "neural region"
+        }
+    },
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 5,
+        "fields": {
+            "nomenclature": 1,
+            "name": "Lateral intraparietal area",
+            "abbreviation": "LIP",
+            "brain_region_type": "neural region"
+        }
+    },
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 6,
+        "fields": {
+            "nomenclature": 1,
+            "name": "Ventral intraparietal area",
+            "abbreviation": "VIP",
+            "brain_region_type": "neural region"
+        }
+    },
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 7,
+        "fields": {
+            "nomenclature": 2,
+            "name": "Area 10",
+            "abbreviation": "10",
+            "brain_region_type": "neural region"
+        }
+    },
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 8,
+        "fields": {
+            "nomenclature": 2,
+            "name": "Area 11",
+            "abbreviation": "11",
+            "brain_region_type": "neural region"
+        }
+    },
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 9,
+        "fields": {
+            "nomenclature": 2,
+            "name": "Orbital area 12",
+            "abbreviation": "12orb",
+            "brain_region_type": "neural region"
+        }
+    },
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 10,
+        "fields": {
+			"nomenclature": 2,
+			"name": "Ventrolateral area 12",
+			"abbreviation": "12vl",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 11,
+        "fields": {
+			"nomenclature": 2,
+			"name": "Orbitofrontal area 13, lateral part",
+			"abbreviation": "13L",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 12,
+        "fields": {
+			"nomenclature": 2,
+			"name": "Orbitofrontal area 13, medial part",
+			"abbreviation": "13M",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 13,
+        "fields": {
+			"nomenclature": 2,
+			"name": "Anterior area 14",
+			"abbreviation": "14A",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 14,
+        "fields": {
+			"nomenclature": 2,
+			"name": "Lateral area 14",
+			"abbreviation": "14L",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 15,
+        "fields": {
+			"nomenclature": 2,
+			"name": "Medial area 14",
+			"abbreviation": "14M",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 16,
+        "fields": {
+			"nomenclature": 2,
+			"name": "Ventrolateral area 14",
+			"abbreviation": "14VL",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 17,
+        "fields": {
+			"nomenclature": 2,
+			"name": "Ventromedial area 14",
+			"abbreviation": "14VM",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 18,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Anterior cingulate area 24",
+			"abbreviation": "24",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 19,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Area 33",
+			"abbreviation": "33",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 20,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Area 4",
+			"abbreviation": "4",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 21,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Cortical area 45",
+			"abbreviation": "45",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 22,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Dorsal area 46",
+			"abbreviation": "46d",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 23,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Area 46 (dorsal rim of the principal sulcus)",
+			"abbreviation": "46dr",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 24,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Rostral area 46",
+			"abbreviation": "46r",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 25,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Ventral area 46",
+			"abbreviation": "46v",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 26,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Area 46 (ventral rim of the principal sulcus)",
+			"abbreviation": "46vr",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 27,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Premotor area 6 (dorsal part)",
+			"abbreviation": "6D",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 28,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Premotor area 6Ds",
+			"abbreviation": "6Ds",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 29,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Medial premotor area 6M",
+			"abbreviation": "6M",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 30,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Premotor area 6Va",
+			"abbreviation": "6Va",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 31,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Premotor area 6Vb",
+			"abbreviation": "6Vb",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 32,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Caudal area 8A",
+			"abbreviation": "8Ac",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 33,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Medial area 8A",
+			"abbreviation": "8Am",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 34,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Rostral area 8A",
+			"abbreviation": "8Ar",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 35,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Dorsal area 8B",
+			"abbreviation": "8Bd",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 36,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Medial area 8B",
+			"abbreviation": "8Bm",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 37,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Prefrontal area 9d",
+			"abbreviation": "9d",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 38,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Prefrontal area 9m",
+			"abbreviation": "9m",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 39,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Frontopolar cingulate area",
+			"abbreviation": "FPC",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 40,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Indusium griseum",
+			"abbreviation": "IG",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 41,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Infralimbic area",
+			"abbreviation": "IL",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 42,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Primary motor area",
+			"abbreviation": "M1",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 43,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Caudal medial frontal area",
+			"abbreviation": "MFc",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 44,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Rostral medial frontal area",
+			"abbreviation": "MFr",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 45,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Orbitofrontal opercular area",
+			"abbreviation": "OFO",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 46,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Paralimbic cortex",
+			"abbreviation": "Para",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 47,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Prelimbic area",
+			"abbreviation": "PL",
+			"brain_region_type": "neural region" 
+		}
+	},
+    {
+        "model": "sensorimotordb.BrainRegion",
+        "pk": 48,
+		"fields": {
+			"nomenclature": 2,
+			"name": "Precentral opercular area",
+			"abbreviation": "PrCO",
+			"brain_region_type": "neural region"
+        }
+    }
+]
+

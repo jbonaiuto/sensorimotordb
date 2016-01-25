@@ -14,7 +14,7 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'uscbp_mirrordb',                      # Or path to database file if using sqlite3.
+        'NAME': 'uscbp_sensorimotordb',                      # Or path to database file if using sqlite3.
         # The following settings are not used with sqlite3:
         'USER': 'root',
         'PASSWORD': '',
@@ -69,7 +69,7 @@ USE_TZ = True
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/var/www/example.com/media/"
-MEDIA_ROOT = '/var/www/mirrordb/mirrordb/media/'
+MEDIA_ROOT = '/var/www/sensorimotordb/sensorimotordb/media/'
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
@@ -80,7 +80,7 @@ MEDIA_URL = '/media/'
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/var/www/example.com/static/"
-STATIC_ROOT = '/var/www/mirrordb/mirrordb/static'
+STATIC_ROOT = '/var/www/sensorimotordb/sensorimotordb/static'
 
 # URL prefix for static files.
 # Example: "http://example.com/static/", "http://static.example.com/"
@@ -131,8 +131,8 @@ TEMPLATE_DIRS = (
                     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
                     # Always use forward slashes, even on Windows.
                     # Don't forget to use absolute paths, not relative paths.
-                    '/var/www/mirrordb/uscbp/templates',
-                    '/var/www/mirrordb/mirrordb/templates',
+                    '/var/www/sensorimotordb/uscbp/templates',
+                    '/var/www/sensorimotordb/sensorimotordb/templates',
 )
 
 INSTALLED_APPS = (
@@ -147,7 +147,7 @@ INSTALLED_APPS = (
 'haystack',
 'elasticsearch',
 'registration',
-'mirrordb',
+'sensorimotordb',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
@@ -199,10 +199,10 @@ EMAIL_USE_TLS = 'true'
 ACCOUNT_ACTIVATION_DAYS = 7
 REGISTRATION_AUTO_LOGIN = True
 
-LOGIN_REDIRECT_URL= '/mirrordb/'
+LOGIN_REDIRECT_URL= '/sensorimotordb/'
 
-URL_BASE = 'http://mirrordb.usc.edu'
-SERVER = 'mirrordb.usc.edu'
+URL_BASE = 'http://sensorimotordb.usc.edu'
+SERVER = 'sensorimotordb.usc.edu'
 
 HAYSTACK_CONNECTIONS = {
     'default': {

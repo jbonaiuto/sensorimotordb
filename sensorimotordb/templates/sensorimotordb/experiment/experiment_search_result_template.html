@@ -1,0 +1,23 @@
+<script type="text/html" id="experiment-template">
+    <div id="experiment-<%= id %>" class="<%= getTRTag(idx) %> search_result">
+        <table>
+            <tr>
+                <td colspan="2"><a href="/sensorimotordb/experiment/<%= id %>/"><h<%= level %>><%= title %></h<%= level %>></a></td>
+            </tr>
+            <tr>
+                <td valign=top>
+                    <table>
+                        <tr>
+                            <td valign=top><strong>Collator</strong></td>
+                            <td><%= collator.first_name %> <%= collator.last_name %></td>
+                        </tr>
+                        <tr>
+                            <td valign=top><strong>Description</strong></td>
+                            <td><%= brief_description %></td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</script>

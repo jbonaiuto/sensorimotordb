@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>SensoriMotorDB - Search</title>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/d3.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_functions.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_plot.js' %}"></script>
+<script>
+
+    $(document).ready(function(){
+        $('#id_q').keypress(function (e) {
+            if (e.which == 13) {
+                submitSearch();
+                return false;
+            }
+        });
+    });
+
+    function search(query, list_class, type, success_func)
+    {
+        $('.'+list_class).each(function(index, element){
+            $(this).empty();
+        });
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/api/v1/"+type+"/search/?format=json&q="+query,
+            data: data,
+            success: success_func,
+            error: function(data) {
+                alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+
+    var searches_left=0;
+    
+    function submitSearch()
+    {
+        searches_left=4;
+        var searchQuery=$('#id_q').val();
+        $('.experiment_results').hide();
+        search(searchQuery, 'experiment_list', 'experiment', loadedExperiments);
+        $('.grasp_observation_condition_results').hide();
+        search(searchQuery, 'grasp_observation_condition_list', 'grasp_observation_condition', loadedGraspObservationConditions);
+        $('.grasp_performance_condition_results').hide();
+        search(searchQuery, 'grasp_performance_condition_list', 'grasp_performance_condition', loadedGraspPerformanceConditions);
+        $('.unit_results').hide();
+        search(searchQuery, 'unit_list', 'unit', loadedUnits);
+        return false;
+    }
+
+    function loadedResults(resp, results_class, list_class, template_id)
+    {
+        if(resp.objects.length>0)
+            $('.'+results_class).show();
+
+        for(var i=0; i<resp.objects.length; i++)
+        {
+            // Add condition to list
+            var obj=resp.objects[i];
+            $('.'+list_class).each(function(index, element){
+                obj.level=3;
+                obj.idx=i;
+                var tmplMarkup = $('#'+template_id).html();
+                var compiledTmpl = _.template(tmplMarkup, obj);
+                $(this).append(compiledTmpl);
+            });
+        }
+    }
+
+    function loadedExperiments(resp)
+    {
+        loadedResults(resp, 'experiment_results', 'experiment_list', 'experiment-template');
+        searches_left-=1;
+        if(searches_left==0)
+            highlight(resp.meta.search_query);
+    }
+
+    function loadedGraspObservationConditions(resp)
+    {
+        loadedResults(resp, 'grasp_observation_condition_results', 'grasp_observation_condition_list', 'condition-template');
+        searches_left-=1;
+        if(searches_left==0)
+            highlight(resp.meta.search_query);
+    }
+
+    function loadedGraspPerformanceConditions(resp)
+    {
+        loadedResults(resp, 'grasp_performance_condition_results', 'grasp_performance_condition_list', 'condition-template');
+        searches_left-=1;
+        if(searches_left==0)
+            highlight(resp.meta.search_query);
+    }
+
+    function loadedUnits(resp)
+    {
+        loadedResults(resp, 'unit_results', 'unit_list', 'unit-template');
+        searches_left-=1;
+        if(searches_left==0)
+            highlight(resp.meta.search_query);
+    }
+
+    RegExp.escape = function(str)
+    {
+        var specials = /[.*+?|()\[\]{}\\$^]/g; // .*+?|()[]{}\$^
+        return str.replace(specials, "\\$&");
+    }
+
+    /* highlight matches text */
+    var highlight = function (string) {
+        if(string.length>0)
+        {
+            $(".search_result").each(function () {
+                $(this).html($(this).html().replace(new RegExp('('+RegExp.escape(string)+')', 'gi'), '<em>$1</em>'));
+            });
+        }
+    };
+
+</script>
+{% endblock %}
+{% block content %}
+    <h1>Search</h1>
+    <form>
+        <input id="id_q" name="q"/>
+        <input type="button" id="id_submit" name="submit" value="Search" onclick="return submitSearch();">
+    </form>
+    <div class="experiment_results" style="display: none;">
+        <h2>Experiments</h2>
+        <div class="experiment_list"></div>
+    </div>
+    <div class="grasp_observation_condition_results" style="display: none;">
+        <h2>Grasp Observation Conditions</h2>
+        <div class="grasp_observation_condition_list"></div>
+    </div>
+    <div class="grasp_performance_condition_results" style="display: none;">
+        <h2>Grasp Performance Conditions</h2>
+        <div class="grasp_performance_condition_list"></div>
+    </div>
+    <div class="unit_results" style="display: none;">
+        <h2>Units</h2>
+        <div class="unit_list"></div>
+    </div>
+{% include "sensorimotordb/experiment/experiment_search_result_template.html" %}
+{% include "sensorimotordb/condition/condition_search_result_template.html" %}
+{% include "sensorimotordb/unit/unit_search_result_template.html" %}
+{% endblock %}

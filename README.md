@@ -1,2 +1,2 @@
-# mirrordb
+# sensorimotordb
 SensoriMotorDatabase

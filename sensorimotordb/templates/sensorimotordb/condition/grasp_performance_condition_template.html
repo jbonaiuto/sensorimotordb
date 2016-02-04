@@ -13,7 +13,7 @@
                         <div class='video_panel'>
                             <div id='video_frame'>
                                 <video id="condition_video" class="video-js vjs-default-skin  vjs-big-play-centered" controls preload="preload"
-                                       width="500" data-setup='{}' autoplay="true">
+                                       width="500" height="300" data-setup='{}' autoplay="true">
                                     <source id="condition_video_source" src="<%= video_url_mp4 %>" type="video/mp4">
                                     <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that <a href="http://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
                                 </video>
@@ -47,6 +47,11 @@
                 <td><strong>Grasp type</strong></td>
                 <td><%= grasp %></td>
             </tr>
+            <% if(video_url_mp4.length>0){ %>
+                <tr>
+                    <td>&nbsp;</td>
+                </tr>
+            <% } %>
         </table>
         <form>
             <label for="binwidth">Bin width</label>

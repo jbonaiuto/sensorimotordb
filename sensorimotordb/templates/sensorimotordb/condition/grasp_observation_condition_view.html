@@ -9,6 +9,8 @@
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_functions.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_plot.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/video-js/video.dev.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/video-framebyframe.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/videojs.timecode.js' %}"></script>
 <script>
 
     videojs.options.flash.swf = "{{ site_url }}/static/sensorimotordb/js/video-js/video-js.swf";
@@ -42,6 +44,25 @@
             var tmplMarkup = $('#grasp_observation_condition-template').html();
             var compiledTmpl = _.template(tmplMarkup, resp);
             $(this).append(compiledTmpl);
+        });
+
+        var video = videojs("condition_video", {
+            plugins: {
+                framebyframe: {
+                    fps: 29.97,
+                    steps: [
+                        { text: '-5', step: -5 },
+                        { text: '-1', step: -1 },
+                        { text: '+1', step: 1 },
+                        { text: '+5', step: 5 },
+                    ]
+                }
+            }
+        });
+        videojs("condition_video").ready(function(){
+            this.timecode({
+                timeFormat: 'STANDARD'
+            });
         });
 
         d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});

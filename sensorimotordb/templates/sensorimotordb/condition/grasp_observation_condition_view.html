@@ -11,6 +11,7 @@
 <script type="text/javascript" src="{% static 'sensorimotordb/js/video-js/video.dev.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/video-framebyframe.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/videojs.timecode.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/video-speed.js' %}"></script>
 <script>
 
     videojs.options.flash.swf = "{{ site_url }}/static/sensorimotordb/js/video-js/video-js.swf";
@@ -56,7 +57,12 @@
                         { text: '+1', step: 1 },
                         { text: '+5', step: 5 },
                     ]
-                }
+                },
+                speed: [
+                    { text: '.25x', rate:.25 },
+                    { text: '.5x', rate:.5 },
+                    { text: '1x', rate: 1, selected: true },
+                ]
             }
         });
         videojs("condition_video").ready(function(){

@@ -171,6 +171,16 @@ class Condition(models.Model):
         group.attrs['type']=np.string_(self.type)
 
 
+class ConditionVideoEvent(models.Model):
+    condition=models.ForeignKey('Condition')
+    code=models.CharField(max_length=10)
+    description=models.CharField(max_length=100)
+    time=models.FloatField()
+
+    class Meta:
+        app_label='sensorimotordb'
+
+
 class GraspCondition(Condition):
     object=models.CharField(max_length=50)
     object_distance=models.DecimalField(max_digits=6, decimal_places=3)

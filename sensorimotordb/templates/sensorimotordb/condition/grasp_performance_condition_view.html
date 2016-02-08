@@ -2,7 +2,8 @@
 {% load staticfiles %}
 {% block extrahead %}
 <title>SensoriMotorDB - View Condition: {{ object.name }}</title>
-<link href="{% static 'sensorimotordb/js/video-js/video-js.css' %}" rel="stylesheet">
+<link href="{% static 'sensorimotordb/js/video-js/video-js.min.css' %}" rel="stylesheet">
+<link href="{% static 'sensorimotordb/js/videojs-markers/videojs.markers.min.css' %}" rel="stylesheet">
 <script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/d3.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
@@ -12,8 +13,8 @@
 <script type="text/javascript" src="{% static 'sensorimotordb/js/video-framebyframe.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/videojs.timecode.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/video-speed.js' %}"></script>
-<script>
-
+<script type="text/javascript" src="{% static 'sensorimotordb/js/videojs-markers/videojs-markers.js' %}"></script>
+<script type="text/javascript">
     videojs.options.flash.swf = "{{ site_url }}/static/sensorimotordb/scripts/video-js/video-js.swf";
     document.createElement('video');document.createElement('audio');document.createElement('track');
 
@@ -26,7 +27,7 @@
             data: data,
             success: loadedConditionData,
             error: function(data) {
-                alert("Something went wrong!");
+                //alert("Something went wrong!");
             } };
         $.ajax(args)
     });
@@ -46,6 +47,7 @@
             var compiledTmpl = _.template(tmplMarkup, resp);
             $(this).append(compiledTmpl);
         });
+        {% if video_url_mp4 %}
         var video = videojs("condition_video", {
             plugins: {
                 framebyframe: {
@@ -59,9 +61,29 @@
                 },
                 speed: [
                     { text: '.25x', rate:.25 },
-                    { text: '.5x', rate:.5 },
-                    { text: '1x', rate: 1, selected: true },
+                    { text: '.5x', rate:.5, selected: true },
+                    { text: '1x', rate: 1 },
                 ]
+            }
+        });
+        video.markers({
+            markerStyle: {
+                'width':'8px',
+                'background-color': 'red'
+            },
+            markerTip: {
+                text: function(marker) {
+                    return "Event: "+ marker.text;
+                }
+            },
+            markers: [
+                {% for event in video_events%}
+                    {time: {{ event.time }}, text: "{{ event.code }}", overlayText: "{{ event.description }}"},
+                {% endfor %}
+            ],
+            breakOverlay: {
+                display: true,
+                text: function(marker){ return 'Event: ' + marker.overlayText;}
             }
         });
         videojs("condition_video").ready(function(){
@@ -69,6 +91,7 @@
                 timeFormat: 'STANDARD'
             });
         });
+        {% endif %}
         d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
         dispatch.on("statechange", update);
 
@@ -83,7 +106,7 @@
             data: data,
             success: loadedRecordingTrialData,
             error: function(data) {
-                alert("Something went wrong!");
+                //alert("Something went wrong!");
             } };
         $.ajax(args);
     }

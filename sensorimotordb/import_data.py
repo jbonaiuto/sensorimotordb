@@ -5,7 +5,7 @@ from django.db import connections
 from neo import io, os
 import scipy.io
 from django.db.models import Q
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, ConditionVideoEvent
 from uscbp import settings
 
 def remove_all(db='default'):
@@ -104,6 +104,50 @@ def import_kraskov_data(mat_file, video_dir, db='default'):
 
         copyfile(os.path.join(video_dir,'ring.mp4'),os.path.join(sensorimotordb_video_dir,'condition_%d.mp4' % exp_conditions[exp_id]['mov_ring'].id))
 
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_ring']
+        event.time=0.266
+        event.code='start'
+        event.description='trial start'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_ring']
+        event.time=1.134
+        event.code='go'
+        event.description='go signal'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_ring']
+        event.time=1.401
+        event.code='mo'
+        event.description='movement onset'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_ring']
+        event.time=1.668
+        event.code='do'
+        event.description='displacement onset'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_ring']
+        event.time=1.935
+        event.code='ho'
+        event.description='hold onset'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_ring']
+        event.time=2.735
+        event.code='hoff'
+        event.description='hold offset'
+        event.save()
+
+
+
         exp_conditions[exp_id]['obs_sphere']=GraspObservationCondition()
         exp_conditions[exp_id]['obs_sphere'].experiment=exp
         exp_conditions[exp_id]['obs_sphere'].name='Observe sphere whole hand grasp'
@@ -132,6 +176,48 @@ def import_kraskov_data(mat_file, video_dir, db='default'):
 
         copyfile(os.path.join(video_dir,'sphere.mp4'),os.path.join(sensorimotordb_video_dir,'condition_%d.mp4' % exp_conditions[exp_id]['mov_sphere'].id))
 
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_sphere']
+        event.time=0.313
+        event.code='start'
+        event.description='trial start'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_sphere']
+        event.time=1.180
+        event.code='go'
+        event.description='go signal'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_sphere']
+        event.time=1.380
+        event.code='mo'
+        event.description='movement onset'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_sphere']
+        event.time=1.581
+        event.code='do'
+        event.description='displacement onset'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_sphere']
+        event.time=1.714
+        event.code='ho'
+        event.description='hold onset'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_sphere']
+        event.time=2.848
+        event.code='hoff'
+        event.description='hold offset'
+        event.save()
+
         exp_conditions[exp_id]['obs_trapezoid']=GraspObservationCondition()
         exp_conditions[exp_id]['obs_trapezoid'].experiment=exp
         exp_conditions[exp_id]['obs_trapezoid'].name='Observe trapezoid precision grasp'
@@ -159,6 +245,48 @@ def import_kraskov_data(mat_file, video_dir, db='default'):
         exp_conditions[exp_id]['mov_trapezoid'].save(using=db)
 
         copyfile(os.path.join(video_dir,'trapezoid.mp4'),os.path.join(sensorimotordb_video_dir,'condition_%d.mp4' % exp_conditions[exp_id]['mov_trapezoid'].id))
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_trapezoid']
+        event.time=0.107
+        event.code='start'
+        event.description='trial start'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_trapezoid']
+        event.time=1.308
+        event.code='go'
+        event.description='go signal'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_trapezoid']
+        event.time=1.508
+        event.code='mo'
+        event.description='movement onset'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_trapezoid']
+        event.time=1.775
+        event.code='do'
+        event.description='displacement onset'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_trapezoid']
+        event.time=1.842
+        event.code='ho'
+        event.description='hold onset'
+        event.save()
+
+        event=ConditionVideoEvent()
+        event.condition=exp_conditions[exp_id]['mov_sphere']
+        event.time=3.176
+        event.code='hoff'
+        event.description='hold offset'
+        event.save()
 
     # create event types (if not already exist)
     # load file

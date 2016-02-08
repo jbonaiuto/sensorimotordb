@@ -11,7 +11,7 @@ function loadObject(resource_uri)
             obj=data;
         },
         error: function(data) {
-            alert("Something went wrong!");
+            //alert("Something went wrong!");
         } };
     $.ajax(args);
     return obj;

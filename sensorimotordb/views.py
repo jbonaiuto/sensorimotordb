@@ -12,7 +12,7 @@ import h5py
 import os
 from registration.forms import User
 from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm
-from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest
+from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent
 from uscbp import settings
 from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
 
@@ -52,6 +52,7 @@ class ConditionDetailView(LoginRequiredMixin, DetailView):
         if os.path.exists(os.path.join(settings.MEDIA_ROOT,'video','condition_%d.mp4' % self.object.id)):
             context['video_url_mp4']=''.join(['http://', get_current_site(None).domain, os.path.join('/media/video/',
                 'condition_%d.mp4' % self.object.id)])
+            context['video_events']=ConditionVideoEvent.objects.filter(condition=self.object).order_by('time')
         return context
 
 

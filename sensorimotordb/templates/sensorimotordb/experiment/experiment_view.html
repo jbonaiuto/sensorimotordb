@@ -58,10 +58,53 @@
             $(this).append(compiledTmpl);
         });
         d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
+        d3.selectAll("#kernelwidth").on("change", function(){ dispatch.statechange()});
         dispatch.on("statechange", update);
+
+        // Load analysis results
+        loadAnalysisResults();
 
         // Load conditions for experiment
         loadConditions();
+    }
+
+    /**
+     * Load analysis results
+     */
+    function loadAnalysisResults(){
+        $('.analysis_results_list').each(function(index, element){
+            $(this).empty();
+        });
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/api/v1/visuomotor_classification_analysis_results/?analysis__experiment={{ object.id }}&limit=0&format=json",
+            data: data,
+            success: loadedAnalysisResultsData,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+
+    /**
+     * Loaded analysis results
+     * @param resp
+     */
+    function loadedAnalysisResultsData(resp)
+    {
+        for(var i=0; i<resp.objects.length; i++)
+        {
+            // Add condition to list
+            var results=resp.objects[i];
+            $('.analysis_results_list').each(function(index, element){
+                results.level=3;
+                results.idx=i;
+                var tmplMarkup = $('#analysis-results-template').html();
+                var compiledTmpl = _.template(tmplMarkup, results);
+                $(this).append(compiledTmpl);
+            });
+        }
     }
 
     /**
@@ -326,13 +369,24 @@
             <option value="100">100</option>
             <option value="200">200</option>
         </select>
+        <label for="kernelwidth">Gaussian width (ms)</label>
+        <select id="kernelwidth">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option selected value="100">100</option>
+            <option value="200">200</option>
+        </select>
         <input id="align_event" type="hidden" value="start"/>
     </form>
+    <h2>Analysis Results</h2>
+    <div class="analysis_results_list"></div>
     <h2>Conditions</h2>
     <div class="condition_list"></div>
     <h2>Units</h2>
     <div class="unit_list"></div>
-{% include "sensorimotordb/experiment/experiment_template.html" %}
-{% include "sensorimotordb/condition/condition_list_item_template.html" %}
-{% include "sensorimotordb/unit/unit_list_item_template.html" %}
+    {% include "sensorimotordb/experiment/experiment_template.html" %}
+    {% include "sensorimotordb/condition/condition_list_item_template.html" %}
+    {% include "sensorimotordb/unit/unit_list_item_template.html" %}
+    {% include "sensorimotordb/analysis/analysis_results_list_item_template.html" %}
 {% endblock %}

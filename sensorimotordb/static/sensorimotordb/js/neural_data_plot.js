@@ -3,6 +3,69 @@ var p=d3.scale.category10();
 
 var dispatch=d3.dispatch("statechange","realigned");
 
+function drawPieChart(classifications, parent_id, on_click)
+{
+    $('#'+parent_id).empty();
+
+    var pie = new d3pie(parent_id, {
+        "footer": {
+            "color": "#999999",
+            "fontSize": 10,
+            "font": "open sans",
+            "location": "bottom-left"
+        },
+        "size": {
+            "canvasWidth": 590,
+            "pieOuterRadius": "90%"
+        },
+        "data": {
+            "sortOrder": "value-desc",
+            "content": classifications
+        },
+        "labels": {
+            "outer": {
+                "pieDistance": 32
+            },
+            "inner": {
+                "hideWhenLessThanPercentage": 3
+            },
+            "mainLabel": {
+                "fontSize": 11
+            },
+            "percentage": {
+                "color": "#ffffff",
+                "decimalPlaces": 0
+            },
+            "value": {
+                "color": "#adadad",
+                "fontSize": 11
+            },
+            "lines": {
+                "enabled": true
+            },
+            "truncation": {
+                "enabled": true
+            }
+        },
+        "effects": {
+            "pullOutSegmentOnClick": {
+                "effect": "linear",
+                "speed": 400,
+                "size": 8
+            }
+        },
+        "misc": {
+            "gradient": {
+                "enabled": true,
+                "percentage": 100
+            }
+        },
+        callbacks: {
+            onClickSegment: on_click
+        }
+    });
+}
+
 function drawRaster(id, parent_id, trial_spikes, trial_events, event_types)
 {
     var scaleFactor=0.5;
@@ -363,8 +426,9 @@ function drawFiringRate(id, parent_id, data, trial_events, event_types)
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var binwidth = parseInt(d3.select("#binwidth").node().value);
+    var kernelwidth = parseInt(d3.select("#kernelwidth").node().value);
 
-    var rate=get_firing_rate(data, binwidth, width);
+    var rate=get_firing_rate(data, binwidth, kernelwidth);
 
     var xScale = d3.scale.linear()
         .range([0, width])
@@ -506,8 +570,9 @@ function drawFiringRate(id, parent_id, data, trial_events, event_types)
         var trial_events=realigned_trial_events.get(id);
 
         binwidth = parseInt(d3.select("#binwidth").node().value);
+        kernelwidth = parseInt(d3.select("#kernelwidth").node().value);
 
-        rate=get_firing_rate(data, binwidth, width);
+        rate=get_firing_rate(data, binwidth, kernelwidth);
 
         var yMax=d3.max(rate, function(d) { return d.y+1; });
         yScale.domain([0, yMax +.1*yMax])
@@ -564,6 +629,7 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var binwidth = parseInt(d3.select("#binwidth").node().value);
+    var kernelwidth = parseInt(d3.select("#kernelwidth").node().value);
     var min_time=10000;
     var max_time=-10000;
     var max_rate=0;
@@ -571,7 +637,7 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
     for(var i=0; i<group_ids.length; i++)
     {
         var group_id=group_ids[i];
-        var rate=get_firing_rate(group_trials.get(group_id), binwidth, width);
+        var rate=get_firing_rate(group_trials.get(group_id), binwidth, kernelwidth);
         rate_data.set(group_id,rate);
         var group_min_time=d3.min(rate, function(d){ return d.x; });
         var group_max_time=d3.max(rate, function(d){ return d.x; });
@@ -752,6 +818,7 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
 
     rate_svg.update=function update(realigned_data, realigned_trial_events){
         binwidth = parseInt(d3.select("#binwidth").node().value);
+        kernelwidth = parseInt(d3.select("#kernelwidth").node().value);
         rate_data=new Map();
         var min_time=10000;
         var max_time=-10000;
@@ -759,7 +826,7 @@ function drawPopulationFiringRate(parent_id, group_trials, group_trial_events, e
         for(var i=0; i<group_ids.length; i++)
         {
             var group_id=group_ids[i];
-            var rate=get_firing_rate(realigned_data.get(group_id), binwidth, width);
+            var rate=get_firing_rate(realigned_data.get(group_id), binwidth, kernelwidth);
             var group_min_time=d3.min(rate, function(d){ return d.x; });
             var group_max_time=d3.max(rate, function(d){ return d.x; });
             if(group_min_time<min_time)

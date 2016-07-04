@@ -272,7 +272,7 @@ class RecordingTrial(models.Model):
 
 class UnitRecording(models.Model):
     trial=models.ForeignKey('RecordingTrial', related_name='unit_recordings')
-    unit=models.ForeignKey('Unit')
+    unit=models.ForeignKey('Unit', related_name='unit_recording')
     spike_times=models.TextField()
 
     class Meta:
@@ -289,6 +289,11 @@ class UnitRecording(models.Model):
     def export(self, group):
         group.attrs['unit']=self.unit.id
         group['spike_times']=self.spike_times_array
+
+    def get_spikes(self, time_zero, window):
+        rel_spike_times=self.spike_times_array-time_zero
+        spikes=rel_spike_times[np.where((rel_spike_times>=window[0]) & (rel_spike_times<window[1]))[0]]
+        return spikes
 
 
 class Event(models.Model):
@@ -349,5 +354,4 @@ class ExperimentExportRequest(models.Model):
 
             self.send()
         super(ExperimentExportRequest,self).save(**kwargs)
-
 

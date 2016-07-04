@@ -58,12 +58,20 @@
             <% } %>
         </table>
         <form>
-            <label for="binwidth">Bin width</label>
+            <label for="binwidth">Bin width (ms)</label>
             <select id="binwidth">
                 <option selected value="10">10</option>
                 <option value="20">20</option>
                 <option value="50">50</option>
                 <option value="100">100</option>
+                <option value="200">200</option>
+            </select>
+            <label for="kernelwidth">Gaussian width (ms)</label>
+            <select id="kernelwidth">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option selected value="100">100</option>
                 <option value="200">200</option>
             </select>
             <input id="align_event" type="hidden" value="start"/>

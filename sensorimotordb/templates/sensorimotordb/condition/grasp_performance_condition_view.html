@@ -93,6 +93,7 @@
         });
         {% endif %}
         d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
+        d3.selectAll("#kernelwidth").on("change", function(){ dispatch.statechange()});
         dispatch.on("statechange", update);
 
         $('.unit_list').each(function(index, element){

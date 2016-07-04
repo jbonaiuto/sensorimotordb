@@ -6,7 +6,7 @@ from tastypie.constants import ALL_WITH_RELATIONS
 from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
 from tastypie.paginator import Paginator
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, VisuomotorClassificationAnalysisResults, UnitClassification, VisuomotorClassificationAnalysis, Analysis, Factor, Level, UnitAnalysisResults, VisuomotorClassificationUnitAnalysisResults
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -181,12 +181,20 @@ class UnitRecordingResource(ModelResource):
         }
         cache = SimpleCache(timeout=10)
 
+    def dehydrate(self, bundle):
+        bundle
+        if VisuomotorClassificationUnitAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,VisuomotorClassificationUnitAnalysisResults):
+            results_res = VisuomotorClassificationUnitAnalysisResultsResource()
+            results_bundle = results_res.build_bundle(obj=VisuomotorClassificationUnitAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = results_res.full_dehydrate(results_bundle).data
+        return bundle
+
 class FullRecordingTrialResource(ModelResource):
     events=fields.ToManyField(EventResource, 'events', full=True, null=True)
     condition=fields.ForeignKey(ConditionResource, 'condition')
     unit_recordings=fields.ToManyField('sensorimotordb.api.UnitRecordingResource', 'unit_recordings', null=False, full=True)
     class Meta:
-        queryset = RecordingTrial.objects.all().prefetch_related('events','condition','unit_recordings')
+        queryset = RecordingTrial.objects.all().prefetch_related('events','condition','unit_recordings','unit_recordings__unit')
         resource_name = 'full_recording_trial'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -194,4 +202,121 @@ class FullRecordingTrialResource(ModelResource):
             'unit_recordings': ALL_WITH_RELATIONS,
             'condition': ALL_WITH_RELATIONS
         }
+        cache = SimpleCache(timeout=10)
+
+
+class UnitClassificationResource(ModelResource):
+    units=fields.ManyToManyField(UnitResource, 'units', null=False, full=True)
+    class Meta:
+        queryset=UnitClassification.objects.all().prefetch_related('units')
+        resource_name='unit_classification'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        cache = SimpleCache(timeout=10)
+
+
+class LevelResource(ModelResource):
+    conditions=fields.ManyToManyField(ConditionResource,'conditions',related_name='conditions',null=False,full=True)
+    class Meta:
+        queryset=Level.objects.all()
+        resource_name='level'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        cache = SimpleCache(timeout=10)
+
+class FactorResource(ModelResource):
+    levels=fields.ToManyField(LevelResource, 'levels', related_name='levels',null=False,full=True)
+    class Meta:
+        queryset=Factor.objects.all()
+        resource_name='factor'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        cache = SimpleCache(timeout=10)
+
+
+class AnalysisResource(ModelResource):
+    experiment=fields.ForeignKey(ExperimentResource, 'experiment')
+    factors=fields.ToManyField(FactorResource,'factors', related_name='factors',null=False,full=True)
+    class Meta:
+        queryset=Analysis.objects.all()
+        resource_name='analysis'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        cache = SimpleCache(timeout=10)
+        filtering={
+            'experiment': ALL_WITH_RELATIONS,
+        }
+
+    def dehydrate(self, bundle):
+        if VisuomotorClassificationAnalysis.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,VisuomotorClassificationAnalysis):
+            analysis_res = VisuomotorClassificationAnalysisResource()
+            analysis_bundle = analysis_res.build_bundle(obj=VisuomotorClassificationAnalysis.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
+        return bundle
+
+
+class VisuomotorClassificationAnalysisResource(AnalysisResource):
+    class Meta:
+        queryset=VisuomotorClassificationAnalysis.objects.all().prefetch_related('experiment')
+        resource_name='visuomotor_classification_analysis'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        cache = SimpleCache(timeout=10)
+
+
+class AnalysisResultsResource(ModelResource):
+    analysis=fields.ForeignKey(AnalysisResource, 'analysis', null=False, full=True)
+    unit_analysis_results=fields.ToManyField('sensorimotordb.api.UnitAnalysisResultsResource', 'unit_analysis_results', related_name='unit_analysis_results',full=True)
+
+    class Meta:
+        queryset=AnalysisResults.objects.all().prefetch_related('analysis','unit_analysis_results')
+        resource_name='analysis_results'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        cache = SimpleCache(timeout=10)
+
+    def dehydrate(self, bundle):
+        if VisuomotorClassificationAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,VisuomotorClassificationAnalysisResults):
+            results_res = VisuomotorClassificationAnalysisResultsResource()
+            results_bundle = results_res.build_bundle(obj=VisuomotorClassificationAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = results_res.full_dehydrate(results_bundle).data
+        return bundle
+
+
+class VisuomotorClassificationAnalysisResultsResource(AnalysisResultsResource):
+    unit_classifications=fields.ToManyField(UnitClassificationResource,'unit_classifications', full=True)
+    class Meta:
+        queryset=VisuomotorClassificationAnalysisResults.objects.all().prefetch_related('analysis','unit_classifications')
+        resource_name='visuomotor_classification_analysis_results'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        filtering={
+            'analysis': ALL_WITH_RELATIONS,
+        }
+        cache = SimpleCache(timeout=10)
+
+
+class UnitAnalysisResultsResource(ModelResource):
+    unit=fields.ToOneField(UnitResource, 'unit', full=True)
+    class Meta:
+        queryset=UnitAnalysisResults.objects.all()
+        resource_name='unit_analysis_results'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        cache = SimpleCache(timeout=10)
+
+    def dehydrate(self, bundle):
+        if VisuomotorClassificationUnitAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,VisuomotorClassificationUnitAnalysisResults):
+            results_res = VisuomotorClassificationUnitAnalysisResultsResource()
+            results_bundle = results_res.build_bundle(obj=VisuomotorClassificationUnitAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = results_res.full_dehydrate(results_bundle).data
+        return bundle
+
+
+class VisuomotorClassificationUnitAnalysisResultsResource(UnitAnalysisResultsResource):
+    class Meta:
+        queryset=VisuomotorClassificationUnitAnalysisResults.objects.all()
+        resource_name='visuomotor_classification_unit_analysis_results'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)

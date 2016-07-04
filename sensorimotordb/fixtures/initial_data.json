@@ -552,6 +552,166 @@
 			"abbreviation": "PrCO",
 			"brain_region_type": "neural region"
         }
+    },
+    {
+        "model": "sensorimotordb.Analysis",
+        "pk": 1,
+        "fields": {
+            "experiment": 73
+        }
+    },
+    {
+        "model": "sensorimotordb.VisuomotorClassificationAnalysis",
+        "pk": 1,
+        "fields": {
+            "baseline_rel_evt": "start",
+            "baseline_rel_start": -1000,
+            "baseline_rel_end": 0,
+            "woi_rel_evt": "mo",
+            "woi_rel_start": 0,
+            "woi_rel_end": 1000
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 1,
+        "fields": {
+            "analysis": 1,
+            "name": "modality"
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 2,
+        "fields": {
+            "analysis": 1,
+            "name": "objectgrasp"
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 1,
+        "fields": {
+            "factor": 1,
+            "value": "execution",
+            "conditions": [407,409,411]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 2,
+        "fields": {
+            "factor": 1,
+            "value": "observation",
+            "conditions": [406,408,410]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 3,
+        "fields": {
+            "factor": 2,
+            "value": "ringhook",
+            "conditions": [406,407]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 4,
+        "fields": {
+            "factor": 2,
+            "value": "spherewholehand",
+            "conditions": [408,409]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 5,
+        "fields": {
+            "factor": 2,
+            "value": "trapezoidprecision",
+            "conditions": [410,411]
+        }
+    },
+    {
+        "model": "sensorimotordb.Analysis",
+        "pk": 2,
+        "fields": {
+            "experiment": 75
+        }
+    },
+    {
+        "model": "sensorimotordb.VisuomotorClassificationAnalysis",
+        "pk": 2,
+        "fields": {
+            "baseline_rel_evt": "start",
+            "baseline_rel_start": -1000,
+            "baseline_rel_end": 0,
+            "woi_rel_evt": "mo",
+            "woi_rel_start": 0,
+            "woi_rel_end": 1000
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 3,
+        "fields": {
+            "analysis": 2,
+            "name": "modality"
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 4,
+        "fields": {
+            "analysis": 2,
+            "name": "objectgrasp"
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 6,
+        "fields": {
+            "factor": 3,
+            "value": "execution",
+            "conditions": [432,433,437,438,442,443]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 7,
+        "fields": {
+            "factor": 3,
+            "value": "observation",
+            "conditions": [430,435,440]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 8,
+        "fields": {
+            "factor": 4,
+            "value": "largeconewholehand",
+            "conditions": [440,442,443]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 9,
+        "fields": {
+            "factor": 4,
+            "value": "ringhook",
+            "conditions": [430,432,433]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 10,
+        "fields": {
+            "factor": 4,
+            "value": "smallconeside",
+            "conditions": [435,437,438]
+        }
     }
 ]
 

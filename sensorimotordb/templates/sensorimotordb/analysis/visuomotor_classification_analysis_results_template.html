@@ -1,0 +1,40 @@
+{% load staticfiles %}
+<script type="text/html" id="analysis_results-template">
+    <h1><%= name %></h1>
+    <div id="analysis_results-<%= id %>">
+        <table>
+            <tr>
+                <td><strong>Description</strong></td>
+                <td><%= description %></td>
+                <td rowspan="2" valign=top>
+                    <form>
+                        <label for="binwidth">Bin width</label>
+                        <select id="binwidth">
+                            <option selected value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                        <label for="kernelwidth">Gaussian width (ms)</label>
+                        <select id="kernelwidth">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option selected value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                        <input id="align_event" type="hidden" value="start"/>
+                    </form>
+                    <div id="analysis_results-<%= id %>-mean_rate" style="text-align:center"></div>
+                </td>
+            </tr>
+            <tr>
+                <td valign=top colspan="2">
+                    <div id="analysis_results-<%= id %>-pie" style="text-align:center"><img src="{% static 'sensorimotordb/img/loading.gif' %}"></div>
+                </td>
+                <td></td>
+            </tr>
+        </table>
+    </div>
+</script>

@@ -1,0 +1,13 @@
+{% load staticfiles %}
+<script type="text/html" id="analysis-results-template">
+    <div id="analysis_results-<%= id %>" class="<%= getTRTag(idx) %>">
+        <table>
+            <tr>
+                <td colspan="2"><a href="/sensorimotordb/analysis_results/<%= id %>/"><h<%= level %>><%= name %></h></h<%= level %>></a></td>
+            </tr>
+            <tr>
+                <td colspan="2"><%= description %></td>
+            </tr>
+        </table>
+    </div>
+</script>

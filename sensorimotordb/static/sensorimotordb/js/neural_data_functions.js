@@ -73,17 +73,17 @@ function realign_events(trial_events, event_name)
     return realigned;
 }
 
-function get_firing_rate(trials, bin_width, width)
+function get_firing_rate(trials, bin_width, kernel_width)
 {
+    var variance=kernel_width/bin_width;
     var window=[];
     for(var i=-2*bin_width; i<2*bin_width+1; i++)
-        window.push(Math.exp(-Math.pow(i,2)*(1/(2*Math.pow(bin_width,2)))));
+        window.push(Math.exp(-Math.pow(i,2)*(1/(2*Math.pow(variance,2)))));
     var windowSum=d3.sum(window, function(x){return x});
     for(var i=0; i<window.length; i++)
         window[i]=window[i]*(1.0/windowSum);
 
     var xScale = d3.scale.linear()
-        .range([0, width])
         .domain([d3.min(trials, function(d) { return d.x; }), d3.max(trials, function(d) { return d.x; })]);;
 
     var numTrials=d3.max(trials, function(d){ return d.y});
@@ -99,24 +99,14 @@ function get_firing_rate(trials, bin_width, width)
             y: hist[j].y/numTrials/(bin_width/1000.0)
         });
 
-    var smoothed = convolute(scaledHist, window, function(datum){
+    var rate = convolute(scaledHist, window, function(datum){
         return datum.y;
     });
-    var rate=[];
-    for(var j=0; j<hist.length; j++)
-    {
-        rate.push({
-            x: hist[j].x,
-            y: smoothed[j]
-        })
-    }
     return rate;
 }
 
 function convolute(data, kernel, accessor){
     var kernel_center = Math.floor(kernel.length/2);
-    var left_size = kernel_center;
-    var right_size = kernel.length - (kernel_center-1);
     if(accessor == undefined){
         accessor = function(datum){
             return datum;
@@ -137,7 +127,7 @@ function convolute(data, kernel, accessor){
             var index = constrain( ( i + (k-kernel_center) ), [0, data.length-1] );
             s += kernel[k] * accessor(data[index]);
         }
-        return s;
+        return {'x': data[i].x, 'y': s};
     });
     return convoluted_data;
 }

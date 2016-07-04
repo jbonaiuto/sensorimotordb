@@ -12,7 +12,7 @@ import h5py
 import os
 from registration.forms import User
 from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm
-from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent
+from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor
 from uscbp import settings
 from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
 
@@ -70,6 +70,30 @@ class ExperimentDetailView(LoginRequiredMixin, DetailView):
         context['can_export']=False
         if self.request.user.is_superuser or ExperimentExportRequest.objects.filter(experiment__id=self.object.id, requesting_user__id=self.request.user.id, status='approved').exists():
             context['can_export']=True
+        return context
+
+
+class AnalysisResultsDetailView(LoginRequiredMixin, DetailView):
+    model=AnalysisResults
+
+    def get(self, request, *args, **kwargs):
+        id=self.kwargs.get('pk', None)
+        if VisuomotorClassificationAnalysisResults.objects.filter(id=id).exists():
+            return redirect('/sensorimotordb/visuomotor_classification_analysis_results/%s/' % id)
+
+
+class VisuomotorClassificationAnalysisResultsDetailView(AnalysisResultsDetailView):
+    model=VisuomotorClassificationAnalysisResults
+    template_name = 'sensorimotordb/analysis/visuomotor_classification_analysis_results_view.html'
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        context = AnalysisResultsDetailView.get_context_data(self, **kwargs)
+        context['factors']=Factor.objects.filter(analysis=self.object.analysis)
         return context
 
 

@@ -24,6 +24,13 @@
             <option value="100">100</option>
             <option value="200">200</option>
         </select>
+        <label for="kernelwidth">Gaussian width (ms)</label>
+        <select id="kernelwidth">
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option selected value="100">100</option>
+            <option value="200">200</option>
+        </select>
         <input id="align_event" type="hidden" value="start"/>
     </form>
     <div id="unit-<%= id %>-plots" style="text-align:center"><img src="{% static 'sensorimotordb/img/loading.gif' %}"></div>

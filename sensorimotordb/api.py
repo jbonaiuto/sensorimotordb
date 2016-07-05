@@ -98,10 +98,10 @@ class ExperimentResource(SearchResourceMixin, ModelResource):
 
 
 class UnitResource(SearchResourceMixin, ModelResource):
-    area = fields.ForeignKey(BrainRegionResource, 'area',full=True)
+    area = fields.ToOneField(BrainRegionResource, 'area',full=True)
 
     class Meta:
-        queryset = Unit.objects.all().prefetch_related('area')
+        queryset = Unit.objects.all().select_related('area')
         resource_name = 'unit'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -109,10 +109,10 @@ class UnitResource(SearchResourceMixin, ModelResource):
 
 
 class ConditionResource(SearchResourceMixin, ModelResource):
-    experiment=fields.ForeignKey(ExperimentResource, 'experiment', full=True)
+    experiment=fields.ToOneField(ExperimentResource, 'experiment', full=True)
     recording_trials=fields.ToManyField('sensorimotordb.api.RecordingTrialResource', 'recording_trials', null=False)
     class Meta:
-        queryset = Condition.objects.all().prefetch_related('experiment','recording_trials')
+        queryset = Condition.objects.all().select_related('experiment').prefetch_related('recording_trials')
         resource_name = 'condition'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -125,7 +125,7 @@ class ConditionResource(SearchResourceMixin, ModelResource):
 
 class GraspPerformanceConditionResource(ConditionResource):
     class Meta:
-        queryset = GraspPerformanceCondition.objects.all().prefetch_related('experiment','recording_trials')
+        queryset = GraspPerformanceCondition.objects.all().select_related('experiment').prefetch_related('recording_trials')
         resource_name = 'grasp_performance_condition'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -133,9 +133,9 @@ class GraspPerformanceConditionResource(ConditionResource):
 
 
 class GraspObservationConditionResource(ConditionResource):
-    demonstrator_species=fields.ForeignKey(SpeciesResource, 'demonstrator_species', full=True)
+    demonstrator_species=fields.ToOneField(SpeciesResource, 'demonstrator_species', full=True)
     class Meta:
-        queryset = GraspObservationCondition.objects.all().prefetch_related('experiment','recording_trials','demonstrator_species')
+        queryset = GraspObservationCondition.objects.all().select_related('experiment','demonstrator_species').prefetch_related('recording_trials')
         resource_name = 'grasp_observation_condition'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -153,10 +153,10 @@ class EventResource(ModelResource):
 
 class RecordingTrialResource(ModelResource):
     events=fields.ToManyField(EventResource, 'events', full=True, null=True)
-    condition=fields.ForeignKey(ConditionResource, 'condition')
+    condition=fields.ToOneField(ConditionResource, 'condition')
     unit_recordings=fields.ToManyField('sensorimotordb.api.UnitRecordingResource', 'unit_recordings', null=False)
     class Meta:
-        queryset = RecordingTrial.objects.all().prefetch_related('events','condition','unit_recordings')
+        queryset = RecordingTrial.objects.all().select_related('condition').prefetch_related('condition','unit_recordings')
         resource_name = 'recording_trial'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -168,10 +168,10 @@ class RecordingTrialResource(ModelResource):
 
 
 class UnitRecordingResource(ModelResource):
-    unit = fields.ForeignKey(UnitResource, 'unit', full=True, null=False)
-    trial = fields.ForeignKey(RecordingTrialResource, 'trial')
+    unit = fields.ToOneField(UnitResource, 'unit', full=True, null=False)
+    trial = fields.ToOneField(RecordingTrialResource, 'trial')
     class Meta:
-        queryset = UnitRecording.objects.all().prefetch_related('unit','trial')
+        queryset = UnitRecording.objects.all().select_related('unit','trial')
         resource_name = 'unit_recording'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -191,10 +191,10 @@ class UnitRecordingResource(ModelResource):
 
 class FullRecordingTrialResource(ModelResource):
     events=fields.ToManyField(EventResource, 'events', full=True, null=True)
-    condition=fields.ForeignKey(ConditionResource, 'condition')
+    condition=fields.ToOneField(ConditionResource, 'condition')
     unit_recordings=fields.ToManyField('sensorimotordb.api.UnitRecordingResource', 'unit_recordings', null=False, full=True)
     class Meta:
-        queryset = RecordingTrial.objects.all().prefetch_related('events','condition','unit_recordings','unit_recordings__unit')
+        queryset = RecordingTrial.objects.all().select_related('condition').prefetch_related('events','unit_recordings')
         resource_name = 'full_recording_trial'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -218,7 +218,7 @@ class UnitClassificationResource(ModelResource):
 class LevelResource(ModelResource):
     conditions=fields.ManyToManyField(ConditionResource,'conditions',related_name='conditions',null=False,full=True)
     class Meta:
-        queryset=Level.objects.all()
+        queryset=Level.objects.all().prefetch_related('conditions')
         resource_name='level'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -227,7 +227,7 @@ class LevelResource(ModelResource):
 class FactorResource(ModelResource):
     levels=fields.ToManyField(LevelResource, 'levels', related_name='levels',null=False,full=True)
     class Meta:
-        queryset=Factor.objects.all()
+        queryset=Factor.objects.all().prefetch_related('levels')
         resource_name='factor'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -235,10 +235,10 @@ class FactorResource(ModelResource):
 
 
 class AnalysisResource(ModelResource):
-    experiment=fields.ForeignKey(ExperimentResource, 'experiment')
+    experiment=fields.ToOneField(ExperimentResource, 'experiment')
     factors=fields.ToManyField(FactorResource,'factors', related_name='factors',null=False,full=True)
     class Meta:
-        queryset=Analysis.objects.all()
+        queryset=Analysis.objects.all().select_related('experiment').prefetch_related('factors')
         resource_name='analysis'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -257,7 +257,7 @@ class AnalysisResource(ModelResource):
 
 class VisuomotorClassificationAnalysisResource(AnalysisResource):
     class Meta:
-        queryset=VisuomotorClassificationAnalysis.objects.all().prefetch_related('experiment')
+        queryset=VisuomotorClassificationAnalysis.objects.all().select_related('experiment').prefetch_related('factors')
         resource_name='visuomotor_classification_analysis'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -265,11 +265,11 @@ class VisuomotorClassificationAnalysisResource(AnalysisResource):
 
 
 class AnalysisResultsResource(ModelResource):
-    analysis=fields.ForeignKey(AnalysisResource, 'analysis', null=False, full=True)
+    analysis=fields.ToOneField(AnalysisResource, 'analysis', null=False, full=True)
     unit_analysis_results=fields.ToManyField('sensorimotordb.api.UnitAnalysisResultsResource', 'unit_analysis_results', related_name='unit_analysis_results',full=True)
 
     class Meta:
-        queryset=AnalysisResults.objects.all().prefetch_related('analysis','unit_analysis_results')
+        queryset=AnalysisResults.objects.all().select_related('analysis').prefetch_related('unit_analysis_results')
         resource_name='analysis_results'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -286,7 +286,7 @@ class AnalysisResultsResource(ModelResource):
 class VisuomotorClassificationAnalysisResultsResource(AnalysisResultsResource):
     unit_classifications=fields.ToManyField(UnitClassificationResource,'unit_classifications', full=True)
     class Meta:
-        queryset=VisuomotorClassificationAnalysisResults.objects.all().prefetch_related('analysis','unit_classifications')
+        queryset=VisuomotorClassificationAnalysisResults.objects.all().select_related('analysis').prefetch_related('unit_analysis_results','unit_classifications')
         resource_name='visuomotor_classification_analysis_results'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -299,7 +299,7 @@ class VisuomotorClassificationAnalysisResultsResource(AnalysisResultsResource):
 class UnitAnalysisResultsResource(ModelResource):
     unit=fields.ToOneField(UnitResource, 'unit', full=True)
     class Meta:
-        queryset=UnitAnalysisResults.objects.all()
+        queryset=UnitAnalysisResults.objects.all().select_related('unit')
         resource_name='unit_analysis_results'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
@@ -315,7 +315,7 @@ class UnitAnalysisResultsResource(ModelResource):
 
 class VisuomotorClassificationUnitAnalysisResultsResource(UnitAnalysisResultsResource):
     class Meta:
-        queryset=VisuomotorClassificationUnitAnalysisResults.objects.all()
+        queryset=VisuomotorClassificationUnitAnalysisResults.objects.all().select_related('unit')
         resource_name='visuomotor_classification_unit_analysis_results'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()

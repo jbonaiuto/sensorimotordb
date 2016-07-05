@@ -73,7 +73,7 @@ function realign_events(trial_events, event_name)
     return realigned;
 }
 
-function get_firing_rate(trials, bin_width, kernel_width)
+function get_standard_firing_rate(trials, bins, bin_width, kernel_width)
 {
     var variance=kernel_width/bin_width;
     var window=[];
@@ -83,13 +83,10 @@ function get_firing_rate(trials, bin_width, kernel_width)
     for(var i=0; i<window.length; i++)
         window[i]=window[i]*(1.0/windowSum);
 
-    var xScale = d3.scale.linear()
-        .domain([d3.min(trials, function(d) { return d.x; }), d3.max(trials, function(d) { return d.x; })]);;
-
     var numTrials=d3.max(trials, function(d){ return d.y});
 
     hist = d3.layout.histogram()
-        .bins(d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width))
+        .bins(bins)
         (trials.map(function(d) {return d.x; }));
 
     var scaledHist=[];
@@ -103,6 +100,15 @@ function get_firing_rate(trials, bin_width, kernel_width)
         return datum.y;
     });
     return rate;
+}
+
+function get_firing_rate(trials, bin_width, kernel_width)
+{
+    var xScale = d3.scale.linear()
+        .domain([d3.min(trials, function(d) { return d.x; }), d3.max(trials, function(d) { return d.x; })]);;
+    var bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width)
+
+    return get_standard_firing_rate(trials, bins, bin_width, kernel_width)
 }
 
 function convolute(data, kernel, accessor){

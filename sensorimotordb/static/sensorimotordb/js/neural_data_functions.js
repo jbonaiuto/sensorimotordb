@@ -21,21 +21,29 @@ function loadObject(resource_uri)
 function realign_spikes(trials, trial_events, event_name)
 {
     var realigned=[];
-    for(var i=0; i<trials.length; i++)
+    var align_evt=[];
+
+    for(var trial_idx=0; trial_idx<trials.length; trial_idx++)
     {
-        var event_time=0;
-        for(var j=0; j<trial_events.length; j++)
+        var start_evt_idx=-1;
+        var align_evt_idx=-1;
+        for(var evt_idx=0; evt_idx<trial_events.length; evt_idx++)
         {
-            if(trial_events[j].trial==trials[i].y && trial_events[j].name==event_name)
+            if(trial_events[evt_idx].trial==trials[trial_idx].y)
             {
-                event_time=trial_events[j].t;
-                break;
+                if(trial_events[evt_idx].name=='start')
+                    start_evt_idx=evt_idx;
+                else if(trial_events[evt_idx].name==event_name)
+                    align_evt_idx=evt_idx;
             }
         }
+        if(align_evt_idx<0)
+            align_evt_idx=start_evt_idx;
+        var align_evt=trial_events[align_evt_idx];
         realigned.push({
-            x: (trials[i].x-event_time)*1000.0,
-            y: trials[i].y
-        })
+            x: (trials[trial_idx].x-align_evt.t)*1000.0,
+            y: trials[trial_idx].y
+        });
     }
     return realigned;
 }
@@ -43,31 +51,40 @@ function realign_spikes(trials, trial_events, event_name)
 function realign_events(trial_events, event_name)
 {
     var realigned=[];
-    for(var i=0; i<trial_events.length; i++)
+    for(var evt_idx=0; evt_idx<trial_events.length; evt_idx++)
     {
-        if(trial_events[i].name==event_name)
+        if(trial_events[evt_idx].name==event_name)
         {
             realigned.push({
                 t: 0,
-                trial: trial_events[i].trial,
-                name: trial_events[i].name,
-                description: trial_events[i].description
+                trial: trial_events[evt_idx].trial,
+                name: trial_events[evt_idx].name,
+                description: trial_events[evt_idx].description
             });
         }
         else
         {
-            for(var j=0; j<trial_events.length; j++)
+            var start_evt_idx=-1;
+            var align_evt_idx=-1;
+            for(var other_evt_idx=0; other_evt_idx<trial_events.length; other_evt_idx++)
             {
-                if(trial_events[j].trial==trial_events[i].trial && trial_events[j].name==event_name)
+                if(trial_events[other_evt_idx].trial==trial_events[evt_idx].trial)
                 {
-                    realigned.push({
-                        t: (trial_events[i].t-trial_events[j].t)*1000.0,
-                        trial: trial_events[i].trial,
-                        name: trial_events[i].name,
-                        description: trial_events[i].description
-                    });
+                    if(trial_events[other_evt_idx].name=='start')
+                        start_evt_idx=other_evt_idx;
+                    else if(trial_events[other_evt_idx].name==event_name)
+                        align_evt_idx=other_evt_idx;
                 }
             }
+            if(align_evt_idx<0)
+                align_evt_idx=start_evt_idx;
+            var align_evt=trial_events[align_evt_idx];
+            realigned.push({
+                    t: (trial_events[evt_idx].t-align_evt.t)*1000.0,
+                    trial: trial_events[evt_idx].trial,
+                    name: trial_events[evt_idx].name,
+                    description: trial_events[evt_idx].description
+            });
         }
     }
     return realigned;
@@ -110,6 +127,28 @@ function get_firing_rate(trials, bin_width, kernel_width)
 
     return get_standard_firing_rate(trials, bins, bin_width, kernel_width)
 }
+
+function mean_firing_rate(rates, times)
+{
+    var sqrt_n=Math.sqrt(rates.length);
+    var mean_rate=times.map(
+        function(d,i){
+            var time_rates=rates.map(
+                function(e){
+                    return e[i].y
+                }
+            );
+            return {
+                x: d,
+                y: d3.mean(time_rates),
+                stderr: d3.deviation(time_rates)/sqrt_n
+            }
+        }
+    );
+    return mean_rate;
+}
+
+
 
 function convolute(data, kernel, accessor){
     var kernel_center = Math.floor(kernel.length/2);

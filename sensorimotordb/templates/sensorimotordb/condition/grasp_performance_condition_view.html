@@ -143,6 +143,19 @@
                         var compiledTmpl = _.template(tmplMarkup, unit);
                         $(this).append(compiledTmpl);
                     });
+                    // Load recording trials for condition
+                    var data = {};
+                    var args = {
+                        type: "GET",
+                        url: "/sensorimotordb/api/v1/unit/"+unit.id+"/?format=json",
+                        data: data,
+                        success: function(resp){
+                            $('#unit-area-'+resp.id).append(resp.area.name);
+                        },
+                        error: function(data) {
+                            //alert("Something went wrong!");
+                        } };
+                    $.ajax(args);
                 }
 
                 unit_trial_events.get(unit.id).push({
@@ -164,14 +177,16 @@
                         event_types.push(event.name);
                 }
 
-                var unit_data=[];
-                var spike_times=unit_recording.spike_times.split(',');
-                for(var k=0; k<spike_times.length; k++)
+                if(unit_recording.spike_times.length>0)
                 {
-                    unit_trials.get(unit.id).push({
-                        x: parseFloat(spike_times[k]),
-                        y: trial_number
-                    });
+                    var spike_times=unit_recording.spike_times.split(',');
+                    for(var k=0; k<spike_times.length; k++)
+                    {
+                        unit_trials.get(unit.id).push({
+                            x: parseFloat(spike_times[k]),
+                            y: trial_number
+                        });
+                    }
                 }
             }
         }
@@ -196,7 +211,7 @@
             drawFiringRate(unit_id, 'unit-'+unit_id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
         }
         $('#condition-'+condition_id+'-plots').empty();
-        drawPopulationFiringRate('condition-'+condition_id, realigned_unit_spikes, realigned_unit_trial_events, event_types, unit_ids, unit_labels, 1.0);
+        drawPopulationFiringRate('condition-'+condition_id+'-plots', 'condition-'+condition_id+'-plots_legend', realigned_unit_spikes, realigned_unit_trial_events, event_types, unit_ids, unit_labels, 1.0);
     }
 
     function update()
@@ -214,7 +229,7 @@
 {% endblock %}
 {% block content %}
     <div class="condition_info"></div>
-    <h2>Unit Recordings</h2>
+    <h2 style="clear: both">Unit Recordings</h2>
     <div class="unit_list"></div>
 {% include "sensorimotordb/condition/grasp_performance_condition_template.html" %}
 {% include "sensorimotordb/unit/unit_list_item_template.html" %}

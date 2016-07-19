@@ -14,12 +14,16 @@ two_way_anova<-function(data, resp_var, factor1, factor2){
     anova_results<-anova(model)
 
     # Get pairwise comparisons
-    f <- paste("pairwise~", factor1, "*", factor2, "|", factor1)
+    f <- paste("pairwise~", factor1)
     factor1_pairwise=do.call("lsmeans", list(model, as.formula(f)))
-    f <- paste("pairwise~", factor1, "*", factor2, "|", factor2)
+    f <- paste("pairwise~", factor2)
     factor2_pairwise=do.call("lsmeans", list(model, as.formula(f)))
+    f <- paste("pairwise~", factor1, "*", factor2, "|", factor1)
+    factor1_by_factor2_pairwise=do.call("lsmeans", list(model, as.formula(f)))
+    f <- paste("pairwise~", factor1, "*", factor2, "|", factor2)
+    factor2_by_factor1_pairwise=do.call("lsmeans", list(model, as.formula(f)))
 
     # Return results as a list
-    result <- list("anova"=anova_results, "factor1_pairwise"=summary(factor1_pairwise)$contrasts, "factor2_pairwise"=summary(factor2_pairwise)$contrasts)
+    result <- list("anova"=anova_results, "factor1_pairwise"=factor1_pairwise, "factor2_pairwise"=factor2_pairwise, "factor1_by_factor2_pairwise"=summary(factor1_by_factor2_pairwise)$contrasts, "factor2_by_factor1_pairwise"=summary(factor2_by_factor1_pairwise)$contrasts)
     return(result)
 }

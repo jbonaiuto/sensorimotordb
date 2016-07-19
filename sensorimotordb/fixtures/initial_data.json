@@ -557,19 +557,22 @@
         "model": "sensorimotordb.Analysis",
         "pk": 1,
         "fields": {
-            "experiment": 73
+            "experiment": 75
         }
     },
     {
         "model": "sensorimotordb.VisuomotorClassificationAnalysis",
         "pk": 1,
         "fields": {
-            "baseline_rel_evt": "start",
-            "baseline_rel_start": -1000,
+            "baseline_rel_evt": "lon",
+            "baseline_rel_start": -500,
             "baseline_rel_end": 0,
-            "woi_rel_evt": "mo",
-            "woi_rel_start": 0,
-            "woi_rel_end": 1000
+            "obj_view_woi_rel_evt": "lon",
+            "obj_view_woi_rel_start": 50,
+            "obj_view_woi_rel_end": 450,
+            "grasp_woi_rel_evt": "do",
+            "grasp_woi_rel_start": -500,
+            "grasp_woi_rel_end": 0
         }
     },
     {
@@ -577,7 +580,7 @@
         "pk": 1,
         "fields": {
             "analysis": 1,
-            "name": "modality"
+            "name": "Object Presentation - Trial Type"
         }
     },
     {
@@ -585,7 +588,31 @@
         "pk": 2,
         "fields": {
             "analysis": 1,
-            "name": "objectgrasp"
+            "name": "Object Presentation - Object"
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 3,
+        "fields": {
+            "analysis": 1,
+            "name": "Grasp Execution: Object/Grasp"
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 4,
+        "fields": {
+            "analysis": 1,
+            "name": "Grasp Execution: Visibility"
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 5,
+        "fields": {
+            "analysis": 1,
+            "name": "Grasp Observation: Object/Grasp"
         }
     },
     {
@@ -593,8 +620,8 @@
         "pk": 1,
         "fields": {
             "factor": 1,
-            "value": "execution",
-            "conditions": [407,409,411]
+            "value": "grasping",
+            "conditions": [432,433,437,438,442,443,430,435,440]
         }
     },
     {
@@ -602,8 +629,8 @@
         "pk": 2,
         "fields": {
             "factor": 1,
-            "value": "observation",
-            "conditions": [406,408,410]
+            "value": "fixation",
+            "conditions": [434,439,444,431,436,441]
         }
     },
     {
@@ -612,7 +639,7 @@
         "fields": {
             "factor": 2,
             "value": "ringhook",
-            "conditions": [406,407]
+            "conditions": [432,433,434,430,431]
         }
     },
     {
@@ -620,8 +647,8 @@
         "pk": 4,
         "fields": {
             "factor": 2,
-            "value": "spherewholehand",
-            "conditions": [408,409]
+            "value": "smallconeside",
+            "conditions": [437,438,439,435,436]
         }
     },
     {
@@ -629,88 +656,80 @@
         "pk": 5,
         "fields": {
             "factor": 2,
-            "value": "trapezoidprecision",
-            "conditions": [410,411]
-        }
-    },
-    {
-        "model": "sensorimotordb.Analysis",
-        "pk": 2,
-        "fields": {
-            "experiment": 75
-        }
-    },
-    {
-        "model": "sensorimotordb.VisuomotorClassificationAnalysis",
-        "pk": 2,
-        "fields": {
-            "baseline_rel_evt": "start",
-            "baseline_rel_start": -1000,
-            "baseline_rel_end": 0,
-            "woi_rel_evt": "mo",
-            "woi_rel_start": 0,
-            "woi_rel_end": 1000
-        }
-    },
-    {
-        "model": "sensorimotordb.Factor",
-        "pk": 3,
-        "fields": {
-            "analysis": 2,
-            "name": "modality"
-        }
-    },
-    {
-        "model": "sensorimotordb.Factor",
-        "pk": 4,
-        "fields": {
-            "analysis": 2,
-            "name": "objectgrasp"
-        }
-    },
-    {
-        "model": "sensorimotordb.Level",
-        "pk": 6,
-        "fields": {
-            "factor": 3,
-            "value": "execution",
-            "conditions": [432,433,437,438,442,443]
-        }
-    },
-    {
-        "model": "sensorimotordb.Level",
-        "pk": 7,
-        "fields": {
-            "factor": 3,
-            "value": "observation",
-            "conditions": [430,435,440]
+            "value": "largeconewhole",
+            "conditions": [442,443,444,440,441]
         }
     },
     {
         "model": "sensorimotordb.Level",
         "pk": 8,
         "fields": {
-            "factor": 4,
-            "value": "largeconewholehand",
-            "conditions": [440,442,443]
+            "factor": 3,
+            "value": "ringhook",
+            "conditions": [432,433]
         }
     },
     {
         "model": "sensorimotordb.Level",
         "pk": 9,
         "fields": {
-            "factor": 4,
-            "value": "ringhook",
-            "conditions": [430,432,433]
+            "factor": 3,
+            "value": "smallconeside",
+            "conditions": [437,438]
         }
     },
     {
         "model": "sensorimotordb.Level",
         "pk": 10,
         "fields": {
+            "factor": 3,
+            "value": "largeconewhole",
+            "conditions": [442,443]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 11,
+        "fields": {
             "factor": 4,
+            "value": "light",
+            "conditions": [432,437,442]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 12,
+        "fields": {
+            "factor": 4,
+            "value": "dark",
+            "conditions": [433,438,443]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 13,
+        "fields": {
+            "factor": 5,
+            "value": "ringhook",
+            "conditions": [430]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 14,
+        "fields": {
+            "factor": 5,
             "value": "smallconeside",
-            "conditions": [435,437,438]
+            "conditions": [435]
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 15,
+        "fields": {
+            "factor": 5,
+            "value": "largeconewhole",
+            "conditions": [440]
         }
     }
 ]

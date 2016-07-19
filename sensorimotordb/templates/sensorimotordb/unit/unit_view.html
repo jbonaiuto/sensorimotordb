@@ -10,13 +10,12 @@
 <script>
 
     $(document).ready(function(){
-        $('<img src="{% static 'sensorimotordb/img/loading.gif' %}"/>');
         var data = {};
         var args = {
             type: "GET",
-            url: "/sensorimotordb/api/v1/condition/?recording_trials__unit_recordings__unit={{ object.id }}&limit=0&format=json",
+            url: "/sensorimotordb/api/v1/unit/{{ object.id }}/?limit=0&format=json",
             data: data,
-            success: loadedConditionData,
+            success: loadedUnitData,
             error: function(data) {
                 //alert("Something went wrong!");
             } };
@@ -28,44 +27,87 @@
     var condition_names=[];
     var condition_trials=new Map();
     var condition_trial_events=new Map();
-    var conditions=new Map();
     var realigned_condition_spikes=new Map();
     var realigned_condition_trial_events=new Map();
     var event_types=['start'];
-    var recording_trial_map=new Map();
-    var condition_map=new Map();
-    var condition_trial_map=new Map();
 
-    function loadedConditionData(resp){
-        for(var i=0; i<resp.objects.length; i++)
-            condition_map.set(resp.objects[i].resource_uri, resp.objects[i]);
-
-        var data = {};
-        var args = {
-            type: "GET",
-            url: "/sensorimotordb/api/v1/recording_trial/?unit_recordings__unit={{ object.id }}&limit=0&format=json",
-            data: data,
-            success: loadedRecordingTrialData,
-            error: function(data) {
-                //alert("Something went wrong!");
-            } };
-        $.ajax(args);
-
-    }
     function loadedRecordingTrialData(resp)
     {
-        for(var i=0; i<resp.objects.length; i++)
-            recording_trial_map.set(resp.objects[i].resource_uri, resp.objects[i]);
-        var data = {};
-        var args = {
-            type: "GET",
-            url: "/sensorimotordb/api/v1/unit/{{ object.id }}/?limit=0&format=json",
-            data: data,
-            success: loadedUnitData,
-            error: function(data) {
-                //alert("Something went wrong!");
-            } };
-        $.ajax(args);
+        // For each recording trial
+        for(var trial_idx=0; trial_idx<resp.objects.length; trial_idx++)
+        {
+            var recording_trial=resp.objects[trial_idx];
+            var trial_number=recording_trial.trial_number;
+            var start_time=parseFloat(recording_trial.start_time);
+
+            // Get condition ID
+            var condition_id=parseInt(recording_trial.condition.split('/')[5]);
+            if(condition_trials.get(condition_id).indexOf(recording_trial.id)<0)
+            {
+                // Iterate through unit recordings
+                for(var unit_recording_idx=0; unit_recording_idx<recording_trial.unit_recordings.length; unit_recording_idx++)
+                {
+                    var unit_recording=recording_trial.unit_recordings[unit_recording_idx];
+                    if(unit_recording.unit.id=={{ object.id }})
+                    {
+                        var trial_number=recording_trial.trial_number;
+                        var start_time=parseFloat(recording_trial.start_time);
+                        condition_trial_events.get(condition_id).push({
+                            t: start_time,
+                            trial: trial_number,
+                            name: 'start',
+                            description: 'trial start'
+                        });
+
+                        for(var evt_idx=0; evt_idx<recording_trial.events.length; evt_idx++)
+                        {
+                            var event=recording_trial.events[evt_idx];
+                            condition_trial_events.get(condition_id).push({
+                                t: parseFloat(event.time),
+                                trial: trial_number,
+                                name: event.name,
+                                description: event.description
+                            });
+                            if(event_types.indexOf(event.name)<0)
+                                event_types.push(event.name);
+                        }
+
+                        var trial_number=recording_trial.trial_number;
+                        if(unit_recording.spike_times.length>0)
+                        {
+                            var spike_times=unit_recording.spike_times.split(',');
+                            for(var spike_idx=0; spike_idx<spike_times.length; spike_idx++)
+                            {
+                                condition_trials.get(condition_id).push({
+                                    x: parseFloat(spike_times[spike_idx]),
+                                    y: trial_number
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        var align_event = d3.select("#align_event").node().value;
+        for(var i=0; i<condition_ids.length; i++)
+        {
+            var condition_id=condition_ids[i];
+            var single_condition_trials=realign_spikes(condition_trials.get(condition_id), condition_trial_events.get(condition_id), align_event);
+            var single_condition_trial_events=realign_events(condition_trial_events.get(condition_id), align_event);
+
+            realigned_condition_spikes.set(condition_id, single_condition_trials);
+            realigned_condition_trial_events.set(condition_id, single_condition_trial_events);
+
+            $('#condition-'+condition_id+'-plots').empty();
+            drawRaster(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
+
+            drawHistogram(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
+
+            drawFiringRate(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
+        }
+        $('#unit-{{ object.id }}-plots').empty();
+        drawPopulationFiringRate('unit-{{ object.id }}-plots', 'unit-{{ object.id }}-plots_legend', realigned_condition_spikes, realigned_condition_trial_events, event_types, condition_ids, condition_names, 1.0);
     }
 
     function loadedUnitData(resp){
@@ -78,120 +120,51 @@
         d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
         d3.selectAll("#kernelwidth").on("change", function(){ dispatch.statechange()});
         dispatch.on("statechange", update);
+
         var data = {};
         var args = {
             type: "GET",
-            url: "/sensorimotordb/api/v1/unit_recording/?unit={{ object.id }}&limit=0&format=json",
+            url: "/sensorimotordb/api/v1/condition/?recording_trials__unit_recordings__unit={{ object.id }}&limit=0&format=json",
             data: data,
-            success: loadedUnitRecordingData,
-            error: function() {
+            success: loadedConditionData,
+            error: function(data) {
                 //alert("Something went wrong!");
             } };
         $.ajax(args);
     }
 
-
-    function loadedUnitRecordingData(resp)
+    function loadedConditionData(resp)
     {
         $('.condition_list').each(function(index, element){
             $(this).empty();
         });
 
-        var trial_condition_list=new Map();
-
-        // Iterate through unit recordings
-        for(var i=0; i<resp.objects.length; i++)
+        for(var cond_idx=0; cond_idx<resp.objects.length; cond_idx++)
         {
-            // Current unit recording
-            var unit_recording=resp.objects[i];
+            var condition=resp.objects[cond_idx];
+            condition_ids.push(condition.id);
+            condition_trials.set(condition.id, []);
+            condition_trial_events.set(condition.id, []);
+            condition_names.push(condition.name);
 
-            var recording_trial=recording_trial_map.get(unit_recording.trial);
-            if(recording_trial!=null)
-            {
-                var condition=condition_map.get(recording_trial.condition);
-                if(condition!=null)
-                {
-                    if(condition_ids.indexOf(condition.id)<0)
-                    {
-                        condition_ids.push(condition.id);
-                        condition_names.push(condition.name);
-                        conditions.set(condition.id, condition);
-                        condition_trials.set(condition.id, []);
-                        condition_trial_events.set(condition.id, []);
-                        condition_trial_map.set(condition.id,[]);
-
-                        $('.condition_list').each(function(index, element){
-                            condition.level=3;
-                            condition.idx=condition_ids.length-1;
-                            var tmplMarkup = $('#condition-template').html();
-                            var compiledTmpl = _.template(tmplMarkup, condition);
-                            $(this).append(compiledTmpl);
-                        });
-                    }
-                    if(condition_trial_map.get(condition.id).indexOf(recording_trial.id)<0)
-                    {
-                        condition_trial_map.get(condition.id).push(recording_trial.id);
-                        var trial_number=recording_trial.trial_number;
-                        var start_time=parseFloat(recording_trial.start_time);
-                        condition_trial_events.get(condition.id).push({
-                            t: start_time,
-                            trial: trial_number,
-                            name: 'start',
-                            description: 'trial start'
-                        });
-
-                        for(var k=0; k<recording_trial.events.length; k++)
-                        {
-                            var event=recording_trial.events[k];
-                            condition_trial_events.get(condition.id).push({
-                                t: parseFloat(event.time),
-                                trial: trial_number,
-                                name: event.name,
-                                description: event.description
-                            });
-                            if(event_types.indexOf(event.name)<0)
-                                event_types.push(event.name);
-                        }
-                    }
-                    var trial_number=recording_trial.trial_number;
-                    var unit_data=[];
-                    var spike_times=unit_recording.spike_times.split(',');
-                    for(var k=0; k<spike_times.length; k++)
-                    {
-                        condition_trials.get(condition.id).push({
-                            x: parseFloat(spike_times[k]),
-                            y: trial_number
-                        });
-                    }
-                }
-                else
-                    alert('Couldnt get condition!');
-            }
-            else
-                alert('Couldnt get recording trial!');
+            $('.condition_list').each(function(index, element){
+                condition.level=3;
+                condition.idx=condition_names.length-1;
+                var tmplMarkup = $('#condition-template').html();
+                var compiledTmpl = _.template(tmplMarkup, condition);
+                $(this).append(compiledTmpl);
+            });
         }
-
-        var align_event = d3.select("#align_event").node().value;
-
-        for(var i=0; i<condition_ids.length; i++)
-        {
-            var condition_id=condition_ids[i];
-            realigned_condition_spikes.set(condition_id, realign_spikes(condition_trials.get(condition_id), condition_trial_events.get(condition_id), align_event));
-            realigned_condition_trial_events.set(condition_id, realign_events(condition_trial_events.get(condition_id), align_event));
-
-            var single_condition_trials=realigned_condition_spikes.get(condition_id);
-            var single_condition_trial_events=realigned_condition_trial_events.get(condition_id);
-
-            $('#condition-'+condition_id+'-plots').empty();
-            drawRaster(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
-
-            drawHistogram(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
-
-            drawFiringRate(condition_id, 'condition-'+condition_id+'-plots', single_condition_trials, single_condition_trial_events, event_types);
-        }
-        $('#unit-{{ object.id }}-plots').empty();
-        drawPopulationFiringRate('unit-{{ object.id }}-plots', realigned_condition_spikes, realigned_condition_trial_events, event_types, condition_ids, condition_names, 1.0);
-
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/api/v1/full_recording_trial/?unit_recordings__unit={{ object.id }}&limit=0&format=json",
+            data: data,
+            success: loadedRecordingTrialData,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
     }
 
     function update()
@@ -211,7 +184,7 @@
 {% endblock %}
 {% block content %}
     <div class="unit_info"></div>
-    <h2>Conditions</h2>
+    <h2 style="clear: both">Conditions</h2>
     <div class="condition_list"></div>
 {% include "sensorimotordb/unit/unit_template.html" %}
 {% include "sensorimotordb/condition/condition_list_item_template.html" %}

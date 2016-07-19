@@ -14,12 +14,13 @@
                         </tr>
                         <tr>
                             <td valign=top><strong>Brain region</strong></td>
-                            <td><%= area.name %></td>
+                            <td><div id="unit-area-<%= id %>"></div></td>
                         </tr>
                     </table>
                 </td>
                 <td>
-                    <div id="unit-<%= id %>-plots" style="text-align:center"><img src="{% static 'sensorimotordb/img/loading.gif' %}"></div>
+                    <div id="unit-<%= id %>-plots" style="float:left"><img src="{% static 'sensorimotordb/img/loading.gif' %}"></div>
+                    <div id="unit-<%= id %>-plots_legend" class="legend"></div>
                 </td>
             </tr>
 

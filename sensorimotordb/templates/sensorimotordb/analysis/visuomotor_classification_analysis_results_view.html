@@ -16,8 +16,12 @@
     var conditions_to_load=[];
     var condition_unit_trials=new Map();
     var condition_unit_trial_events=new Map();
-    var realigned_condition_unit_spikes=new Map();
     var realigned_condition_unit_trial_events=new Map();
+    var realigned_condition_unit_rates=new Map();
+    var realigned_factor_level_trial_events=new Map();
+    var realigned_factor_level_mean_rates=new Map();
+    var factor_event_types=new Map();
+    var realigned_times=[];
     var results;
     var factor_plots=new Map();
 
@@ -81,22 +85,306 @@
         d3.selectAll("#kernelwidth").on("change", function(){ dispatch.statechange()});
         dispatch.on("statechange", update);
 
-        data=[];
+        var data=[
+                "All neurons",
+                [
+                        -1,
+                        []
+                ],
+                {}
+        ];
         for(var idx=0; idx<resp.unit_classifications.length; idx++)
         {
-             data.push({classification: resp.unit_classifications[idx], label: resp.unit_classifications[idx].label,
-                value: resp.unit_classifications[idx].units.length, results_id: resp.id});
+            var classification=resp.unit_classifications[idx];
+            if(classification.parent==null)
+            {
+                for(var unit_idx=0; unit_idx<classification.units.length; unit_idx++)
+                    data[1][1].push(classification.units[unit_idx]);
+                data[2][classification.label]=[
+                        classification.label,
+                        [
+                                classification.id,
+                                classification.units
+                        ],
+                        {}
+                ];
+            }
+//             data.push({classification: resp.unit_classifications[idx], label: resp.unit_classifications[idx].label,
+//                value: resp.unit_classifications[idx].units.length, results_id: resp.id});
         }
-        var pie_svg=drawPieChart(data, "analysis_results-"+resp.id+"-pie", onPieClick);
+        for(var idx=0; idx<resp.unit_classifications.length; idx++)
+        {
+            var classification=resp.unit_classifications[idx];
+            if(classification.parent!=null)
+            {
+                var parent_id=parseInt(classification.parent.split('/')[5]);
+                for(var child_label in data[2])
+                //for(var child_idx=0; child_idx<data[2].keys().length; child_idx++)
+                {
+                    //var child_label=data[2].keys()[child_idx];
+                    var child=data[2][child_label];
+                    if(child[1][0]==parent_id)
+                    {
+                        child[2][classification.label]=[
+                            classification.label,
+                            [
+                                classification.id,
+                                classification.units
+                            ],
+                            {}
+                        ];
+                    }
+                }
+            }
+        }
+        function count_function(d)
+        {
+            return d[1][1].length;
+        }
+
+        function label_function(d)
+        {
+            return d[2]+": "+d[4][1].length+" neurons";
+        }
+
+        function legend_function(d)
+        {
+            return "<h3>"+d[2]+"</h3>";
+        }
+
+        var color = d3.scale.category20c();
+
+        function color_function(d)
+        {
+            return color(d[2]);
+        }
+        d3.select(self.frameElement).style("height", "800px");
+        init_code_hierarchy_plot("analysis_results-"+resp.id+"-pie",data,count_function,color_function,label_function,legend_function);
+        //var pie_svg=drawPieChart(data, "analysis_results-"+resp.id+"-pie", onPieClick);
     }
 
-    function onPieClick(info)
+    function init_code_hierarchy_plot(element_id,data,count_function,color_function,title_function,legend_function)
+    {
+        var plot = document.getElementById(element_id);
+
+        while (plot.hasChildNodes())
+        {
+            plot.removeChild(plot.firstChild);
+        }
+
+        var width = plot.offsetWidth;
+        var height = width;
+        var x_margin = 40;
+        var y_margin = 40;
+
+        var max_depth=3;
+
+        var data_slices = [];
+        var max_level = 4;
+
+        var svg = d3.select("#"+element_id).append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", "translate(" + width / 2 + "," + height * .52 + ")");
+
+        function process_data(data,level,start_deg,stop_deg)
+        {
+            var name = data[0];
+            var total = count_function(data);
+            var children = data[2];
+            var current_deg = start_deg;
+            if (level > max_level)
+            {
+                return;
+            }
+            if (start_deg == stop_deg)
+            {
+                return;
+            }
+            data_slices.push([start_deg,stop_deg,name,level,data[1]]);
+            for (var key in children)
+            {
+                child = children[key];
+                var inc_deg = (stop_deg-start_deg)/total*count_function(child);
+                var child_start_deg = current_deg;
+                current_deg+=inc_deg;
+                var child_stop_deg = current_deg;
+                var span_deg = child_stop_deg-child_start_deg;
+                process_data(child,level+1,child_start_deg,child_stop_deg);
+            }
+        }
+
+        process_data(data,0,0,360./180.0*Math.PI);
+
+        var ref = data_slices[0];
+        var next_ref = ref;
+        var last_refs = [];
+
+        var thickness = width/2.0/(max_level+2)*1.1;
+
+        var arc = d3.svg.arc()
+                .startAngle(function(d) { if(d[3]==0){return d[0];}return d[0]+0.01; })
+                .endAngle(function(d) { if(d[3]==0){return d[1];}return d[1]-0.01; })
+                .innerRadius(function(d) { return 1.1*d[3]*thickness; })
+                .outerRadius(function(d) { return (1.1*d[3]+1)*thickness; });
+
+        var slices = svg.selectAll(".form")
+                .data(function(d) { return data_slices; })
+                .enter()
+                .append("g");
+        slices.append("path")
+                .attr("d", arc)
+                .attr("id",function(d,i){return element_id+i;})
+                .style("fill", function(d) { return color_function(d);})
+                .attr("class","form");
+        slices.on("click",animate);
+
+        if (title_function != undefined)
+        {
+            slices.append("svg:title")
+                    .text(title_function);
+        }
+        function get_start_angle(d,ref)
+        {
+            if (ref)
+            {
+                var ref_span = ref[1]-ref[0];
+                return (d[0]-ref[0])/ref_span*Math.PI*2.0
+            }
+            else
+            {
+                return d[0];
+            }
+        }
+
+        function get_stop_angle(d,ref)
+        {
+            if (ref)
+            {
+                var ref_span = ref[1]-ref[0];
+                return (d[1]-ref[0])/ref_span*Math.PI*2.0
+            }
+            else
+            {
+                return d[0];
+            }
+        }
+
+        function get_level(d,ref)
+        {
+            if (ref)
+            {
+                return d[3]-ref[3];
+            }
+            else
+            {
+                return d[3];
+            }
+        }
+
+        function rebaseTween(new_ref)
+        {
+            return function(d)
+            {
+                var level = d3.interpolate(get_level(d,ref),get_level(d,new_ref));
+                var start_deg = d3.interpolate(get_start_angle(d,ref),get_start_angle(d,new_ref));
+                var stop_deg = d3.interpolate(get_stop_angle(d,ref),get_stop_angle(d,new_ref));
+                var opacity = d3.interpolate(100,0);
+                return function(t)
+                {
+                    return arc([start_deg(t),stop_deg(t),d[2],level(t)]);
+                }
+            }
+        }
+
+        var animating = false;
+
+        function animate(d) {
+            if (animating)
+            {
+                return;
+            }
+            var legend = d3.select("#"+element_id+"_legend")
+
+            legend.html(legend_function(d));
+            loadUnitRates(d[4][1]);
+            animating = true;
+            var revert = false;
+            var new_ref;
+            if (d == ref && last_refs.length > 0)
+            {
+                revert = true;
+                last_ref = last_refs.pop();
+            }
+            if (revert)
+            {
+                d = last_ref;
+                new_ref = ref;
+                svg.selectAll(".form")
+                        .filter(
+                        function (b)
+                        {
+                            if (b[0].toFixed(5) >= last_ref[0].toFixed(5) && b[1].toFixed(5) <= last_ref[1].toFixed(5)  && b[3] >= last_ref[3])
+                            {
+                                return true;
+                            }
+                            return false;
+                        }
+                )
+                        .transition().duration(1000).style("opacity","1").attr("pointer-events","all");
+            }
+            else
+            {
+                new_ref = d;
+                svg.selectAll(".form")
+                        .filter(
+                        function (b)
+                        {
+                            if (b[0].toFixed(5) < d[0].toFixed(5) || b[1].toFixed(5) > d[1].toFixed(5) || b[3] < d[3])
+                            {
+                                return true;
+                            }
+                            return false;
+                        }
+                )
+                        .transition().duration(1000).style("opacity","0").attr("pointer-events","none");
+            }
+            svg.selectAll(".form")
+                    .filter(
+                    function (b)
+                    {
+                        if (b[0].toFixed(5) >= new_ref[0].toFixed(5) && b[1].toFixed(5) <= new_ref[1].toFixed(5) && b[3] >= new_ref[3])
+                        {
+                            return true;
+                        }
+                        return false;
+                    }
+            )
+                    .transition().duration(1000).attrTween("d",rebaseTween(d));
+            setTimeout(function(){
+                animating = false;
+                if (! revert)
+                {
+                    last_refs.push(ref);
+                    ref = d;
+                }
+                else
+                {
+                    ref = d;
+                }
+            },1000);
+        };
+
+    }
+
+    function loadUnitRates(units)
     {
         conditions_to_load=[];
         current_unit_ids=[];
-        for(var unit_idx=0; unit_idx<info.data.classification.units.length; unit_idx++)
+        for(var unit_idx=0; unit_idx<units.length; unit_idx++)
         {
-            var unit_id=info.data.classification.units[unit_idx].id;
+            var unit_id=units[unit_idx].id;
             current_unit_ids.push(unit_id);
         }
 
@@ -104,10 +392,10 @@
         {
             var id=results.unit_analysis_results[unit_results_idx].id;
             var found=false;
-            for(var unit_idx=0; unit_idx<info.data.classification.units.length; unit_idx++)
+            for(var unit_idx=0; unit_idx<units.length; unit_idx++)
             {
-                var unit_id=info.data.classification.units[unit_idx].id;
-                if(info.data.classification.units[unit_idx].id==results.unit_analysis_results[unit_results_idx].unit.id)
+                var unit_id=units[unit_idx].id;
+                if(units[unit_idx].id==results.unit_analysis_results[unit_results_idx].unit.id)
                 {
                     $('#unit_analysis_results-'+id).show();
                     found=true;
@@ -140,7 +428,8 @@
                 // Initialize map of condition-unit recordings
                 condition_unit_trials.set(condition_id, new Map());
                 condition_unit_trial_events.set(condition_id, new Map());
-                realigned_condition_unit_spikes.set(condition_id, new Map());
+                //realigned_condition_unit_spikes.set(condition_id, new Map());
+                realigned_condition_unit_rates.set(condition_id, new Map());
                 realigned_condition_unit_trial_events.set(condition_id, new Map());
             }
 
@@ -157,7 +446,10 @@
             $.ajax(args);
         }
         else
+        {
+            update_rates();
             plotFactors();
+        }
     }
 
     /**
@@ -208,480 +500,48 @@
                     condition_unit_trial_events.get(condition_id).get(unit.id).push(current_event);
                 }
 
-                var spike_times=unit_recording.spike_times.split(',');
-                for(var l=0; l<spike_times.length; l++)
+                if(unit_recording.spike_times.length>0)
                 {
-                    var spk={
-                        x: parseFloat(spike_times[l]),
-                        y: trial_number
-                    };
-                    condition_unit_trials.get(condition_id).get(unit.id).push(spk);
+                    var spike_times=unit_recording.spike_times.split(',');
+                    for(var l=0; l<spike_times.length; l++)
+                    {
+                        var spk={
+                            x: parseFloat(spike_times[l]),
+                            y: trial_number
+                        };
+                        condition_unit_trials.get(condition_id).get(unit.id).push(spk);
+                    }
                 }
             }
         }
 
-        var align_event = d3.select("#align_event").node().value;
-        for(let condition_id of condition_unit_trials.keys())
-        {
-            for(let unit_id of condition_unit_trials.get(condition_id).keys())
-            {
-                if(condition_unit_trials.get(condition_id).has(unit_id))
-                {
-                    realigned_condition_unit_spikes.get(condition_id).set(unit_id,
-                            realign_spikes(condition_unit_trials.get(condition_id).get(unit_id),
-                                    condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
-                    realigned_condition_unit_trial_events.get(condition_id).set(unit_id,
-                            realign_events(condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
-                }
-            }
-        }
+        update_rates();
 
         plotFactors();
     }
 
-    function plotFactors()
-    {
-        var bin_width = parseInt(d3.select("#binwidth").node().value);
-        var kernel_width = parseInt(d3.select("#kernelwidth").node().value);
-        var parent_id="analysis_results-"+results.id+"-mean_rate";
-        $('#'+parent_id).empty();
-        factor_plots=new Map();
-        for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
-        {
-            var factor=factors[factor_idx];
-            var factor_parent_id='analysis_results-'+results.id+'-factor-'+factor.id+'-mean_rate';
-            $('#'+parent_id).append('<div id="'+factor_parent_id+'" style="text-align:center"></div>');
-            var level_realigned_events=new Map();
-            var event_types=[];
-            var level_ids=[];
-            var level_labels=[];
-
-            var min_time=1000;
-            var max_time=-1000;
-            for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
-            {
-                var level=factor.levels[level_idx];
-                level_labels.push(level.value);
-                level_ids.push(level.id);
-                level_realigned_events.set(level.id,[]);
-
-                for(var condition_idx=0; condition_idx<level.conditions.length; condition_idx++)
-                {
-                    var condition=level.conditions[condition_idx];
-                    for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
-                    {
-                        var unit_id=current_unit_ids[unit_idx];
-                        if(realigned_condition_unit_spikes.get(condition.id).has(unit_id))
-                        {
-                            var unit_spks=realigned_condition_unit_spikes.get(condition.id).get(unit_id);
-                            var unit_min_time=d3.min(unit_spks, function(d) { return d.x; });
-                            var unit_max_time=d3.max(unit_spks, function(d) { return d.x; });
-                            if(unit_min_time<min_time)
-                                min_time=unit_min_time;
-                            if(unit_max_time>max_time)
-                                max_time=unit_max_time;
-
-                            var unit_evts=realigned_condition_unit_trial_events.get(condition.id).get(unit_id);
-                            for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
-                            {
-                                var evt=unit_evts[event_idx];
-                                level_realigned_events.get(level.id).push(evt);
-                                if(event_types.indexOf(evt.name)<0)
-                                    event_types.push(evt.name);
-                            }
-                        }
-                    }
-                }
-            }
-
-            var xScale = d3.scale.linear()
-                    .domain([min_time, max_time]);
-            var bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width);
-            var times=d3.range(xScale.domain()[0], xScale.domain()[1], bin_width);
-
-            var level_mean_rates=new Map();
-            // Create a plot for this factor
-            for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
-            {
-                var level=factor.levels[level_idx];
-                var condition_rates=[];
-
-                for(var condition_idx=0; condition_idx<level.conditions.length; condition_idx++)
-                {
-                    var condition=level.conditions[condition_idx];
-                    var unit_rates=[];
-                    for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
-                    {
-                        var unit_id=current_unit_ids[unit_idx];
-                        if(realigned_condition_unit_spikes.get(condition.id).has(unit_id))
-                        {
-                            var unit_spks=realigned_condition_unit_spikes.get(condition.id).get(unit_id);
-                            // Compute unit firing rate
-                            var rate=get_standard_firing_rate(unit_spks, bins, bin_width, kernel_width);
-
-                            unit_rates.push(rate);
-                        }
-                    }
-                    var condition_mean_rate=average_firing_rates(unit_rates, times);
-                    condition_rates.push(condition_mean_rate);
-                }
-                var level_mean_rate=average_firing_rates(condition_rates, times);
-                level_mean_rates.set(level.id, level_mean_rate);
-            }
-
-            var rate_svg=drawMeanFiringRates(factor_parent_id, level_mean_rates, level_realigned_events, event_types,
-                    level_ids, level_labels, 0.5);
-            factor_plots.set(factor.id, rate_svg);
-        }
-    }
-
-    function average_firing_rates(rates, times)
-    {
-        var mean_rate=times.map(function(d,i){ return {x: d, y: d3.mean(rates.map(function(e){ return e[i].y })), stderr: d3.deviation(rates.map(function(e){ return e[i].y }))/Math.sqrt(rates.length)}});
-        return mean_rate;
-    }
-
-    function drawMeanFiringRates(parent_id, mean_rates, group_trial_events, event_types, group_ids, group_names, scale_factor)
-    {
-        var margin = {top: 30, right: 20, bottom: 40, left: 50}
-                , width = scale_factor*(960 - margin.left - margin.right)
-                , height = scale_factor*(400 - margin.top - margin.bottom);
-
-        var rate_svg = d3.select("#"+parent_id).append("svg:svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        var min_time=10000;
-        var max_time=-10000;
-        var max_rate=0;
-        for(var i=0; i<group_ids.length; i++)
-        {
-            var group_id=group_ids[i];
-            var rate=mean_rates.get(group_id);
-            var group_min_time=d3.min(rate, function(d){ return d.x; });
-            var group_max_time=d3.max(rate, function(d){ return d.x; });
-            if(group_min_time<min_time)
-                min_time=group_min_time;
-            if(group_max_time>max_time)
-                max_time=group_max_time;
-            var group_max_rate=d3.max(rate, function(d){ return d.y+ d.stderr });
-            if(group_max_rate>max_rate)
-                max_rate=group_max_rate;
-        }
-
-        var xScale = d3.scale.linear()
-                .range([0, width])
-                .domain([min_time, max_time]);
-
-        var yScale = d3.scale.linear()
-                .range([height, 0]);
-
-        var xAxis = d3.svg.axis()
-                .scale(xScale)
-                .orient("bottom");
-
-        var yAxis = d3.svg.axis()
-                .scale(yScale)
-                .orient("left");
-
-        var line = d3.svg.line()
-                .x(function(d) { return xScale(d.x); })
-                .y(function(d) { return yScale(d.y); });
-
-        yScale.domain([0, max_rate +.1*max_rate]);
-
-        rate_svg.append("g")
-                .attr("class", "x axis")
-                .attr("transform", "translate(0," + height + ")")
-                .call(xAxis);
-
-        rate_svg.append("svg:g")
-                .attr("class", "y axis")
-                .call(yAxis);
-
-        var max_length=d3.max(group_names, function(d){return d.length});
-
-        for(var group_idx=0; group_idx<group_ids.length; group_idx++)
-        {
-            var mean_rate=mean_rates.get(group_ids[group_idx]);
-
-            // Define a convenience function to calculate the
-            // path for a slice of the data.
-            var slice = function(d,i) {
-                var x = i ? mean_rate[i-1].x : d.x,
-                        y = i ? mean_rate[i-1].y : d.y,
-                        stderr = i ? mean_rate[i-1].stderr : d.stderr,
-                        x0 = xScale(x),
-                        x1 = xScale(d.x),
-                        y0min = yScale(y - stderr),
-                        y0max = yScale(y + stderr),
-                        y1min = yScale(d.y - stderr),
-                        y1max = yScale(d.y + stderr);
-                return "M" + x0 + "," + y0min +
-                        "L" + x0 + "," + y0max +
-                        "L" + x1 + "," + y1max +
-                        "L" + x1 + "," + y1min +
-                        "L" + x0 + "," + y0min;
-            }
-
-            rate_svg.selectAll(".slice.mean_rates")
-                    .data(mean_rate)
-                   .enter().append("path")
-                    .attr("class", "slice_dataset_"+group_ids[group_idx])
-                    .attr("fill", p(group_idx))
-                    .attr("fill-opacity", "0.4")
-                    .attr("stroke", "none")
-                    .attr("d", slice);
-
-            rate_svg.append("path")
-                    .attr("id", parent_id+"-group-"+group_ids[group_idx])
-                    .datum(mean_rate)
-                    .attr("class", "data-line")
-                    .style("stroke", p(group_idx))
-                    .attr("d", line);
-            rate_svg.append("text")
-                    .attr("class","legend-label")
-                    .attr("x",width-max_length*7)
-                    .attr("y",margin.top+group_idx*20)
-                    .style("fill", p(group_idx))
-                    .text(group_names[group_idx]);
-        }
-
-        rate_svg.append("text")
-                .attr("class", "axis-label")
-                .attr("text-anchor", "middle")
-                .attr("x", width/2)
-                .attr("y", height + margin.bottom)
-                .text("Time (ms)");
-
-        rate_svg.append("text")
-                .attr("class", "axis-label")
-                .attr("text-anchor", "middle")
-                .attr("x", -height/2)
-                .attr("y", -(margin.left-3))
-                .attr("dy", ".75em")
-                .attr("transform", "rotate(-90)")
-                .text("Firing Rate (Hz)");
-
-        // Events
-        var event_notes=[];
-        var event_lines=[];
-        var event_areas=[];
-        for(var i=0; i<event_types.length; i++)
-        {
-            var event_type=event_types[i];
-            var times=[];
-            for(var k=0; k<group_ids.length; k++)
-            {
-                var group_id=group_ids[k];
-                var group_times=[];
-                var realigned_trial_events=group_trial_events.get(group_id)
-                for(var j=0; j<realigned_trial_events.length; j++)
-                {
-                    if(realigned_trial_events[j].name==event_type)
-                        group_times.push(realigned_trial_events[j].t);
-                }
-                times.push(d3.mean(group_times));
-            }
-            var mean_time=d3.mean(times);
-            var min_time=d3.min(times);
-            var max_time=d3.max(times);
-            event_lines.push(
-                    rate_svg.append("line")
-                            .attr("x1", xScale(mean_time))
-                            .attr("y1", yScale(0))
-                            .attr("x2", xScale(mean_time))
-                            .attr("y2", yScale(max_rate +.1*max_rate))
-                            .classed("annotation-line",true)
-            );
-            var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-            event_areas.push(
-                    rate_svg.append("line")
-                            .attr("x1", area_x)
-                            .attr("y1", yScale(0))
-                            .attr("x2", area_x)
-                            .attr("y2", yScale(max_rate +.1*max_rate))
-                            .classed("annotation-line",true)
-                            .style("stroke", p(i))
-                            .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px")
-            );
-            event_notes.push(
-                    rate_svg.selectAll(".g-note")
-                            .data([event_type])
-                            .enter().append("text")
-                            .classed("annotation-text",true)
-                            .style('fill', p(i))
-                            .attr("x", xScale(mean_time))
-                            .attr("y", yScale(max_rate +.1*max_rate))
-                            .attr("dy", function(d, i) { return i * 1.3 + "em"; })
-                            .text(function(d) { return d; })
-                            .on("click", function(d) {
-                                d3.select("#align_event").node().value= d;
-                                dispatch.statechange();
-                            })
-            );
-        }
-
-        var focus = rate_svg.append("g")
-                .attr("class", "focus")
-                .style("display", "none");
-
-        focus.append("circle")
-                .attr("r", 4.5);
-
-        focus.append("text")
-                .attr("x", 9)
-                .attr("dy", ".35em");
-
-        rate_svg.append("rect")
-                .attr("class", "overlay")
-                .attr("width", width)
-                .attr("height", height)
-                .on("mouseover", function() { focus.style("display", null); })
-                .on("mouseout", function() { focus.style("display", "none"); })
-                .on("mousemove", mousemove);
-
-        function mousemove() {
-            var x0 = xScale.invert(d3.mouse(this)[0]);
-            var y0 = yScale.invert(d3.mouse(this)[1]);
-            min_y_dist=10000;
-            min_y_d=null;
-            for(var j=0; j<group_ids.length; j++)
-            {
-                rate=mean_rates.get(group_ids[j]);
-                var i = bisectTime(rate, x0, 1);
-                d0 = rate[i - 1];
-                d1 = rate[i];
-                d = x0 - d0.x > d1.x - x0 ? d1 : d0;
-                y_dist=Math.abs(d.y-y0);
-                if(y_dist<min_y_dist)
-                {
-                    min_y_dist=y_dist;
-                    min_y_d=d;
-                }
-            }
-            focus.attr("transform", "translate(" + xScale(min_y_d.x) + "," + yScale(min_y_d.y) + ")");
-            focus.select("text").text(min_y_d.y.toFixed(2)+'Hz');
-        }
-
-        rate_svg.update=function update(realigned_mean_rates, realigned_trial_events){
-            binwidth = parseInt(d3.select("#binwidth").node().value);
-            kernelwidth = parseInt(d3.select("#kernelwidth").node().value);
-            var min_time=10000;
-            var max_time=-10000;
-            var max_rate=0;
-            for(var i=0; i<group_ids.length; i++)
-            {
-                var group_id=group_ids[i];
-                var rate=realigned_mean_rates.get(group_id);
-                var group_min_time=d3.min(rate, function(d){ return d.x; });
-                var group_max_time=d3.max(rate, function(d){ return d.x; });
-                if(group_min_time<min_time)
-                    min_time=group_min_time;
-                if(group_max_time>max_time)
-                    max_time=group_max_time;
-                var group_max_rate=d3.max(rate, function(d){ return d.y+1 });
-                if(group_max_rate>max_rate)
-                    max_rate=group_max_rate;
-
-            }
-
-            yScale.domain([0, max_rate +.1*max_rate]);
-            yAxis.scale(yScale);
-            xScale.domain([min_time, max_time]);
-            xAxis.scale(xScale);
-
-            xBinwidth =  width / (rate.length-1)
-            for(var i=0; i<event_types.length; i++)
-            {
-                var event_type=event_types[i];
-                var times=[];
-                for(var k=0; k<group_ids.length; k++)
-                {
-                    var group_id=group_ids[k];
-                    var group_times=[];
-                    var trial_events=realigned_trial_events.get(group_id);
-                    for(var j=0; j<trial_events.length; j++)
-                    {
-                        if(trial_events[j].name==event_type)
-                            group_times.push(trial_events[j].t);
-                    }
-                    times.push(d3.mean(group_times));
-                }
-                var mean_time=d3.mean(times);
-                var min_time=d3.min(times);
-                var max_time=d3.max(times);
-                event_lines[i]
-                        .attr("x1", xScale(mean_time))
-                        .attr("x2",xScale(mean_time));
-                var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-                event_areas[i]
-                        .attr("x1", area_x)
-                        .attr("x2", area_x)
-                        .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
-                event_notes[i].attr("x", xScale(mean_time))
-            }
-
-            for(var i=0; i<group_ids.length; i++)
-            {
-                var group_id=group_ids[i];
-                var mean_rate=realigned_mean_rates.get(group_id);
-                rate_svg.selectAll('#'+parent_id+'-group-'+group_id).datum(mean_rate)
-                        .transition().duration(1000)
-                        .attr("class", "data-line")
-                        .attr("d", line);
-                var slice = function(d,i) {
-                    var x = i ? mean_rate[i-1].x : d.x,
-                            y = i ? mean_rate[i-1].y : d.y,
-                            stderr = i ? mean_rate[i-1].stderr : d.stderr,
-                            x0 = xScale(x),
-                            x1 = xScale(d.x),
-                            y0min = yScale(y - stderr),
-                            y0max = yScale(y + stderr),
-                            y1min = yScale(d.y - stderr),
-                            y1max = yScale(d.y + stderr);
-                    return "M" + x0 + "," + y0min +
-                            "L" + x0 + "," + y0max +
-                            "L" + x1 + "," + y1max +
-                            "L" + x1 + "," + y1min +
-                            "L" + x0 + "," + y0min;
-                }
-                rate_svg.selectAll(".slice_dataset_"+group_id).data(mean_rate)
-                        .transition().duration(1000)
-                        .attr("d", slice);
-            }
-            rate_svg.selectAll(".text").data(hist).remove();
-            rate_svg.select(".y.axis").call(yAxis);
-            rate_svg.select(".x.axis").call(xAxis);
-
-        }
-        dispatch.on("realigned.rate.population."+parent_id, rate_svg.update);
-        return rate_svg;
-    }
-
-    function update()
+    function update_rates()
     {
         var align_event = d3.select("#align_event").node().value;
         var bin_width = parseInt(d3.select("#binwidth").node().value);
         var kernel_width = parseInt(d3.select("#kernelwidth").node().value);
-
+        var realigned_spikes=new Map();
         var min_time=1000;
         var max_time=-1000;
         for(let condition_id of condition_unit_trials.keys())
         {
+            realigned_spikes.set(condition_id,new Map());
             for(let unit_id of condition_unit_trials.get(condition_id).keys())
             {
-                realigned_condition_unit_spikes.get(condition_id).set(unit_id,
-                        realign_spikes(condition_unit_trials.get(condition_id).get(unit_id),
-                                condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
-                realigned_condition_unit_trial_events.get(condition_id).set(unit_id,
-                        realign_events(condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
-                if(current_unit_ids.indexOf(unit_id)>-1)
+                if(condition_unit_trials.get(condition_id).has(unit_id))
                 {
-                    var unit_min_time=d3.min(realigned_condition_unit_spikes.get(condition_id).get(unit_id), function(d) { return d.x; });
-                    var unit_max_time=d3.max(realigned_condition_unit_spikes.get(condition_id).get(unit_id), function(d) { return d.x; });
+                    var unit_spikes=realign_spikes(condition_unit_trials.get(condition_id).get(unit_id),
+                            condition_unit_trial_events.get(condition_id).get(unit_id), align_event);
+                    realigned_spikes.get(condition_id).set(unit_id,unit_spikes);
+                    realigned_condition_unit_trial_events.get(condition_id).set(unit_id,
+                            realign_events(condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
+                    var unit_min_time=d3.min(unit_spikes, function(d) { return d.x; });
+                    var unit_max_time=d3.max(unit_spikes, function(d) { return d.x; });
                     if(unit_min_time<min_time)
                         min_time=unit_min_time;
                     if(unit_max_time>max_time)
@@ -689,23 +549,105 @@
                 }
             }
         }
-
         var xScale = d3.scale.linear()
                 .domain([min_time, max_time]);
         var bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width);
-        var times=d3.range(xScale.domain()[0], xScale.domain()[1], bin_width);
+        realigned_times=d3.range(xScale.domain()[0], xScale.domain()[1], bin_width);
+
+        for(let condition_id of realigned_spikes.keys())
+        {
+            for(let unit_id of realigned_spikes.get(condition_id).keys())
+            {
+                var unit_spikes=realigned_spikes.get(condition_id).get(unit_id);
+                // Compute unit firing rate
+                var rate=get_standard_firing_rate(unit_spikes, bins, bin_width, kernel_width);
+                realigned_condition_unit_rates.get(condition_id).set(unit_id,rate);
+            }
+        }
 
         for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
         {
+            var each_level_evt_types=[];
             var factor=factors[factor_idx];
-            var level_mean_rates=new Map();
-            var level_realigned_events=new Map();
+            for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
+            {
+                var level=factor.levels[level_idx];
+                for(var condition_idx=0; condition_idx<level.conditions.length; condition_idx++)
+                {
+                    var condition=level.conditions[condition_idx];
+                    for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
+                    {
+                        var unit_id=current_unit_ids[unit_idx];
+                        if(realigned_condition_unit_trial_events.get(condition.id).has(unit_id))
+                        {
+                            var unit_evts=realigned_condition_unit_trial_events.get(condition.id).get(unit_id);
+                            for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
+                            {
+                                var evt=unit_evts[event_idx];
+                                if(each_level_evt_types.indexOf(evt.name)<0)
+                                    each_level_evt_types.push(evt.name);
+                            }
+                        }
+                    }
+                }
+            }
+            var all_evt_types=[];
+            for(var evt_type_idx=0; evt_type_idx<each_level_evt_types.length; evt_type_idx++)
+            {
+                var evt_type=each_level_evt_types[evt_type_idx];
+                var all_have=true;
+                for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
+                {
+                    var level=factor.levels[level_idx];
+                    var has_evt=false;
+                    for(var condition_idx=0; condition_idx<level.conditions.length; condition_idx++)
+                    {
+                        var condition=level.conditions[condition_idx];
+                        var unit_rates=[];
+                        for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
+                        {
+                            var unit_id=current_unit_ids[unit_idx];
+                            if(realigned_condition_unit_rates.get(condition.id).has(unit_id))
+                            {
+                                var unit_rate=realigned_condition_unit_rates.get(condition.id).get(unit_id);
+                                unit_rates.push(unit_rate);
+                                var unit_evts=realigned_condition_unit_trial_events.get(condition.id).get(unit_id);
+                                for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
+                                {
+                                    var evt=unit_evts[event_idx];
+                                    if(evt.name==evt_type)
+                                    {
+                                        has_evt=true;
+                                        break
+                                    }
+                                }
+                            }
+                            if(has_evt)
+                                break
+                        }
+                        if(has_evt)
+                            break
+                    }
+                    if(!has_evt)
+                    {
+                        all_have=false;
+                        break
+                    }
+                }
+                if(all_have)
+                    all_evt_types.push(evt_type);
+            }
+            factor_event_types.set(factor.id, all_evt_types);
+            
+            realigned_factor_level_trial_events.set(factor.id, new Map());
+            realigned_factor_level_mean_rates.set(factor.id, new Map());
             // Create a plot for this factor
             for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
             {
                 var level=factor.levels[level_idx];
+                realigned_factor_level_trial_events.get(factor.id).set(level.id,[]);
+
                 var condition_rates=[];
-                level_realigned_events.set(level.id,[]);
 
                 for(var condition_idx=0; condition_idx<level.conditions.length; condition_idx++)
                 {
@@ -714,29 +656,70 @@
                     for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
                     {
                         var unit_id=current_unit_ids[unit_idx];
-                        if(realigned_condition_unit_spikes.get(condition.id).has(unit_id))
+                        if(realigned_condition_unit_rates.get(condition.id).has(unit_id))
                         {
-                            var unit_spks=realigned_condition_unit_spikes.get(condition.id).get(unit_id);
-                            // Compute unit firing rate
-                            var rate=get_standard_firing_rate(unit_spks, bins, bin_width, kernel_width);
-
-                            unit_rates.push(rate);
-
+                            var unit_rate=realigned_condition_unit_rates.get(condition.id).get(unit_id);
+                            unit_rates.push(unit_rate);
                             var unit_evts=realigned_condition_unit_trial_events.get(condition.id).get(unit_id);
                             for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
                             {
                                 var evt=unit_evts[event_idx];
-                                level_realigned_events.get(level.id).push(evt);
+                                if(factor_event_types.get(factor.id).indexOf(evt.name)>-1)
+                                    realigned_factor_level_trial_events.get(factor.id).get(level.id).push(evt);
                             }
                         }
                     }
-                    var condition_mean_rate=average_firing_rates(unit_rates, times);
+                    var condition_mean_rate=mean_firing_rate(unit_rates, realigned_times);
                     condition_rates.push(condition_mean_rate);
                 }
-                var level_mean_rate=average_firing_rates(condition_rates, times);
-                level_mean_rates.set(level.id, level_mean_rate);
-            }
-            factor_plots.get(factor.id).update(level_mean_rates, level_realigned_events);
+                if(level.conditions.length>1)
+                {
+                    var level_mean_rate=mean_firing_rate(condition_rates, realigned_times);
+                    realigned_factor_level_mean_rates.get(factor.id).set(level.id, level_mean_rate);
+                }
+                else
+                {
+                    realigned_factor_level_mean_rates.get(factor.id).set(level.id, condition_rates[0]);
+                }
+            }    
+        }
+    }
+
+    function plotFactors()
+    {
+        var parent_id="analysis_results-"+results.id+"-mean_rate";
+        $('#'+parent_id).empty();
+        factor_plots=new Map();
+        for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
+        {
+            var factor=factors[factor_idx];
+            var factor_parent_id='analysis_results-'+results.id+'-factor-'+factor.id+'-mean_rate';
+            $('#'+parent_id).append('<div id="'+factor_parent_id+'" style="text-align:center"><h3>'+factor.name+'</h3></div>');
+            var level_ids=[];
+            var level_labels=[];
+
+            // Create a plot for this factor
+            for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
+            {
+                var level=factor.levels[level_idx];
+                level_labels.push(level.value);
+                level_ids.push(level.id);                                
+            }            
+
+            var rate_svg=drawMeanFiringRates(factor_parent_id, realigned_factor_level_mean_rates.get(factor.id), 
+                    realigned_factor_level_trial_events.get(factor.id), factor_event_types.get(factor.id),
+                    level_ids, level_labels, 0.5);
+            factor_plots.set(factor.id, rate_svg);
+        }
+    }
+
+    function update()
+    {
+        update_rates();
+        for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
+        {
+            var factor=factors[factor_idx];
+            factor_plots.get(factor.id).update(realigned_factor_level_mean_rates.get(factor.id), realigned_factor_level_trial_events.get(factor.id));
 
         }
 

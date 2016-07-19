@@ -30,6 +30,8 @@
     var condition_unit_ids=new Map();
     var unit_condition_ids=new Map();
 
+    var unit_areas=new Map();
+
     var unit_condition_trials=new Map();
     var unit_condition_trial_events=new Map();
     var condition_unit_trials=new Map();
@@ -172,6 +174,12 @@
         }
     }
 
+    function loadedUnitData(resp)
+    {
+        $('#unit-area-'+resp.id).append(resp.area.name);
+        unit_areas.set(resp.id,resp.area.name);
+    }
+
     /**
      * Loaded recording trials for a condition
      * @param resp
@@ -207,6 +215,21 @@
                         var compiledTmpl = _.template(tmplMarkup, unit);
                         $(this).append(compiledTmpl);
                     });
+                    if(unit_areas.has(unit.id))
+                        $('#unit-area-'+unit.id).innerHTML=unit_areas.get(unit.id)
+                    else{
+                        // Load recording trials for condition
+                        var data = {};
+                        var args = {
+                            type: "GET",
+                            url: "/sensorimotordb/api/v1/unit/"+unit.id+"/?format=json",
+                            data: data,
+                            success: loadedUnitData,
+                            error: function(data) {
+                                //alert("Something went wrong!");
+                            } };
+                        $.ajax(args);
+                    }
 
                     // Initialize map of unit - condition recordings
                     unit_condition_trials.set(unit.id, new Map());
@@ -255,15 +278,18 @@
                         event_types.push(evt.name);
                 }
 
-                var spike_times=unit_recording.spike_times.split(',');
-                for(var l=0; l<spike_times.length; l++)
+                if(unit_recording.spike_times.length>0)
                 {
-                    var spk={
-                        x: parseFloat(spike_times[l]),
-                        y: trial_number
-                    };
-                    condition_unit_trials.get(condition_id).get(unit.id).push(spk);
-                    unit_condition_trials.get(unit.id).get(condition_id).push(spk);
+                    var spike_times=unit_recording.spike_times.split(',');
+                    for(var l=0; l<spike_times.length; l++)
+                    {
+                        var spk={
+                            x: parseFloat(spike_times[l]),
+                            y: trial_number
+                        };
+                        condition_unit_trials.get(condition_id).get(unit.id).push(spk);
+                        unit_condition_trials.get(unit.id).get(condition_id).push(spk);
+                    }
                 }
             }
         }
@@ -282,7 +308,8 @@
         }
 
         $('#condition-'+condition_id+'-plots').empty();
-        var rate_svg=drawPopulationFiringRate('condition-'+condition_id+'-plots', realigned_condition_unit_spikes.get(condition_id),
+        var rate_svg=drawPopulationFiringRate('condition-'+condition_id+'-plots',
+                'condition-'+condition_id+'-plots_legend', realigned_condition_unit_spikes.get(condition_id),
                 realigned_condition_unit_trial_events.get(condition_id), event_types,
                 condition_unit_ids.get(condition_id), condition_unit_labels, 0.5);
         condition_plots.set(condition_id, rate_svg)
@@ -304,9 +331,9 @@
             {
                 var unit_id=condition_unit_ids.get(condition_id)[i];
                 $('#unit-'+unit_id+'-plots').empty();
-                var rate_svg=drawPopulationFiringRate('unit-'+unit_id+'-plots', realigned_unit_condition_spikes.get(unit_id),
-                        realigned_unit_condition_trial_events.get(unit_id), event_types, condition_ids,
-                        condition_names, 0.5);
+                var rate_svg=drawPopulationFiringRate('unit-'+unit_id+'-plots', 'unit-'+unit_id+'-plots_legend',
+                        realigned_unit_condition_spikes.get(unit_id), realigned_unit_condition_trial_events.get(unit_id),
+                        event_types, condition_ids, condition_names, 0.5);
                 unit_plots.set(unit_id, rate_svg);
             }
         }

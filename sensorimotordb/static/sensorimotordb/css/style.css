@@ -24,6 +24,14 @@
     font: 16px sans-serif;
 }
 
+.legend {
+    overflow: auto;
+    width: 250px;
+}
+
+.legend1 {
+    overflow: auto;
+}
 .legend-label {
     font: 16px sans-serif;
     cursor: pointer;

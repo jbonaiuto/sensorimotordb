@@ -290,9 +290,14 @@ class UnitRecording(models.Model):
         group.attrs['unit']=self.unit.id
         group['spike_times']=self.spike_times_array
 
-    def get_spikes(self, time_zero, window):
+    def get_spikes_relative(self, time_zero, window):
         rel_spike_times=self.spike_times_array-time_zero
         spikes=rel_spike_times[np.where((rel_spike_times>=window[0]) & (rel_spike_times<window[1]))[0]]
+        return spikes
+
+    def get_spikes_fixed(self, window):
+        rel_spike_times=self.spike_times_array-time_zero
+        spikes=self.spike_times_array[np.where((rel_spike_times>=window[0]) & (rel_spike_times<window[1]))[0]]
         return spikes
 
 

@@ -6,7 +6,7 @@ from tastypie.constants import ALL_WITH_RELATIONS
 from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
 from tastypie.paginator import Paginator
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, VisuomotorClassificationAnalysisResults, UnitClassification, VisuomotorClassificationAnalysis, Analysis, Factor, Level, UnitAnalysisResults, VisuomotorClassificationUnitAnalysisResults
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, VisuomotorClassificationAnalysisResults, UnitClassification, VisuomotorClassificationAnalysis, Analysis, Factor, Level, UnitAnalysisResults, VisuomotorClassificationUnitAnalysisResults, AnalysisResultsLevelMapping
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -162,18 +162,31 @@ class GraspObservationConditionResource(ConditionResource):
         cache = SimpleCache(timeout=10)
 
 
+class BasicEventResource(ModelResource):
+    class Meta:
+        queryset = Event.objects.all()
+        resource_name = 'basic_event'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        cache = SimpleCache(timeout=10)
+        filtering={
+            'trial': ALL_WITH_RELATIONS,
+        }
+
 class EventResource(ModelResource):
+    trial=fields.ToOneField('sensorimotordb.api.BasicRecordingTrialResource', 'trial', full=True)
     class Meta:
         queryset = Event.objects.all()
         resource_name = 'event'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
-
-
+        filtering={
+            'trial': ALL_WITH_RELATIONS,
+        }
 
 class RecordingTrialResource(ModelResource):
-    events=fields.ToManyField(EventResource, 'events', full=True, null=True)
+    events=fields.ToManyField(BasicEventResource, 'events', full=True, null=True)
     #condition=fields.ToOneField(BasicConditionResource, 'condition')
     unit_recordings=fields.ToManyField('sensorimotordb.api.UnitRecordingResource', 'unit_recordings', null=False)
     class Meta:
@@ -183,6 +196,18 @@ class RecordingTrialResource(ModelResource):
         authentication = SessionAuthentication()
         filtering={
             'unit_recordings': ALL_WITH_RELATIONS,
+            'condition': ALL_WITH_RELATIONS
+        }
+        cache = SimpleCache(timeout=10)
+
+class BasicRecordingTrialResource(ModelResource):
+    condition=fields.ToOneField(ConditionResource, 'condition')
+    class Meta:
+        queryset = RecordingTrial.objects.all().select_related('condition').prefetch_related('unit_recordings').distinct()
+        resource_name = 'recording_trial'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        filtering={
             'condition': ALL_WITH_RELATIONS
         }
         cache = SimpleCache(timeout=10)
@@ -203,7 +228,7 @@ class UnitRecordingResource(ModelResource):
         cache = SimpleCache(timeout=10)
 
 class FullRecordingTrialResource(ModelResource):
-    events=fields.ToManyField(EventResource, 'events', full=True, null=True)
+    events=fields.ToManyField(BasicEventResource, 'events', full=True, null=True)
     condition=fields.ToOneField(BasicConditionResource, 'condition')
     unit_recordings=fields.ToManyField('sensorimotordb.api.UnitRecordingResource', 'unit_recordings', null=False, full=True)
     class Meta:
@@ -231,7 +256,6 @@ class UnitClassificationResource(ModelResource):
 
 
 class LevelResource(ModelResource):
-    conditions=fields.ManyToManyField(ConditionResource,'conditions',related_name='conditions',null=False,full=True)
     class Meta:
         queryset=Level.objects.all().prefetch_related('conditions')
         resource_name='level'
@@ -250,17 +274,13 @@ class FactorResource(ModelResource):
 
 
 class AnalysisResource(ModelResource):
-    experiment=fields.ToOneField(ExperimentResource, 'experiment')
     factors=fields.ToManyField(FactorResource,'factors', related_name='factors',null=False,full=True)
     class Meta:
-        queryset=Analysis.objects.all().select_related('experiment').prefetch_related('factors')
+        queryset=Analysis.objects.all().prefetch_related('factors')
         resource_name='analysis'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
-        filtering={
-            'experiment': ALL_WITH_RELATIONS,
-        }
 
     def dehydrate(self, bundle):
         if VisuomotorClassificationAnalysis.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,VisuomotorClassificationAnalysis):
@@ -272,23 +292,37 @@ class AnalysisResource(ModelResource):
 
 class VisuomotorClassificationAnalysisResource(AnalysisResource):
     class Meta:
-        queryset=VisuomotorClassificationAnalysis.objects.all().select_related('experiment').prefetch_related('factors')
+        queryset=VisuomotorClassificationAnalysis.objects.all().prefetch_related('factors')
         resource_name='visuomotor_classification_analysis'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
 
+class AnalysisResultsLevelMappingResource(ModelResource):
+    level=fields.ToOneField(LevelResource, 'level')
+    conditions=fields.ToManyField(ConditionResource, 'conditions', related_name='conditions')
+    class Meta:
+        queryset=AnalysisResultsLevelMapping.objects.all()
+        resource_name='analysis_results_level_mapping'
+        authorization= DjangoAuthorization()
+        authentication = SessionAuthentication()
+        cache = SimpleCache(timeout=10)
 
 class AnalysisResultsResource(ModelResource):
     analysis=fields.ToOneField(AnalysisResource, 'analysis', null=False, full=True)
+    experiment=fields.ToOneField(ExperimentResource, 'experiment')
     unit_analysis_results=fields.ToManyField('sensorimotordb.api.UnitAnalysisResultsResource', 'unit_analysis_results', related_name='unit_analysis_results',full=True)
-
+    level_mappings=fields.ToManyField("sensorimotordb.api.AnalysisResultsLevelMappingResource", 'level_mappings',full=True)
     class Meta:
-        queryset=AnalysisResults.objects.all().select_related('analysis').prefetch_related('unit_analysis_results')
+        queryset=AnalysisResults.objects.all().select_related('analysis','experiment').prefetch_related('unit_analysis_results')
         resource_name='analysis_results'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
         cache = SimpleCache(timeout=10)
+        filtering={
+            'analysis': ALL_WITH_RELATIONS,
+            'experiment': ALL_WITH_RELATIONS,
+            }
 
     def dehydrate(self, bundle):
         if VisuomotorClassificationAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,VisuomotorClassificationAnalysisResults):
@@ -301,12 +335,13 @@ class AnalysisResultsResource(ModelResource):
 class VisuomotorClassificationAnalysisResultsResource(AnalysisResultsResource):
     unit_classifications=fields.ToManyField(UnitClassificationResource,'unit_classifications', full=True)
     class Meta:
-        queryset=VisuomotorClassificationAnalysisResults.objects.all().prefetch_related('unit_analysis_results','unit_classifications','analysis')
+        queryset=VisuomotorClassificationAnalysisResults.objects.all().select_related('analysis','experiment').prefetch_related('unit_analysis_results','unit_classifications')
         resource_name='visuomotor_classification_analysis_results'
         authorization= DjangoAuthorization()
         authentication = SessionAuthentication()
         filtering={
             'analysis': ALL_WITH_RELATIONS,
+            'experiment': ALL_WITH_RELATIONS,
         }
         cache = SimpleCache(timeout=10)
 

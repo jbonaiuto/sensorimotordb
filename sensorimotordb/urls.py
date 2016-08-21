@@ -2,7 +2,7 @@
 from django.conf.urls import patterns, include, url
 from tastypie.api import Api
 from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, VisuomotorClassificationAnalysisResource, VisuomotorClassificationAnalysisResultsResource, UnitClassificationResource, AnalysisResource, FactorResource, LevelResource, UnitAnalysisResultsResource, VisuomotorClassificationUnitAnalysisResultsResource
-from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView
+from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView, CreateVisuomotorClassificationAnalysisView, DeleteVisuomotorClassificationAnalysisResultsView
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())
@@ -41,5 +41,7 @@ urlpatterns = patterns('',
     (r'^experiment/(?P<pk>\d+)/export/$', ExperimentExportView.as_view(), {}, 'experiment_export_view'),
     (r'^analysis_results/(?P<pk>\d+)/$', AnalysisResultsDetailView.as_view(), {}, 'analysis_results_view'),
     (r'^visuomotor_classification_analysis_results/(?P<pk>\d+)/$', VisuomotorClassificationAnalysisResultsDetailView.as_view(), {}, 'analysis_results_view'),
+    (r'^visuomotor_classification_analysis/new/$', CreateVisuomotorClassificationAnalysisView.as_view(), {}, 'analysis_add'),
+    (r'^visuomotor_classification_analysis_results/(?P<pk>\d+)/delete/$', DeleteVisuomotorClassificationAnalysisResultsView.as_view(), {}, 'analysis_results_delete'),
     (r'', IndexView.as_view(), {}, 'index'),
 )

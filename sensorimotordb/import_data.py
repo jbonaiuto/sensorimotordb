@@ -668,7 +668,7 @@ def import_bonini_data(nex_files, db='default'):
         obs_conditions['small_cone_go_light'].viewing_angle=90.0
         obs_conditions['small_cone_go_light'].save(using=db)
 
-    if GraspObservationCondition.objects.using(db).filter(experiment=exp,name='Observe small cone - nogo').count():
+    if GraspObservationCondition.objects.using(db).filter(experiment=exp,name='Observe small cone side grasp - nogo').count():
         obs_conditions['small_cone_nogo']=GraspObservationCondition.objects.using(db).filter(experiment=exp,name='Observe small cone - nogo')[0]
     else:
         obs_conditions['small_cone_nogo']=GraspObservationCondition()

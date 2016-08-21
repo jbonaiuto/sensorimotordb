@@ -80,7 +80,7 @@
         var data = {};
         var args = {
             type: "GET",
-            url: "/sensorimotordb/api/v1/visuomotor_classification_analysis_results/?analysis__experiment={{ object.id }}&limit=0&format=json",
+            url: "/sensorimotordb/api/v1/visuomotor_classification_analysis_results/?experiment={{ object.id }}&limit=0&format=json",
             data: data,
             success: loadedAnalysisResultsData,
             error: function(data) {
@@ -383,35 +383,83 @@
                 realigned_unit_condition_trial_events.get(unit_id));
         }
     }
+
+    function newAnalysis() {
+        var selectBox = document.getElementById("analysis_type");
+        var selectedValue = selectBox.options[selectBox.selectedIndex].value;
+        if(selectedValue.length>0)
+            document.location.href='/sensorimotordb/'+selectedValue+'_analysis/new/?experiment={{ object.id }}';
+    }
+
+    function deleteAnalysisResults(id) {
+        if (confirm('Are you sure you want to delete these results?')) {
+            var data={'id':id, 'csrfmiddlewaretoken': '{{ csrf_token }}'};
+            var args={
+                type:"POST",
+                url:'/sensorimotordb/visuomotor_classification_analysis_results/'+id+'/delete/',
+                data: data,
+                success: doneAnalysisResultsDelete };
+            $.ajax(args);
+        }
+    }
+
+    function doneAnalysisResultsDelete(data, status)
+    {
+        if(status=='success')
+        {
+            // Remove subevent from list in left panel
+            $(document.getElementById('analysis_results-'+data.id)).remove();
+        }
+    }
 </script>
 {% endblock %}
 {% block content %}
     <div class="experiment_info"></div>
-    <form>
-        <label for="binwidth">Bin width</label>
-        <select id="binwidth">
-            <option selected value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-            <option value="200">200</option>
-        </select>
-        <label for="kernelwidth">Gaussian width (ms)</label>
-        <select id="kernelwidth">
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-            <option selected value="100">100</option>
-            <option value="200">200</option>
-        </select>
-        <input id="align_event" type="hidden" value="start"/>
-    </form>
     <h2>Analysis Results</h2>
+        <label for="analysis_type">New Analysis</label>
+        <select id="analysis_type" onchange="newAnalysis();">
+            <option value="" selected></option>
+            <option value="visuomotor_classification">Visuomotor classification</option>
+        </select>
     <div class="analysis_results_list"></div>
-    <h2>Conditions</h2>
-    <div class="condition_list"></div>
-    <h2>Units</h2>
-    <div class="unit_list"></div>
+
+    <table>
+        <tr>
+            <td><h2>Conditions</h2></td>
+            <td><form>
+                <label for="binwidth">Bin width</label>
+                <select id="binwidth">
+                    <option selected value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                </select>
+                <label for="kernelwidth">Gaussian width (ms)</label>
+                <select id="kernelwidth">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option selected value="100">100</option>
+                    <option value="200">200</option>
+                </select>
+                <input id="align_event" type="hidden" value="start"/>
+            </form></td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <div class="condition_list"></div>
+            </td>
+        </tr>
+        <tr>
+            <td><h2>Units</h2></td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <div class="unit_list"></div>
+            </td>
+        </tr>
+    </table>
     {% include "sensorimotordb/experiment/experiment_template.html" %}
     {% include "sensorimotordb/condition/condition_list_item_template.html" %}
     {% include "sensorimotordb/unit/unit_list_item_template.html" %}

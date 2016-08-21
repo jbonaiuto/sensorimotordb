@@ -13,15 +13,19 @@ import pandas as pd
 
 
 class Analysis(models.Model):
-    experiment = models.ForeignKey('Experiment')
+    name=models.CharField(max_length=100, blank=False)
+    description=models.TextField()
 
     objects = InheritanceManager()
     class Meta:
         app_label='sensorimotordb'
 
+    def run(self, results):
+        pass
 
 class AnalysisResults(models.Model):
     analysis = models.ForeignKey('Analysis')
+    experiment = models.ForeignKey('Experiment')
     name=models.CharField(max_length=100, blank=False)
     description=models.TextField()
     date_run=models.DateTimeField(auto_now_add=True)
@@ -50,6 +54,14 @@ class Factor(models.Model):
 class Level(models.Model):
     factor=models.ForeignKey('Factor', related_name='levels')
     value=models.CharField(max_length=1000, blank=False)
+
+    class Meta:
+        app_label='sensorimotordb'
+
+
+class AnalysisResultsLevelMapping(models.Model):
+    level=models.ForeignKey('Level')
+    analysis_results=models.ForeignKey(AnalysisResults, related_name='level_mappings')
     conditions=models.ManyToManyField(Condition)
 
     class Meta:
@@ -57,7 +69,19 @@ class Level(models.Model):
 
 
 class VisuomotorClassificationAnalysisResults(AnalysisResults):
-    total_num_units=models.IntegerField()
+    baseline_rel_evt=models.CharField(max_length=1000, blank=False)
+    baseline_rel_start=models.IntegerField(blank=True)
+    baseline_rel_end=models.IntegerField(blank=True)
+    baseline_rel_end_evt=models.CharField(max_length=1000, blank=True)
+    obj_view_woi_rel_evt=models.CharField(max_length=1000, blank=False)
+    obj_view_woi_rel_start=models.IntegerField(blank=True)
+    obj_view_woi_rel_end=models.IntegerField(blank=True)
+    obj_view_woi_rel_end_evt=models.CharField(max_length=1000, blank=True)
+    grasp_woi_rel_evt=models.CharField(max_length=1000, blank=False)
+    grasp_woi_rel_start=models.IntegerField(blank=True)
+    grasp_woi_rel_end=models.IntegerField(blank=True)
+    grasp_woi_rel_end_evt=models.CharField(max_length=1000, blank=True)
+    total_num_units=models.IntegerField(blank=True, null=True)
 
     class Meta:
         app_label='sensorimotordb'
@@ -82,108 +106,14 @@ class UnitClassification(MPTTModel,models.Model):
 
 
 class VisuomotorClassificationAnalysis(Analysis):
-    baseline_rel_evt=models.CharField(max_length=1000, blank=False)
-    baseline_rel_start=models.IntegerField()
-    baseline_rel_end=models.IntegerField()
-    obj_view_woi_rel_evt=models.CharField(max_length=1000, blank=False)
-    obj_view_woi_rel_start=models.IntegerField()
-    obj_view_woi_rel_end=models.IntegerField()
-    grasp_woi_rel_evt=models.CharField(max_length=1000, blank=False)
-    grasp_woi_rel_start=models.IntegerField()
-    grasp_woi_rel_end=models.IntegerField()
 
     class Meta:
         app_label='sensorimotordb'
 
-    def get_objectgrasp_pref(self, objectgrasp_pairwise):
-        pref='nonselective'
-        if(isinstance(objectgrasp_pairwise, pd.DataFrame)):
-            largeconewhole_ringhook = objectgrasp_pairwise['estimate'][1]
-            largeconewhole_ringhook_p = objectgrasp_pairwise['p.value'][1]
-            largeconewhole_smallconeside = objectgrasp_pairwise['estimate'][2]
-            largeconewhole_smallconeside_p = objectgrasp_pairwise['p.value'][2]
-            ringhook_smallconeside = objectgrasp_pairwise['estimate'][3]
-            ringhook_smallconeside_p = objectgrasp_pairwise['p.value'][3]
-        else:
-            grasp_pairwise = str(objectgrasp_pairwise[1]).split('\n')
-            line = grasp_pairwise[1].split()
-            largeconewhole_ringhook = float(line[3])
-            if(line[7][0] == '<'):
-                largeconewhole_ringhook_p = float(line[7][1:]) / 2
-            else:
-                largeconewhole_ringhook_p = float(line[7]) / 2
-            line = grasp_pairwise[2].split()
-            largeconewhole_smallconeside = float(line[3])
-            if(line[7][0] == '<'):
-                largeconewhole_smallconeside_p = float(line[7][1:]) / 2
-            else:
-                largeconewhole_smallconeside_p = float(line[7]) / 2
-            line = grasp_pairwise[3].split()
-            ringhook_smallconeside = float(line[3])
-            if(line[7][0] == '<'):
-                ringhook_smallconeside_p = float(line[7][1:]) / 2
-            else:
-                ringhook_smallconeside_p = float(line[7]) / 2
-        if largeconewhole_ringhook_p >= 0.05 and largeconewhole_smallconeside_p >= 0.05 and ringhook_smallconeside_p >= 0.05:
-            pref = 'nonselective'
-            print('should not get here!')
-        elif largeconewhole_ringhook_p < 0.05 and largeconewhole_smallconeside_p >= 0.05 and ringhook_smallconeside_p >= 0.05:
-            print('should not get here!')
-        elif largeconewhole_ringhook_p >= 0.05 and largeconewhole_smallconeside_p < 0.05 and ringhook_smallconeside_p >= 0.05:
-            print('should not get here!')
-        elif largeconewhole_ringhook_p < 0.05 and largeconewhole_smallconeside_p < 0.05 and ringhook_smallconeside_p >= 0.05:
-            if largeconewhole_ringhook < 0 and largeconewhole_smallconeside < 0:
-                pref = 'ringhook_smallconeside'
-            elif largeconewhole_ringhook > 0 and largeconewhole_smallconeside > 0:
-                pref = 'largeconewhole'
-            else:
-                print('should not get here!')
-        elif largeconewhole_ringhook_p >= 0.05 and largeconewhole_smallconeside_p >= 0.05 and ringhook_smallconeside_p < 0.05:
-            print('should not get here!')
-        elif largeconewhole_ringhook_p < 0.05 and largeconewhole_smallconeside_p >= 0.05 and ringhook_smallconeside_p < 0.05:
-            if largeconewhole_ringhook > 0 and ringhook_smallconeside < 0:
-                pref = 'smallconeside_largeconewhole'
-            elif largeconewhole_ringhook < 0 and ringhook_smallconeside > 0:
-                pref = 'ringhook'
-            else:
-                print('should not get here!')
-        elif largeconewhole_ringhook_p >= 0.05 and largeconewhole_smallconeside_p < 0.05 and ringhook_smallconeside_p < 0.05:
-            if largeconewhole_smallconeside > 0 and ringhook_smallconeside > 0:
-                pref = 'ringhook_largeconewhole'
-            elif largeconewhole_smallconeside < 0 and ringhook_smallconeside < 0:
-                pref = 'smallconeside'
-            else:
-                print('should not get here!')
-        elif largeconewhole_ringhook_p < 0.05 and largeconewhole_smallconeside_p < 0.05 and ringhook_smallconeside_p < 0.05:
-            # S L R
-            if largeconewhole_ringhook < 0 and largeconewhole_smallconeside > 0 and ringhook_smallconeside > 0:
-                pref = 'ringhook'
-            # S R L
-            elif largeconewhole_ringhook > 0 and largeconewhole_smallconeside > 0 and ringhook_smallconeside > 0:
-                pref = 'largeconewhole'
-            # L S R
-            elif largeconewhole_ringhook < 0 and largeconewhole_smallconeside < 0 and ringhook_smallconeside > 0:
-                pref = 'ringhook'
-            # L R S
-            elif largeconewhole_ringhook < 0 and largeconewhole_smallconeside < 0 and ringhook_smallconeside < 0:
-                pref = 'smallconeside'
-            # R S L
-            elif largeconewhole_ringhook > 0 and largeconewhole_smallconeside > 0 and ringhook_smallconeside < 0:
-                pref = 'largeconewhole'
-            # R L S
-            elif largeconewhole_ringhook > 0 and largeconewhole_smallconeside < 0 and ringhook_smallconeside < 0:
-                pref = 'smallconeside'
-            else:
-                print('should not get here!')
-        return pref
-
-    def run(self, res_name, res_description):
-        unit_ids=np.unique(UnitRecording.objects.filter(trial__condition__experiment__id=self.experiment.id).values_list('unit',
+    def run(self, results):
+        unit_ids=np.unique(UnitRecording.objects.filter(trial__condition__experiment=results.experiment).values_list('unit',
             flat=True))
-
-        results=VisuomotorClassificationAnalysisResults(name=res_name, description=res_description, analysis=self,
-            total_num_units=len(unit_ids))
-        results.save()
+        results.total_num_units=len(unit_ids)
 
         unit_classifications={
             "motor":UnitClassification(analysis_results=results, label='motor'),
@@ -199,28 +129,25 @@ class VisuomotorClassificationAnalysis(Analysis):
         unit_classifications['mirror'].save()
         unit_classifications['canonical mirror']=UnitClassification(parent=unit_classifications['visuomotor'],analysis_results=results,label='canonical mirror')
         unit_classifications['canonical mirror'].save()
-
-        unit_classifications['motor - ringhook']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='ringhook selective')
+        unit_classifications['motor - ringhook']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='ringhook')
         unit_classifications['motor - ringhook'].save()
-        unit_classifications['motor - smallconeside']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='smallconeside selective')
+        unit_classifications['motor - smallconeside']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='smallconeside')
         unit_classifications['motor - smallconeside'].save()
-        unit_classifications['motor - largeconewhole']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='largeconewhole selective')
+        unit_classifications['motor - largeconewhole']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='largeconewhole')
         unit_classifications['motor - largeconewhole'].save()
-        unit_classifications['motor - ringhook_smallconeside']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='ringhook_smallconeside selective')
-        unit_classifications['motor - ringhook_smallconeside'].save()
-        unit_classifications['motor - ringhook_largeconewhole']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='ringhook_largeconewhole selective')
-        unit_classifications['motor - ringhook_largeconewhole'].save()
-        unit_classifications['motor - smallconeside_largeconewhole']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='smallconeside_largeconewhole selective')
-        unit_classifications['motor - smallconeside_largeconewhole'].save()
-        unit_classifications['motor - nonselective']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='nonselective')
-        unit_classifications['motor - nonselective'].save()
+        unit_classifications['visual - ringhook']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='ringhook')
+        unit_classifications['visual - ringhook'].save()
+        unit_classifications['visual - smallconeside']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='smallconeside')
+        unit_classifications['visual - smallconeside'].save()
+        unit_classifications['visual - largeconewhole']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='largeconewhole')
+        unit_classifications['visual - largeconewhole'].save()
 
         for unit_id in unit_ids:
             unit=Unit.objects.get(id=unit_id)
             (motor_anova_results,motor_visibility_pairwise,motor_objectgrasp_pairwise,motor_visibilityobjectgrasp_pairwise,
-                motor_objectgraspvisibility_pairwise)=self.test_unit_motor(results, unit)
+                motor_objectgraspvisibility_pairwise,motor_pref)=self.test_unit_motor(results, unit)
             (objpres_anova_results,objpres_trialtype_pairwise,objpres_objectgrasp_pairwise,
-                objpres_trialtypeobjectgrasp_pairwise,objpres_objectgrasptrialtype_pairwise)=self.test_unit_obj_pres(results, unit)
+                objpres_trialtypeobjectgrasp_pairwise,objpres_objectgrasptrialtype_pairwise, objpres_pref)=self.test_unit_obj_pres(results, unit)
             (obs_grasp_anova_results,obs_grasp_objectgrasp_pairwise)=self.test_unit_obs_grasp(results, unit)
 
             unit_results=VisuomotorClassificationUnitAnalysisResults(analysis_results=results,
@@ -243,38 +170,40 @@ class VisuomotorClassificationAnalysis(Analysis):
             unit_results.save()
 
 
-            motor_properties=False
-            motor_pref='nonselective'
-            if motor_anova_results['Pr(>F)']['visibility']>=0.05 and motor_anova_results['Pr(>F)']['visibility:objectgrasp']>=0.05 and motor_anova_results['Pr(>F)']['objectgrasp']<0.05:
-                motor_properties=True
-                motor_pref = self.get_objectgrasp_pref(motor_objectgrasp_pairwise)
+            # Visibility not significant (fires during grasping in light and dark)
+            # Significant object/grasp (doesn't fire for all types of grasps)
+            motor_properties=motor_anova_results['Pr(>F)']['visibility']>=0.05 and motor_anova_results['Pr(>F)']['visibility:objectgrasp']>=0.05 and motor_anova_results['Pr(>F)']['objectgrasp']<0.05
 
-            obj_pres=False
-            obj_pref='nonselective'
-            if objpres_anova_results['Pr(>F)']['trial_type']>=0.05 and objpres_anova_results['Pr(>F)']['trial_type:objectgrasp']>=0.05 and objpres_anova_results['Pr(>F)']['objectgrasp']<0.05:
-                obj_pres=True
-                obj_pref=self.get_objectgrasp_pref(objpres_objectgrasp_pairwise)
+            # Trial type not significant (fires during go and no/go)
+            # Significant object/grasp (doesn't fire for all types of objects)
+            obj_pres=objpres_anova_results['Pr(>F)']['trial_type']>=0.05 and objpres_anova_results['Pr(>F)']['objectgrasp']<0.05
 
-            action_obs=False
-            obs_pref='nonselective'
-            if obs_grasp_anova_results['Pr(>F)']['objectgrasp']<0.05:
-                action_obs=True
-                obs_pref=self.get_objectgrasp_pref(obs_grasp_objectgrasp_pairwise)
+            # Significant object/grasp (doesn't fire during observation of all grasp types)
+            action_obs=obs_grasp_anova_results['Pr(>F)']['objectgrasp']<0.05
 
+            # If cell has motor and visual properties -> visomotor
             if motor_properties and (obj_pres or action_obs):
                 unit_classifications['visuomotor'].units.add(Unit.objects.get(id=unit_id))
+                # If fires for object presentation and action observation -> canonical mirror
                 if obj_pres and action_obs:
                     unit_classifications['canonical mirror'].units.add(Unit.objects.get(id=unit_id))
+                # If fires only for object presentation -> canonical
                 elif obj_pres:
                     unit_classifications['canonical'].units.add(Unit.objects.get(id=unit_id))
+                # If fires only during action observation -> mirror
                 else:
                     unit_classifications['mirror'].units.add(Unit.objects.get(id=unit_id))
-
-            elif motor_properties:
+            # If only has motor properties -> motor
+            elif motor_properties :
                 unit_classifications['motor'].units.add(Unit.objects.get(id=unit_id))
-                unit_classifications['motor - %s' % motor_pref].units.add(Unit.objects.get(id=unit_id))
-            elif (obj_pres or action_obs):
+                if len(motor_pref):
+                    unit_classifications['motor - %s' % motor_pref].units.add(Unit.objects.get(id=unit_id))
+            # If only has visual properties -> visual
+            elif obj_pres or action_obs:
                 unit_classifications['visual'].units.add(Unit.objects.get(id=unit_id))
+                if len(objpres_pref):
+                    unit_classifications['visual - %s' % objpres_pref].units.add(Unit.objects.get(id=unit_id))
+            # Otherwise other
             else:
                 unit_classifications['other'].units.add(Unit.objects.get(id=unit_id))
 
@@ -284,63 +213,24 @@ class VisuomotorClassificationAnalysis(Analysis):
         print('%.4f %% other cells' % (unit_classifications['other'].units.count()/float(len(unit_ids))*100.0))
 
 
-    def test_unit(self, results, unit_id):
-        conditions=Condition.objects.filter(experiment__id=self.experiment.id)
-        unit=Unit.objects.get(id=unit_id)
-        trial_ids=[]
-        modalities=[]
-        objectgrasps=[]
-        num_spikes_diff=[]
-        for condition in conditions:
-            recording_trials=RecordingTrial.objects.filter(condition=condition)
-            for trial in recording_trials:
-
-                if (self.baseline_rel_evt=='start' or Event.objects.filter(name=self.baseline_rel_evt,trial=trial).count()) and\
-                   (self.woi_rel_evt=='start' or Event.objects.filter(name=self.woi_rel_evt,trial=trial).count()):
-                    baseline_time_zero=float(trial.start_time)
-                    if not self.baseline_rel_evt=='start':
-                        baseline_evt=Event.objects.get(name=self.baseline_rel_evt,trial=trial)
-                        baseline_time_zero=float(baseline_evt.time)
-                    woi_time_zero=float(trial.start_time)
-                    if not self.woi_rel_evt=='start':
-                        woi_evt=Event.objects.get(name=self.woi_rel_evt, trial=trial)
-                        woi_time_zero=float(woi_evt.time)
-                    if UnitRecording.objects.filter(trial=trial, unit=unit).count():
-                        unit_recording=UnitRecording.objects.get(trial=trial, unit=unit)
-                        baseline_spikes=unit_recording.get_spikes(baseline_time_zero,[self.baseline_rel_start, self.baseline_rel_end])
-                        woi_spikes=unit_recording.get_spikes(woi_time_zero, [self.woi_rel_start, self.woi_rel_end])
-
-                        modality=Level.objects.get(factor__analysis=self,factor__name='modality',conditions=condition).value
-                        objectgrasp=Level.objects.get(factor__analysis=self,factor__name='objectgrasp',conditions=condition).value
-
-                        trial_ids.append(trial.id)
-                        modalities.append(modality)
-                        objectgrasps.append(objectgrasp)
-                        num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
-
-        df= pd.DataFrame({
-            'trial': pd.Series(trial_ids),
-            'modality': pd.Series(modalities),
-            'objectgrasp': pd.Series(objectgrasps),
-            'num_spikes_diff': pd.Series(num_spikes_diff)
-        })
-
-        df=df.set_index(['trial'])
-
-        r_source = robjects.r['source']
-        r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/two_way_anova.R'))
-        r_two_way_anova = robjects.globalenv['two_way_anova']
-        (anova_results,objectgraspmodality_pairwise,modalityobjectgrasp_pairwise)=r_two_way_anova(df,"num_spikes_diff",
-            "modality","objectgrasp")
-
-        unit_results=VisuomotorClassificationUnitAnalysisResults(analysis_results=results, results_text=anova_results,
-            pairwise_results_text='%s\n%s' % (str(modalityobjectgrasp_pairwise), str(objectgraspmodality_pairwise)),
-            unit=unit)
-        unit_results.save()
-
-        return anova_results,objectgraspmodality_pairwise,modalityobjectgrasp_pairwise
-
-
+    def get_woi_spikes(self, trial, unit_recording, rel_evt, rel_start_ms, rel_end_ms, rel_end_evt):
+        if len(rel_end_evt) == 0:
+            woi_time_zero = float(trial.start_time)
+            if not rel_evt == 'start':
+                woi_evt = Event.objects.get(name=rel_evt, trial=trial)
+                woi_time_zero = float(woi_evt.time)
+            woi_spikes = unit_recording.get_spikes_relative(woi_time_zero, [rel_start_ms, rel_end_ms])
+        else:
+            woi_time_start = float(trial.start_time)
+            if not rel_evt == 'start':
+                woi_start_evt = Event.objects.get(name=rel_evt, trial=trial)
+                woi_time_start = float(woi_start_evt.time)
+            woi_time_end = float(trial.start_time)
+            if not rel_end_evt == 'start':
+                woi_end_evt = Event.objects.get(name=rel_end_evt, trial=trial)
+                woi_time_end = float(woi_end_evt.time)
+            woi_spikes = unit_recording.get_spikes_fixed([woi_time_start, woi_time_end])
+        return woi_spikes
 
     def test_unit_motor(self, results, unit):
         trial_ids=[]
@@ -348,10 +238,12 @@ class VisuomotorClassificationAnalysis(Analysis):
         objectgrasps=[]
         num_spikes_diff=[]
         condition_ids=[]
+        objectgrasps_spikes={}
         for factor_name in ['Grasp Execution: Visibility','Grasp Execution: Object/Grasp']:
             factor=Factor.objects.get(analysis=results.analysis, name=factor_name)
             for level in factor.levels.all():
-                for condition in level.conditions.all():
+                conditions=AnalysisResultsLevelMapping.objects.get(level=level,analysis_results=results).conditions.all()
+                for condition in conditions:
                     if not condition.id in condition_ids:
                         condition_ids.append(condition.id)
         conditions=Condition.objects.filter(id__in=condition_ids)
@@ -359,28 +251,32 @@ class VisuomotorClassificationAnalysis(Analysis):
             recording_trials=RecordingTrial.objects.filter(condition=condition)
             for trial in recording_trials:
 
-                baseline_time_zero=float(trial.start_time)
-                if not self.baseline_rel_evt=='start':
-                    baseline_evt=Event.objects.get(name=self.baseline_rel_evt,trial=trial)
-                    baseline_time_zero=float(baseline_evt.time)
-                woi_time_zero=float(trial.start_time)
-                if not self.grasp_woi_rel_evt=='start':
-                    woi_evt=Event.objects.get(name=self.grasp_woi_rel_evt, trial=trial)
-                    woi_time_zero=float(woi_evt.time)
                 if UnitRecording.objects.filter(trial=trial, unit=unit).count():
                     unit_recording=UnitRecording.objects.get(trial=trial, unit=unit)
-                    baseline_spikes=unit_recording.get_spikes(baseline_time_zero,[self.baseline_rel_start/1000.0,
-                                                                                  self.baseline_rel_end/1000.0])
-                    woi_spikes=unit_recording.get_spikes(woi_time_zero, [self.grasp_woi_rel_start/1000.0,
-                                                                         self.grasp_woi_rel_end/1000.0])
 
-                    visibility=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Visibility',conditions=condition).value
-                    objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Object/Grasp',conditions=condition).value
+                    baseline_spikes = self.get_woi_spikes(trial, unit_recording, results.baseline_rel_evt,
+                        results.baseline_rel_start/1000.0, results.baseline_rel_end/1000.0,
+                        results.baseline_rel_end_evt)
+
+                    woi_spikes = self.get_woi_spikes(trial, unit_recording, results.grasp_woi_rel_evt,
+                        results.grasp_woi_rel_start/1000.0, results.grasp_woi_rel_end/1000.0,
+                        results.grasp_woi_rel_end_evt)
+
+                    visibility=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Visibility',
+                        analysisresultslevelmapping__conditions=condition,
+                        analysisresultslevelmapping__analysis_results=results).value
+                    objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Object/Grasp',
+                        analysisresultslevelmapping__conditions=condition,
+                        analysisresultslevelmapping__analysis_results=results).value
 
                     trial_ids.append(trial.id)
                     visibilities.append(visibility)
                     objectgrasps.append(objectgrasp)
                     num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
+
+                    if not objectgrasp in objectgrasps_spikes:
+                        objectgrasps_spikes[objectgrasp]=[]
+                    objectgrasps_spikes[objectgrasp].append(len(woi_spikes))
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
@@ -403,7 +299,15 @@ class VisuomotorClassificationAnalysis(Analysis):
         visibilityobjectgrasp_pairwise=pandas2ri.ri2py_dataframe(visibilityobjectgrasp_pairwise)
         objectgraspvisibility_pairwise=pandas2ri.ri2py_dataframe(objectgraspvisibility_pairwise)
 
-        return anova_results,visibility_pairwise,objectgrasp_pairwise,visibilityobjectgrasp_pairwise,objectgraspvisibility_pairwise
+        max_spikes=0
+        pref_objgrasp=''
+        for objgrasp in objectgrasps_spikes:
+            mean_spikes=np.mean(objectgrasps_spikes[objgrasp])
+            if mean_spikes>max_spikes:
+                max_spikes=mean_spikes
+                pref_objgrasp=objgrasp
+
+        return anova_results,visibility_pairwise,objectgrasp_pairwise,visibilityobjectgrasp_pairwise,objectgraspvisibility_pairwise,pref_objgrasp
 
 
     def test_unit_obj_pres(self, results, unit):
@@ -412,10 +316,12 @@ class VisuomotorClassificationAnalysis(Analysis):
         objectgrasps=[]
         num_spikes_diff=[]
         condition_ids=[]
+        objectgrasps_spikes={}
         for factor_name in ['Object Presentation - Trial Type','Object Presentation - Object']:
             factor=Factor.objects.get(analysis=results.analysis, name=factor_name)
             for level in factor.levels.all():
-                for condition in level.conditions.all():
+                conditions=AnalysisResultsLevelMapping.objects.get(level=level,analysis_results=results).conditions.all()
+                for condition in conditions:
                     if not condition.id in condition_ids:
                         condition_ids.append(condition.id)
         conditions=Condition.objects.filter(id__in=condition_ids)
@@ -423,28 +329,32 @@ class VisuomotorClassificationAnalysis(Analysis):
             recording_trials=RecordingTrial.objects.filter(condition=condition)
             for trial in recording_trials:
 
-                baseline_time_zero=float(trial.start_time)
-                if not self.baseline_rel_evt=='start':
-                    baseline_evt=Event.objects.get(name=self.baseline_rel_evt,trial=trial)
-                    baseline_time_zero=float(baseline_evt.time)
-                woi_time_zero=float(trial.start_time)
-                if not self.grasp_woi_rel_evt=='start':
-                    woi_evt=Event.objects.get(name=self.obj_view_woi_rel_evt, trial=trial)
-                    woi_time_zero=float(woi_evt.time)
                 if UnitRecording.objects.filter(trial=trial, unit=unit).count():
                     unit_recording=UnitRecording.objects.get(trial=trial, unit=unit)
-                    baseline_spikes=unit_recording.get_spikes(baseline_time_zero,[self.baseline_rel_start/1000.0,
-                                                                                  self.baseline_rel_end/1000.0])
-                    woi_spikes=unit_recording.get_spikes(woi_time_zero, [self.obj_view_woi_rel_start/1000.0,
-                                                                         self.obj_view_woi_rel_end/1000.0])
 
-                    trial_type=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Trial Type',conditions=condition).value
-                    objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Object',conditions=condition).value
+                    baseline_spikes = self.get_woi_spikes(trial, unit_recording, results.baseline_rel_evt,
+                        results.baseline_rel_start/1000.0, results.obj_view_woi_rel_end/1000.0,
+                        results.baseline_rel_end_evt)
+
+                    woi_spikes = self.get_woi_spikes(trial, unit_recording, results.obj_view_woi_rel_evt,
+                        results.obj_view_woi_rel_start/1000.0, results.obj_view_woi_rel_end/1000.0,
+                        results.obj_view_woi_rel_end_evt)
+
+                    trial_type=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Trial Type',
+                        analysisresultslevelmapping__conditions=condition,
+                        analysisresultslevelmapping__analysis_results=results).value
+                    objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Object',
+                        analysisresultslevelmapping__conditions=condition,
+                        analysisresultslevelmapping__analysis_results=results).value
 
                     trial_ids.append(trial.id)
                     trial_types.append(trial_type)
                     objectgrasps.append(objectgrasp)
                     num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
+
+                    if not objectgrasp in objectgrasps_spikes:
+                        objectgrasps_spikes[objectgrasp]=[]
+                    objectgrasps_spikes[objectgrasp].append(len(woi_spikes))
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
@@ -467,7 +377,15 @@ class VisuomotorClassificationAnalysis(Analysis):
         trialtypeobjectgrasp_pairwise=pandas2ri.ri2py_dataframe(trialtypeobjectgrasp_pairwise)
         objectgrasptrialtype_pairwise=pandas2ri.ri2py_dataframe(objectgrasptrialtype_pairwise)
 
-        return anova_results,trialtype_pairwise,objectgrasp_pairwise,trialtypeobjectgrasp_pairwise,objectgrasptrialtype_pairwise
+        max_spikes=0
+        pref_objgrasp=''
+        for objgrasp in objectgrasps_spikes:
+            mean_spikes=np.mean(objectgrasps_spikes[objgrasp])
+            if mean_spikes>max_spikes:
+                max_spikes=mean_spikes
+                pref_objgrasp=objgrasp
+
+        return anova_results,trialtype_pairwise,objectgrasp_pairwise,trialtypeobjectgrasp_pairwise,objectgrasptrialtype_pairwise,pref_objgrasp
 
 
     def test_unit_obs_grasp(self, results, unit):
@@ -478,7 +396,8 @@ class VisuomotorClassificationAnalysis(Analysis):
         for factor_name in ['Grasp Observation: Object/Grasp']:
             factor=Factor.objects.get(analysis=results.analysis, name=factor_name)
             for level in factor.levels.all():
-                for condition in level.conditions.all():
+                conditions=AnalysisResultsLevelMapping.objects.get(level=level,analysis_results=results).conditions.all()
+                for condition in conditions:
                     if not condition.id in condition_ids:
                         condition_ids.append(condition.id)
         conditions=Condition.objects.filter(id__in=condition_ids)
@@ -486,22 +405,20 @@ class VisuomotorClassificationAnalysis(Analysis):
             recording_trials=RecordingTrial.objects.filter(condition=condition)
             for trial in recording_trials:
 
-                baseline_time_zero=float(trial.start_time)
-                if not self.baseline_rel_evt=='start':
-                    baseline_evt=Event.objects.get(name=self.baseline_rel_evt,trial=trial)
-                    baseline_time_zero=float(baseline_evt.time)
-                woi_time_zero=float(trial.start_time)
-                if not self.grasp_woi_rel_evt=='start':
-                    woi_evt=Event.objects.get(name=self.grasp_woi_rel_evt, trial=trial)
-                    woi_time_zero=float(woi_evt.time)
                 if UnitRecording.objects.filter(trial=trial, unit=unit).count():
                     unit_recording=UnitRecording.objects.get(trial=trial, unit=unit)
-                    baseline_spikes=unit_recording.get_spikes(baseline_time_zero,[self.baseline_rel_start/1000.0,
-                                                                                  self.baseline_rel_end/1000.0])
-                    woi_spikes=unit_recording.get_spikes(woi_time_zero, [self.grasp_woi_rel_start/1000.0,
-                                                                         self.grasp_woi_rel_end/1000.0])
 
-                    objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Observation: Object/Grasp',conditions=condition).value
+                    baseline_spikes = self.get_woi_spikes(trial, unit_recording, results.baseline_rel_evt,
+                        results.baseline_rel_start/1000.0, results.baseline_rel_end/1000.0,
+                        results.baseline_rel_end_evt)
+
+                    woi_spikes = self.get_woi_spikes(trial, unit_recording, results.grasp_woi_rel_evt,
+                        results.grasp_woi_rel_start/1000.0, results.grasp_woi_rel_end/1000.0,
+                        results.grasp_woi_rel_end_evt)
+
+                    objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Observation: Object/Grasp',
+                        analysisresultslevelmapping__conditions=condition,
+                        analysisresultslevelmapping__analysis_results=results).value
 
                     trial_ids.append(trial.id)
                     objectgrasps.append(objectgrasp)

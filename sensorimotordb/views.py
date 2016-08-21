@@ -1,3 +1,4 @@
+import json
 from h5py import h5
 from wsgiref.util import FileWrapper
 from django.contrib.auth.decorators import login_required
@@ -6,13 +7,13 @@ from django.core.mail import EmailMessage
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect
 from django.views.generic import DetailView, TemplateView, CreateView, UpdateView, View
-from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.detail import SingleObjectMixin, BaseDetailView
 from django.views.generic.edit import ModelFormMixin
 import h5py
 import os
 from registration.forms import User
-from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm
-from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor
+from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm
+from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults
 from uscbp import settings
 from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
 
@@ -25,6 +26,31 @@ class LoginRequiredMixin(object):
             login_url=self.login_url)(
             super(LoginRequiredMixin, self).dispatch
         )(request, *args, **kwargs)
+
+
+class JSONResponseMixin(object):
+
+    def post(self, request, *args, **kwargs):
+        self.request=request
+        return self.render_to_response(self.get_context_data(**kwargs))
+
+    def render_to_response(self, context):
+        "Returns a JSON response containing 'context' as payload"
+        return self.get_json_response(self.convert_context_to_json(context))
+
+    def get_json_response(self, content, **httpresponse_kwargs):
+        "Construct an `HttpResponse` object."
+        return HttpResponse(content,
+            content_type='application/json',
+            **httpresponse_kwargs)
+
+    def convert_context_to_json(self, context):
+        "Convert the context dictionary into a JSON object"
+        # Note: This is *EXTREMELY* naive; in reality, you'll need
+        # to do much more complex handling to ensure that arbitrary
+        # objects -- such as Django model instances or querysets
+        # -- can be serialized as JSON.
+        return json.dumps(context)
 
 
 class IndexView(LoginRequiredMixin, TemplateView):
@@ -94,6 +120,25 @@ class VisuomotorClassificationAnalysisResultsDetailView(AnalysisResultsDetailVie
     def get_context_data(self, **kwargs):
         context = AnalysisResultsDetailView.get_context_data(self, **kwargs)
         context['factors']=Factor.objects.filter(analysis=self.object.analysis)
+        return context
+
+
+class DeleteVisuomotorClassificationAnalysisResultsView(JSONResponseMixin,BaseDetailView):
+    model=VisuomotorClassificationAnalysisResults
+
+    def get_context_data(self, **kwargs):
+        context={'msg':u'No POST data sent.' }
+        if self.request.is_ajax():
+            self.object=self.get_object()
+            for classification in UnitClassification.objects.filter(analysis_results=self.object):
+                classification.delete()
+            for unit_results in VisuomotorClassificationUnitAnalysisResults.objects.filter(analysis_results=self.object):
+                unit_results.delete()
+            for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=self.object):
+                level_mapping.delete()
+            self.object.delete()
+            context={'id': self.request.POST['id']}
+
         return context
 
 
@@ -225,3 +270,71 @@ class UpdateUserProfileView(LoginRequiredMixin,UpdateView):
         user.save()
 
         return redirect(self.success_url)
+
+
+class CreateVisuomotorClassificationAnalysisView(LoginRequiredMixin,CreateView):
+    model = VisuomotorClassificationAnalysisResults
+    form_class = VisuomotorClassificationAnalysisResultsForm
+    template_name = 'sensorimotordb/analysis/visuomotor_classification_analysis_results_create.html'
+
+    def get_context_data(self, **kwargs):
+        context_data=super(CreateVisuomotorClassificationAnalysisView,self).get_context_data(**kwargs)
+        context_data['factors']=Factor.objects.filter(analysis=VisuomotorClassificationAnalysis.objects.filter()[0]).prefetch_related('levels')
+        context_data['conditions']=[]
+        experiment_id=self.request.GET.get('experiment',None)
+        if experiment_id is not None:
+            context_data['conditions']=Condition.objects.filter(experiment__id=experiment_id)
+        return context_data
+
+    def get_form(self, form_class=None):
+        form=super(CreateVisuomotorClassificationAnalysisView,self).get_form(form_class=form_class)
+        experiment_id=self.request.GET.get('experiment',None)
+        if experiment_id is not None:
+            all_evts=Event.objects.filter(trial__condition__experiment__id=experiment_id).values_list('name',flat=True).distinct()
+            form.fields['baseline_rel_evt'].choices=[]
+            form.fields['baseline_rel_end_evt'].choices=[('','')]
+            form.fields['obj_view_woi_rel_evt'].choices=[]
+            form.fields['obj_view_woi_rel_end_evt'].choices=[('','')]
+            for evt in all_evts:
+                form.fields['baseline_rel_evt'].choices.append((evt,evt))
+                form.fields['baseline_rel_end_evt'].choices.append((evt,evt))
+                form.fields['obj_view_woi_rel_evt'].choices.append((evt,evt))
+                form.fields['obj_view_woi_rel_end_evt'].choices.append((evt,evt))
+
+            form.fields['grasp_woi_rel_evt'].choices=[]
+            form.fields['grasp_woi_rel_end_evt'].choices=[('','')]
+            execution_conditions=GraspPerformanceCondition.objects.filter(experiment__id=experiment_id)
+            motor_evts=[]
+            for evt in all_evts:
+                for condition in execution_conditions:
+                    if Event.objects.filter(name=evt, trial__condition=condition).count()>0 and not evt in motor_evts:
+                        motor_evts.append(evt)
+            for evt in motor_evts:
+                form.fields['grasp_woi_rel_evt'].choices.append((evt,evt))
+                form.fields['grasp_woi_rel_end_evt'].choices.append((evt,evt))
+
+        return form
+
+    def get_initial(self):
+        initial_data={'analysis': VisuomotorClassificationAnalysis.objects.filter()[0]}
+        experiment_id=self.request.GET.get('experiment',None)
+        if experiment_id is not None:
+            initial_data['experiment']=experiment_id
+        return initial_data
+
+    def form_valid(self, form):
+        """
+        If the form is valid, save the associated model.
+        """
+        self.object=form.save()
+        for field in self.request.POST:
+            if field.startswith('level_mapping_'):
+                level_id=int(field.split('_')[-1])
+                condition_ids=self.request.POST.getlist(field)
+                mapping=AnalysisResultsLevelMapping(level=Level.objects.get(id=level_id), analysis_results=self.object)
+                mapping.save()
+                for condition_id in condition_ids:
+                    mapping.conditions.add(Condition.objects.get(id=condition_id))
+        analysis=VisuomotorClassificationAnalysis.objects.get(id=self.object.analysis.id)
+        analysis.run(self.object)
+        return redirect('/sensorimotordb/experiment/%d/' % self.object.experiment.id)

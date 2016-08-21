@@ -5,8 +5,46 @@
         <table>
             <tr>
                 <td><strong>Description</strong></td>
-                <td><%= description %></td>
-                <td rowspan="2" valign=top>
+                <td colspan="4"><%= description %></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td><strong>Baseline</strong></td>
+                <td><strong>Object view WOI</strong></td>
+                <td><strong>Grasp WOI</strong></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Relative event</td>
+                <td><%= baseline_rel_evt %></td>
+                <td><%= obj_view_woi_rel_evt %></td>
+                <td><%= grasp_woi_rel_evt %></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>End event</td>
+                <td><%= baseline_rel_end_evt %></td>
+                <td><%= obj_view_woi_rel_end_evt %></td>
+                <td><%= grasp_woi_rel_end_evt %></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Start time</td>
+                <td><%= baseline_rel_start %>ms</td>
+                <td><%= obj_view_woi_rel_start %>ms</td>
+                <td><%= grasp_woi_rel_start %>ms</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>End time</td>
+                <td><%= baseline_rel_end %>ms</td>
+                <td><%= obj_view_woi_rel_end %>ms</td>
+                <td><%= grasp_woi_rel_end %>ms</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4"></td>
+                <td valign=top rowspan="2">
                     <form>
                         <label for="binwidth">Bin width</label>
                         <select id="binwidth">
@@ -30,7 +68,7 @@
                 </td>
             </tr>
             <tr>
-                <td valign=top colspan="2">
+                <td valign=top colspan="4">
                     <div id="analysis_results-<%= id %>-pie_legend" style="text-align:center"></div>
                     <div id="analysis_results-<%= id %>-pie" style="text-align:center"><img src="{% static 'sensorimotordb/img/loading.gif' %}"></div>
                 </td>

@@ -3,8 +3,13 @@
     <div id="analysis_results-<%= id %>" class="<%= getTRTag(idx) %>">
         <table>
             <tr>
-                <td colspan="2"><a href="/sensorimotordb/analysis_results/<%= id %>/"><h<%= level %>><%= name %></h></h<%= level %>></a></td>
+                <td width="100%"><a href="/sensorimotordb/analysis_results/<%= id %>/"><h<%= level %>><%= name %></h></h<%= level %>></a></td>
+                <td style="text-align: right;margin-right: 1em;">
+                    <input type="button" value="Delete" onclick="deleteAnalysisResults(<%= id %>)"/>
+                </td>
             </tr>
+            <tr>
+                <td colspan="2"><%= date_run %></td></tr>
             <tr>
                 <td colspan="2"><%= description %></td>
             </tr>

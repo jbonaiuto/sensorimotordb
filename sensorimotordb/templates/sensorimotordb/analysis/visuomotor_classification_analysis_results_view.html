@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% load staticfiles %}
 {% block extrahead %}
-<title>SensoriMotorDB - View Analysis Results: {{ object.name }}</title>
+<title>SensoriMotorDB - View Visuomotor Classification Analysis Results: {{ object.name }}</title>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/d3.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_functions.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_plot.js' %}"></script>
-<script type="text/javascript" src="{% static 'sensorimotordb/js/d3pie.min.js' %}"></script>
 <script>
 
     var classifications=[];
     var current_unit_ids=[];
     var factors=[];
+    var level_mappings=new Map();
     var conditions_to_load=[];
     var condition_unit_trials=new Map();
     var condition_unit_trial_events=new Map();
@@ -55,6 +55,20 @@
             var compiledTmpl = _.template(tmplMarkup, results);
             $(this).append(compiledTmpl);
         });
+        conditions_to_load=[];
+        for(var mapping_idx=0; mapping_idx<resp.level_mappings.length; mapping_idx++)
+        {
+            var mapping=resp.level_mappings[mapping_idx];
+            var level_id=parseInt(mapping.level.split('/')[5]);
+            level_mappings.set(level_id,[]);
+            for(var condition_idx=0; condition_idx<mapping.conditions.length; condition_idx++)
+            {
+                var condition_id=parseInt(mapping.conditions[condition_idx].split('/')[5]);
+                level_mappings.get(level_id).push(condition_id);
+                if(conditions_to_load.indexOf(condition_id)<0)
+                    conditions_to_load.push(condition_id);
+            }
+        }
         for(var unit_idx=0; unit_idx<resp.unit_analysis_results.length; unit_idx++)
         {
             var unit_results=resp.unit_analysis_results[unit_idx];
@@ -109,8 +123,6 @@
                         {}
                 ];
             }
-//             data.push({classification: resp.unit_classifications[idx], label: resp.unit_classifications[idx].label,
-//                value: resp.unit_classifications[idx].units.length, results_id: resp.id});
         }
         for(var idx=0; idx<resp.unit_classifications.length; idx++)
         {
@@ -119,9 +131,7 @@
             {
                 var parent_id=parseInt(classification.parent.split('/')[5]);
                 for(var child_label in data[2])
-                //for(var child_idx=0; child_idx<data[2].keys().length; child_idx++)
                 {
-                    //var child_label=data[2].keys()[child_idx];
                     var child=data[2][child_label];
                     if(child[1][0]==parent_id)
                     {
@@ -160,9 +170,51 @@
         }
         d3.select(self.frameElement).style("height", "800px");
         init_code_hierarchy_plot("analysis_results-"+resp.id+"-pie",data,count_function,color_function,label_function,legend_function);
-        //var pie_svg=drawPieChart(data, "analysis_results-"+resp.id+"-pie", onPieClick);
     }
 
+    function addClassification(data, classification)
+    {
+        if(classification.parent==null)
+        {
+            for(var unit_idx=0; unit_idx<classification.units.length; unit_idx++)
+                data[1][1].push(classification.units[unit_idx]);
+            data[2][classification.label]=[
+                classification.label,
+                [
+                    classification.id,
+                    classification.units
+                ],
+                {}
+            ];
+        }
+        else
+        {
+            if(classification.parent!=null)
+            {
+                var parent_id=parseInt(classification.parent.split('/')[5]);
+                for(var child_label in data[2])
+                {
+                    var child=data[2][child_label];
+                    if(child[1][0]==parent_id)
+                    {
+                        child[2][classification.label]=[
+                            classification.label,
+                            [
+                                classification.id,
+                                classification.units
+                            ],
+                            {}
+                        ];
+                        return data;
+                    }
+                    else
+                    {
+                        data[2]=addClassification(data[2], child);
+                    }
+                }
+            }
+        }
+    }
     function init_code_hierarchy_plot(element_id,data,count_function,color_function,title_function,legend_function)
     {
         var plot = document.getElementById(element_id);
@@ -172,7 +224,7 @@
             plot.removeChild(plot.firstChild);
         }
 
-        var width = plot.offsetWidth;
+        var width = 450;
         var height = width;
         var x_margin = 40;
         var y_margin = 40;
@@ -307,8 +359,6 @@
             }
             var legend = d3.select("#"+element_id+"_legend")
 
-            legend.html(legend_function(d));
-            loadUnitRates(d[4][1]);
             animating = true;
             var revert = false;
             var new_ref;
@@ -320,6 +370,8 @@
             if (revert)
             {
                 d = last_ref;
+                legend.html(legend_function(d));
+                loadUnitRates(d[4][1]);
                 new_ref = ref;
                 svg.selectAll(".form")
                         .filter(
@@ -336,6 +388,8 @@
             }
             else
             {
+                legend.html(legend_function(d));
+                loadUnitRates(d[4][1]);
                 new_ref = d;
                 svg.selectAll(".form")
                         .filter(
@@ -380,7 +434,6 @@
 
     function loadUnitRates(units)
     {
-        conditions_to_load=[];
         current_unit_ids=[];
         for(var unit_idx=0; unit_idx<units.length; unit_idx++)
         {
@@ -406,18 +459,6 @@
                 $('#unit_analysis_results-'+id).hide();
         }
 
-        for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
-        {
-            for(var level_idx=0; level_idx<factors[factor_idx].levels.length; level_idx++)
-            {
-                for(var condition_idx=0; condition_idx<factors[factor_idx].levels[level_idx].conditions.length; condition_idx++)
-                {
-                    var condition_id=factors[factor_idx].levels[level_idx].conditions[condition_idx].id;
-                    if(conditions_to_load.indexOf(condition_id)<0 && !condition_unit_trials.has(condition_id))
-                        conditions_to_load.push(condition_id);
-                }
-            }
-        }
         $('#analysis_results-'+results.id+'-mean_rate').empty();
         $('#analysis_results-'+results.id+'-mean_rate').append('<img src="/static/sensorimotordb/img/loading.gif">');
         if(conditions_to_load.length>0)
@@ -458,6 +499,7 @@
      */
     function loadedRecordingTrialData(resp)
     {
+        conditions_to_load=[];
         // For each recording trial
         for(var j=0; j<resp.objects.length; j++)
         {
@@ -475,7 +517,7 @@
                 var unit=unit_recording.unit;
 
                 // If this is the first instance of this unit in this condition
-                if(~condition_unit_trials.get(condition_id).has(unit.id))
+                if(!condition_unit_trials.get(condition_id).has(unit.id))
                 {
                     condition_unit_trial_events.get(condition_id).set(unit.id, []);
                     condition_unit_trials.get(condition_id).set(unit.id, []);
@@ -572,15 +614,16 @@
             for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
             {
                 var level=factor.levels[level_idx];
-                for(var condition_idx=0; condition_idx<level.conditions.length; condition_idx++)
+                var level_mapping=level_mappings.get(level.id);
+                for(var condition_idx=0; condition_idx<level_mapping.length; condition_idx++)
                 {
-                    var condition=level.conditions[condition_idx];
+                    var condition_id=level_mapping[condition_idx];
                     for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
                     {
                         var unit_id=current_unit_ids[unit_idx];
-                        if(realigned_condition_unit_trial_events.get(condition.id).has(unit_id))
+                        if(realigned_condition_unit_trial_events.get(condition_id).has(unit_id))
                         {
-                            var unit_evts=realigned_condition_unit_trial_events.get(condition.id).get(unit_id);
+                            var unit_evts=realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
                             for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
                             {
                                 var evt=unit_evts[event_idx];
@@ -599,19 +642,20 @@
                 for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
                 {
                     var level=factor.levels[level_idx];
+                    var level_mapping=level_mappings.get(level.id);
                     var has_evt=false;
-                    for(var condition_idx=0; condition_idx<level.conditions.length; condition_idx++)
+                    for(var condition_idx=0; condition_idx<level_mapping.length; condition_idx++)
                     {
-                        var condition=level.conditions[condition_idx];
+                        var condition_id=level_mapping[condition_idx];
                         var unit_rates=[];
                         for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
                         {
                             var unit_id=current_unit_ids[unit_idx];
-                            if(realigned_condition_unit_rates.get(condition.id).has(unit_id))
+                            if(realigned_condition_unit_rates.get(condition_id).has(unit_id))
                             {
-                                var unit_rate=realigned_condition_unit_rates.get(condition.id).get(unit_id);
+                                var unit_rate=realigned_condition_unit_rates.get(condition_id).get(unit_id);
                                 unit_rates.push(unit_rate);
-                                var unit_evts=realigned_condition_unit_trial_events.get(condition.id).get(unit_id);
+                                var unit_evts=realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
                                 for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
                                 {
                                     var evt=unit_evts[event_idx];
@@ -645,22 +689,23 @@
             for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
             {
                 var level=factor.levels[level_idx];
+                var level_mapping=level_mappings.get(level.id)
                 realigned_factor_level_trial_events.get(factor.id).set(level.id,[]);
 
                 var condition_rates=[];
 
-                for(var condition_idx=0; condition_idx<level.conditions.length; condition_idx++)
+                for(var condition_idx=0; condition_idx<level_mapping.length; condition_idx++)
                 {
-                    var condition=level.conditions[condition_idx];
+                    var condition_id=level_mapping[condition_idx];
                     var unit_rates=[];
                     for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
                     {
                         var unit_id=current_unit_ids[unit_idx];
-                        if(realigned_condition_unit_rates.get(condition.id).has(unit_id))
+                        if(realigned_condition_unit_rates.get(condition_id).has(unit_id))
                         {
-                            var unit_rate=realigned_condition_unit_rates.get(condition.id).get(unit_id);
+                            var unit_rate=realigned_condition_unit_rates.get(condition_id).get(unit_id);
                             unit_rates.push(unit_rate);
-                            var unit_evts=realigned_condition_unit_trial_events.get(condition.id).get(unit_id);
+                            var unit_evts=realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
                             for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
                             {
                                 var evt=unit_evts[event_idx];
@@ -672,7 +717,7 @@
                     var condition_mean_rate=mean_firing_rate(unit_rates, realigned_times);
                     condition_rates.push(condition_mean_rate);
                 }
-                if(level.conditions.length>1)
+                if(level_mapping.length>1)
                 {
                     var level_mean_rate=mean_firing_rate(condition_rates, realigned_times);
                     realigned_factor_level_mean_rates.get(factor.id).set(level.id, level_mean_rate);

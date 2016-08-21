@@ -557,22 +557,14 @@
         "model": "sensorimotordb.Analysis",
         "pk": 1,
         "fields": {
-            "experiment": 75
+            "name": "Visuomotor classification",
+            "description": "Classification of neurons into motor, visual, or visuomotor and classification of visuomotor neurons into canonical, mirror or canonical-mirror"
         }
     },
     {
         "model": "sensorimotordb.VisuomotorClassificationAnalysis",
         "pk": 1,
         "fields": {
-            "baseline_rel_evt": "lon",
-            "baseline_rel_start": -500,
-            "baseline_rel_end": 0,
-            "obj_view_woi_rel_evt": "lon",
-            "obj_view_woi_rel_start": 50,
-            "obj_view_woi_rel_end": 450,
-            "grasp_woi_rel_evt": "do",
-            "grasp_woi_rel_start": -500,
-            "grasp_woi_rel_end": 0
         }
     },
     {
@@ -620,8 +612,7 @@
         "pk": 1,
         "fields": {
             "factor": 1,
-            "value": "grasping",
-            "conditions": [432,433,437,438,442,443,430,435,440]
+            "value": "grasping"
         }
     },
     {
@@ -629,8 +620,7 @@
         "pk": 2,
         "fields": {
             "factor": 1,
-            "value": "fixation",
-            "conditions": [434,439,444,431,436,441]
+            "value": "fixation"
         }
     },
     {
@@ -638,8 +628,7 @@
         "pk": 3,
         "fields": {
             "factor": 2,
-            "value": "ringhook",
-            "conditions": [432,433,434,430,431]
+            "value": "ringhook"
         }
     },
     {
@@ -647,8 +636,7 @@
         "pk": 4,
         "fields": {
             "factor": 2,
-            "value": "smallconeside",
-            "conditions": [437,438,439,435,436]
+            "value": "smallconeside"
         }
     },
     {
@@ -656,8 +644,7 @@
         "pk": 5,
         "fields": {
             "factor": 2,
-            "value": "largeconewhole",
-            "conditions": [442,443,444,440,441]
+            "value": "largeconewhole"
         }
     },
     {
@@ -665,8 +652,7 @@
         "pk": 8,
         "fields": {
             "factor": 3,
-            "value": "ringhook",
-            "conditions": [432,433]
+            "value": "ringhook"
         }
     },
     {
@@ -674,8 +660,7 @@
         "pk": 9,
         "fields": {
             "factor": 3,
-            "value": "smallconeside",
-            "conditions": [437,438]
+            "value": "smallconeside"
         }
     },
     {
@@ -683,8 +668,7 @@
         "pk": 10,
         "fields": {
             "factor": 3,
-            "value": "largeconewhole",
-            "conditions": [442,443]
+            "value": "largeconewhole"
         }
     },
     {
@@ -692,8 +676,7 @@
         "pk": 11,
         "fields": {
             "factor": 4,
-            "value": "light",
-            "conditions": [432,437,442]
+            "value": "light"
         }
     },
     {
@@ -701,8 +684,7 @@
         "pk": 12,
         "fields": {
             "factor": 4,
-            "value": "dark",
-            "conditions": [433,438,443]
+            "value": "dark"
         }
     },
     {
@@ -710,8 +692,7 @@
         "pk": 13,
         "fields": {
             "factor": 5,
-            "value": "ringhook",
-            "conditions": [430]
+            "value": "ringhook"
         }
     },
     {
@@ -719,8 +700,7 @@
         "pk": 14,
         "fields": {
             "factor": 5,
-            "value": "smallconeside",
-            "conditions": [435]
+            "value": "smallconeside"
         }
     },
     {
@@ -728,8 +708,7 @@
         "pk": 15,
         "fields": {
             "factor": 5,
-            "value": "largeconewhole",
-            "conditions": [440]
+            "value": "largeconewhole"
         }
     }
 ]

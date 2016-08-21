@@ -141,7 +141,7 @@ function mean_firing_rate(rates, times)
             return {
                 x: d,
                 y: d3.mean(time_rates),
-                stderr: d3.deviation(time_rates)/sqrt_n
+                stderr: rates.length>1 ? d3.deviation(time_rates)/sqrt_n : 0
             }
         }
     );

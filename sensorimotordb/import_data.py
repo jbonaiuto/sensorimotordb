@@ -21,6 +21,7 @@ def remove_all(db='default'):
     cursor.execute('DELETE FROM %s.sensorimotordb_graspobservationcondition WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_graspperformancecondition WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_graspcondition WHERE 1=1' % (settings.DATABASES[db]['NAME']))
+    cursor.execute('DELETE FROM %s.sensorimotordb_conditionvideoevent WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_condition WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     for exp in Experiment.objects.using(db).all():
         cursor.execute('DELETE FROM %s.sensorimotordb_experiment WHERE id=%d' % (settings.DATABASES[db]['NAME'],exp.id))

@@ -1,7 +1,7 @@
 two_way_anova<-function(data, resp_var, factor1, factor2){
 
     # Make sure needed packages are installed and loaded
-    if(length(new<-(packages<-c("Rmisc","lsmeans"))[!(packages %in% installed.packages()[,"Package"])])){
+    if(length(new<-(packages<-c("Rmisc","lsmeans","stats"))[!(packages %in% installed.packages()[,"Package"])])){
         install.packages(new[!(new %in% installed.packages()[,"Package"])])
     }
     sapply(packages, require, character.only=T)

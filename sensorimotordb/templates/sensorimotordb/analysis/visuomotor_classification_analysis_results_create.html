@@ -5,6 +5,9 @@
 <script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/d3.min.js' %}"></script>
 <script type="text/javascript">
+    var eventTimes=new Map();
+    var durations=[];
+
     $(document).ready(function(){
 
         var data = {};
@@ -21,8 +24,6 @@
 
     function loadedEvents(resp)
     {
-        var eventTimes=new Map();
-        var durations=[];
         for(var idx=0; idx<resp.objects.length; idx++)
         {
             var event=resp.objects[idx];
@@ -37,7 +38,21 @@
             var times=eventTimes.get(event_name);
             eventMeanTimes.set(event_name, d3.mean(times));
         }
-        drawWOIPicker('analysis_woi_picker', 0, d3.mean(durations), eventMeanTimes);
+        if(resp.meta.next==null)
+            drawWOIPicker('analysis_woi_picker', 0, d3.mean(durations), eventMeanTimes);
+        else
+        {
+            var data = {};
+            var args = {
+                type: "GET",
+                url: resp.meta.next,
+                data: data,
+                success: loadedEvents,
+                error: function(data) {
+                    //alert("Something went wrong!");
+                } };
+            $.ajax(args);
+        }
     }
 
     var dispatch=d3.dispatch("statechange","woi_modified");

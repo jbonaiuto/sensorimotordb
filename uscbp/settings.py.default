@@ -213,3 +213,5 @@ HAYSTACK_CONNECTIONS = {
 }
 
 API_LIMIT_PER_PAGE = 0
+
+BODB_SERVER='http://bodb.usc.edu'

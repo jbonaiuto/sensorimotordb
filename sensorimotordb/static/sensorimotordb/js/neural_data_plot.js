@@ -3,69 +3,6 @@ var p=d3.scale.category10();
 
 var dispatch=d3.dispatch("statechange","realigned");
 
-function drawPieChart(classifications, parent_id, on_click)
-{
-    $('#'+parent_id).empty();
-
-    var pie = new d3pie(parent_id, {
-        "footer": {
-            "color": "#999999",
-            "fontSize": 10,
-            "font": "open sans",
-            "location": "bottom-left"
-        },
-        "size": {
-            "canvasWidth": 590,
-            "pieOuterRadius": "90%"
-        },
-        "data": {
-            "sortOrder": "value-desc",
-            "content": classifications
-        },
-        "labels": {
-            "outer": {
-                "pieDistance": 32
-            },
-            "inner": {
-                "hideWhenLessThanPercentage": 3
-            },
-            "mainLabel": {
-                "fontSize": 11
-            },
-            "percentage": {
-                "color": "#ffffff",
-                "decimalPlaces": 0
-            },
-            "value": {
-                "color": "#adadad",
-                "fontSize": 11
-            },
-            "lines": {
-                "enabled": true
-            },
-            "truncation": {
-                "enabled": true
-            }
-        },
-        "effects": {
-            "pullOutSegmentOnClick": {
-                "effect": "linear",
-                "speed": 400,
-                "size": 8
-            }
-        },
-        "misc": {
-            "gradient": {
-                "enabled": true,
-                "percentage": 100
-            }
-        },
-        callbacks: {
-            onClickSegment: on_click
-        }
-    });
-}
-
 function drawRaster(id, parent_id, trial_spikes, trial_events, event_types)
 {
     var scaleFactor=0.5;

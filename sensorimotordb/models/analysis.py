@@ -70,17 +70,17 @@ class AnalysisResultsLevelMapping(models.Model):
 
 class VisuomotorClassificationAnalysisResults(AnalysisResults):
     baseline_rel_evt=models.CharField(max_length=1000, blank=False)
-    baseline_rel_start=models.IntegerField(blank=True)
-    baseline_rel_end=models.IntegerField(blank=True)
-    baseline_rel_end_evt=models.CharField(max_length=1000, blank=True)
+    baseline_rel_start=models.IntegerField(blank=True, null=True)
+    baseline_rel_end=models.IntegerField(blank=True, null=True)
+    baseline_rel_end_evt=models.CharField(max_length=1000, blank=True, null=True)
     obj_view_woi_rel_evt=models.CharField(max_length=1000, blank=False)
-    obj_view_woi_rel_start=models.IntegerField(blank=True)
-    obj_view_woi_rel_end=models.IntegerField(blank=True)
-    obj_view_woi_rel_end_evt=models.CharField(max_length=1000, blank=True)
+    obj_view_woi_rel_start=models.IntegerField(blank=True, null=True)
+    obj_view_woi_rel_end=models.IntegerField(blank=True, null=True)
+    obj_view_woi_rel_end_evt=models.CharField(max_length=1000, blank=True, null=True)
     grasp_woi_rel_evt=models.CharField(max_length=1000, blank=False)
-    grasp_woi_rel_start=models.IntegerField(blank=True)
-    grasp_woi_rel_end=models.IntegerField(blank=True)
-    grasp_woi_rel_end_evt=models.CharField(max_length=1000, blank=True)
+    grasp_woi_rel_start=models.IntegerField(blank=True, null=True)
+    grasp_woi_rel_end=models.IntegerField(blank=True, null=True)
+    grasp_woi_rel_end_evt=models.CharField(max_length=1000, blank=True, null=True)
     total_num_units=models.IntegerField(blank=True, null=True)
 
     class Meta:
@@ -114,6 +114,7 @@ class VisuomotorClassificationAnalysis(Analysis):
         unit_ids=np.unique(UnitRecording.objects.filter(trial__condition__experiment=results.experiment).values_list('unit',
             flat=True))
         results.total_num_units=len(unit_ids)
+        results.save()
 
         unit_classifications={
             "motor":UnitClassification(analysis_results=results, label='motor'),

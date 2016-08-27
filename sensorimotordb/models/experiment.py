@@ -7,6 +7,7 @@ from django.db import models
 import datetime
 import h5py
 import numpy as np
+from tastypie.models import create_api_key
 
 # Animal species
 class Species(models.Model):
@@ -296,8 +297,7 @@ class UnitRecording(models.Model):
         return spikes
 
     def get_spikes_fixed(self, window):
-        rel_spike_times=self.spike_times_array-time_zero
-        spikes=self.spike_times_array[np.where((rel_spike_times>=window[0]) & (rel_spike_times<window[1]))[0]]
+        spikes=self.spike_times_array[np.where((self.spike_times_array>=window[0]) & (self.spike_times_array<window[1]))[0]]
         return spikes
 
 
@@ -360,3 +360,5 @@ class ExperimentExportRequest(models.Model):
             self.send()
         super(ExperimentExportRequest,self).save(**kwargs)
 
+
+models.signals.post_save.connect(create_api_key, sender=User)

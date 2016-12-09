@@ -12,6 +12,7 @@ from django.views.generic.edit import ModelFormMixin
 import h5py
 import os
 from registration.forms import User
+from tastypie.models import ApiKey
 from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm
 from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults
 from uscbp import settings
@@ -120,6 +121,9 @@ class VisuomotorClassificationAnalysisResultsDetailView(AnalysisResultsDetailVie
     def get_context_data(self, **kwargs):
         context = AnalysisResultsDetailView.get_context_data(self, **kwargs)
         context['factors']=Factor.objects.filter(analysis=self.object.analysis)
+        context['bodb_server']=settings.BODB_SERVER
+        context['api_key']=ApiKey.objects.get(user=self.request.user).key
+        context['username']=self.request.user.username
         return context
 
 
@@ -260,6 +264,7 @@ class UpdateUserProfileView(LoginRequiredMixin,UpdateView):
     def get_context_data(self, **kwargs):
         context = super(UpdateUserProfileView,self).get_context_data(**kwargs)
         context['msg']=self.request.GET.get('msg',None)
+        context['api_key']=ApiKey.objects.get(user=self.request.user).key
         return context
 
     def form_valid(self, form):

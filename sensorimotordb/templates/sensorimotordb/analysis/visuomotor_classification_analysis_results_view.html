@@ -215,6 +215,7 @@
             }
         }
     }
+
     function init_code_hierarchy_plot(element_id,data,count_function,color_function,title_function,legend_function)
     {
         var plot = document.getElementById(element_id);
@@ -768,6 +769,13 @@
 
         }
 
+    }
+
+    function exportToBODB(analysis_id)
+    {
+        var win = window.open('{{ bodb_server }}/bodb/sed/neurophysiology/sensorimotordb/import/?_popup=1&analysis_id={{ object.id }}&api_key={{ api_key }}&user={{ username }}', 'Export to BODB', 'height=800,width=1000,resizable=yes,scrollbars=yes');
+        win.focus();
+        return false;
     }
 
 </script>

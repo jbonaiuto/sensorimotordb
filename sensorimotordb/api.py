@@ -116,6 +116,7 @@ class SpeciesResource(ModelResource):
 
 
 class BrainRegionResource(ModelResource):
+    nomenclature=fields.ToOneField('sensorimotordb.api.NomenclatureResource','nomenclature', full=True)
     class Meta:
         queryset = BrainRegion.objects.all()
         resource_name = 'brain_region'

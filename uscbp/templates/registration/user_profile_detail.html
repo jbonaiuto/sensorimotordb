@@ -45,6 +45,10 @@
                 <td class="myerrors">{% if form.email.errors %}{{ form.email.errors }}{% endif %}</td>
             </tr>
             <tr>
+                <td>API Key</td>
+                <td colspan="2">{{ api_key }}</td>
+            </tr>
+            <tr>
                 <td>New password *</td>
                 <td><input type="password" name="password1" id="id_password1" onkeyup="checkPasswords()"/></td>
                 <td class="myerrors">{% if form.password1.errors %}{{ form.password1.errors }}{% endif %}</td>

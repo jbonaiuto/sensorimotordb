@@ -222,15 +222,18 @@ class VisuomotorClassificationAnalysis(Analysis):
                 woi_time_zero = float(woi_evt.time)
             woi_spikes = unit_recording.get_spikes_relative(woi_time_zero, [rel_start_ms, rel_end_ms])
         else:
-            woi_time_start = float(trial.start_time)
-            if not rel_evt == 'start':
-                woi_start_evt = Event.objects.get(name=rel_evt, trial=trial)
-                woi_time_start = float(woi_start_evt.time)
-            woi_time_end = float(trial.start_time)
-            if not rel_end_evt == 'start':
-                woi_end_evt = Event.objects.get(name=rel_end_evt, trial=trial)
-                woi_time_end = float(woi_end_evt.time)
-            woi_spikes = unit_recording.get_spikes_fixed([woi_time_start, woi_time_end])
+            if Event.objects.filter(name=rel_evt, trial=trial).exists() and Event.objects.filter(name=rel_end_evt, trial=trial).exists():
+                woi_time_start = float(trial.start_time)
+                if not rel_evt == 'start':
+                    woi_start_evt = Event.objects.get(name=rel_evt, trial=trial)
+                    woi_time_start = float(woi_start_evt.time)
+                woi_time_end = float(trial.start_time)
+                if not rel_end_evt == 'start':
+                    woi_end_evt = Event.objects.get(name=rel_end_evt, trial=trial)
+                    woi_time_end = float(woi_end_evt.time)
+                woi_spikes = unit_recording.get_spikes_fixed([woi_time_start, woi_time_end])
+            else:
+                return None
         return woi_spikes
 
     def test_unit_motor(self, results, unit):
@@ -255,29 +258,40 @@ class VisuomotorClassificationAnalysis(Analysis):
                 if UnitRecording.objects.filter(trial=trial, unit=unit).count():
                     unit_recording=UnitRecording.objects.get(trial=trial, unit=unit)
 
+                    baseline_rel_start=0
+                    if results.baseline_rel_start is not None:
+                        baseline_rel_start=results.baseline_rel_start/1000.0
+                    baseline_rel_end=0
+                    if results.baseline_rel_end is not None:
+                        baseline_rel_end=results.baseline_rel_end/1000.0
                     baseline_spikes = self.get_woi_spikes(trial, unit_recording, results.baseline_rel_evt,
-                        results.baseline_rel_start/1000.0, results.baseline_rel_end/1000.0,
-                        results.baseline_rel_end_evt)
+                        baseline_rel_start, baseline_rel_end, results.baseline_rel_end_evt)
 
+                    grasp_woi_rel_start=0
+                    if results.grasp_woi_rel_start is not None:
+                        grasp_woi_rel_start=results.grasp_woi_rel_start/1000.0
+                    grasp_woi_rel_end=0
+                    if results.grasp_woi_rel_end is not None:
+                        grasp_woi_rel_end=results.grasp_woi_rel_end/1000.0
                     woi_spikes = self.get_woi_spikes(trial, unit_recording, results.grasp_woi_rel_evt,
-                        results.grasp_woi_rel_start/1000.0, results.grasp_woi_rel_end/1000.0,
-                        results.grasp_woi_rel_end_evt)
+                        grasp_woi_rel_start, grasp_woi_rel_end, results.grasp_woi_rel_end_evt)
 
-                    visibility=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Visibility',
-                        analysisresultslevelmapping__conditions=condition,
-                        analysisresultslevelmapping__analysis_results=results).value
-                    objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Object/Grasp',
-                        analysisresultslevelmapping__conditions=condition,
-                        analysisresultslevelmapping__analysis_results=results).value
+                    if baseline_spikes is not None and woi_spikes is not None:
+                        visibility=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Visibility',
+                            analysisresultslevelmapping__conditions=condition,
+                            analysisresultslevelmapping__analysis_results=results).value
+                        objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Object/Grasp',
+                            analysisresultslevelmapping__conditions=condition,
+                            analysisresultslevelmapping__analysis_results=results).value
 
-                    trial_ids.append(trial.id)
-                    visibilities.append(visibility)
-                    objectgrasps.append(objectgrasp)
-                    num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
+                        trial_ids.append(trial.id)
+                        visibilities.append(visibility)
+                        objectgrasps.append(objectgrasp)
+                        num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
 
-                    if not objectgrasp in objectgrasps_spikes:
-                        objectgrasps_spikes[objectgrasp]=[]
-                    objectgrasps_spikes[objectgrasp].append(len(woi_spikes))
+                        if not objectgrasp in objectgrasps_spikes:
+                            objectgrasps_spikes[objectgrasp]=[]
+                        objectgrasps_spikes[objectgrasp].append(len(woi_spikes))
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
@@ -333,29 +347,40 @@ class VisuomotorClassificationAnalysis(Analysis):
                 if UnitRecording.objects.filter(trial=trial, unit=unit).count():
                     unit_recording=UnitRecording.objects.get(trial=trial, unit=unit)
 
+                    baseline_rel_start=0
+                    if results.baseline_rel_start is not None:
+                        baseline_rel_start=results.baseline_rel_start/1000.0
+                    baseline_rel_end=0
+                    if results.baseline_rel_end is not None:
+                        baseline_rel_end=results.baseline_rel_end/1000.0
                     baseline_spikes = self.get_woi_spikes(trial, unit_recording, results.baseline_rel_evt,
-                        results.baseline_rel_start/1000.0, results.obj_view_woi_rel_end/1000.0,
-                        results.baseline_rel_end_evt)
+                        baseline_rel_start, baseline_rel_end, results.baseline_rel_end_evt)
 
+                    obj_view_woi_rel_start=0
+                    if results.obj_view_woi_rel_start is not None:
+                        obj_view_woi_rel_start=results.obj_view_woi_rel_start/1000.0
+                    obj_view_woi_rel_end=0
+                    if results.obj_view_woi_rel_end is not None:
+                        obj_view_woi_rel_end=results.obj_view_woi_rel_end/1000.0
                     woi_spikes = self.get_woi_spikes(trial, unit_recording, results.obj_view_woi_rel_evt,
-                        results.obj_view_woi_rel_start/1000.0, results.obj_view_woi_rel_end/1000.0,
-                        results.obj_view_woi_rel_end_evt)
+                        obj_view_woi_rel_start, obj_view_woi_rel_end, results.obj_view_woi_rel_end_evt)
 
-                    trial_type=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Trial Type',
-                        analysisresultslevelmapping__conditions=condition,
-                        analysisresultslevelmapping__analysis_results=results).value
-                    objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Object',
-                        analysisresultslevelmapping__conditions=condition,
-                        analysisresultslevelmapping__analysis_results=results).value
+                    if baseline_spikes is not None and woi_spikes is not None:
+                        trial_type=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Trial Type',
+                            analysisresultslevelmapping__conditions=condition,
+                            analysisresultslevelmapping__analysis_results=results).value
+                        objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Object',
+                            analysisresultslevelmapping__conditions=condition,
+                            analysisresultslevelmapping__analysis_results=results).value
 
-                    trial_ids.append(trial.id)
-                    trial_types.append(trial_type)
-                    objectgrasps.append(objectgrasp)
-                    num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
+                        trial_ids.append(trial.id)
+                        trial_types.append(trial_type)
+                        objectgrasps.append(objectgrasp)
+                        num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
 
-                    if not objectgrasp in objectgrasps_spikes:
-                        objectgrasps_spikes[objectgrasp]=[]
-                    objectgrasps_spikes[objectgrasp].append(len(woi_spikes))
+                        if not objectgrasp in objectgrasps_spikes:
+                            objectgrasps_spikes[objectgrasp]=[]
+                        objectgrasps_spikes[objectgrasp].append(len(woi_spikes))
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
@@ -409,21 +434,32 @@ class VisuomotorClassificationAnalysis(Analysis):
                 if UnitRecording.objects.filter(trial=trial, unit=unit).count():
                     unit_recording=UnitRecording.objects.get(trial=trial, unit=unit)
 
+                    baseline_rel_start=0
+                    if results.baseline_rel_start is not None:
+                        baseline_rel_start=results.baseline_rel_start/1000.0
+                    baseline_rel_end=0
+                    if results.baseline_rel_end is not None:
+                        baseline_rel_end=results.baseline_rel_end/1000.0
                     baseline_spikes = self.get_woi_spikes(trial, unit_recording, results.baseline_rel_evt,
-                        results.baseline_rel_start/1000.0, results.baseline_rel_end/1000.0,
-                        results.baseline_rel_end_evt)
+                        baseline_rel_start, baseline_rel_end, results.baseline_rel_end_evt)
 
+                    grasp_woi_rel_start=0
+                    if results.grasp_woi_rel_start is not None:
+                        grasp_woi_rel_start=results.grasp_woi_rel_start/1000.0
+                    grasp_woi_rel_end=0
+                    if results.grasp_woi_rel_end is not None:
+                        grasp_woi_rel_end=results.grasp_woi_rel_end/1000.0
                     woi_spikes = self.get_woi_spikes(trial, unit_recording, results.grasp_woi_rel_evt,
-                        results.grasp_woi_rel_start/1000.0, results.grasp_woi_rel_end/1000.0,
-                        results.grasp_woi_rel_end_evt)
+                        grasp_woi_rel_start, grasp_woi_rel_end, results.grasp_woi_rel_end_evt)
 
-                    objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Observation: Object/Grasp',
-                        analysisresultslevelmapping__conditions=condition,
-                        analysisresultslevelmapping__analysis_results=results).value
+                    if baseline_spikes is not None and woi_spikes is not None:
+                        objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Observation: Object/Grasp',
+                            analysisresultslevelmapping__conditions=condition,
+                            analysisresultslevelmapping__analysis_results=results).value
 
-                    trial_ids.append(trial.id)
-                    objectgrasps.append(objectgrasp)
-                    num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
+                        trial_ids.append(trial.id)
+                        objectgrasps.append(objectgrasp)
+                        num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),

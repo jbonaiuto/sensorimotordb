@@ -109,7 +109,6 @@ class ExperimentImportView(LoginRequiredMixin, UpdateView):
             for condition_form in condition_formset.forms:
                 if not condition_form in condition_formset.deleted_forms:
                     grasp_condition=condition_form.save(commit=False)
-                    print(grasp_condition.experiment.id)
                     if grasp_condition.type=='grasp_performance':
                         grasp_perf_cond=GraspPerformanceCondition(graspcondition_ptr=grasp_condition)
                         grasp_perf_cond.__dict__.update(grasp_condition.__dict__)
@@ -126,7 +125,6 @@ class ExperimentImportView(LoginRequiredMixin, UpdateView):
                         grasp_obs_cond.save()
 
                     condition_map[(condition_form.cleaned_data['trial_type'],int(condition_form.cleaned_data['object']))]=grasp_condition.id
-        print(condition_map)
         self.import_kraskov_data(condition_map)
         return redirect('/sensorimotordb/experiment/%d/' % self.object.id)
 

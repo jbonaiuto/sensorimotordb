@@ -358,7 +358,6 @@ class ImportView(LoginRequiredMixin, CreateView):
 
         self.init_conditions(data_filename)
         event_types=self.get_event_types(data_filename)
-        print(event_types)
 
         return redirect('/sensorimotordb/experiment/%d/import/?event_types=%s' % (self.object.id,','.join(event_types)))
 

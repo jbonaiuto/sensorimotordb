@@ -591,17 +591,20 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
     for(var i=0; i<group_ids.length; i++)
     {
         var group_id=group_ids[i];
-        var rate=get_firing_rate(group_trials.get(group_id), binwidth, kernelwidth);
-        rate_data.set(group_id,rate);
-        var group_min_time=d3.min(rate, function(d){ return d.x; });
-        var group_max_time=d3.max(rate, function(d){ return d.x; });
-        if(group_min_time<min_time)
-            min_time=group_min_time;
-        if(group_max_time>max_time)
-            max_time=group_max_time;
-        var group_max_rate=d3.max(rate, function(d){ return d.y+1 });
-        if(group_max_rate>max_rate)
-            max_rate=group_max_rate;
+        if(group_trials.get(group_id)!=null)
+        {
+            var rate=get_firing_rate(group_trials.get(group_id), binwidth, kernelwidth);
+            rate_data.set(group_id,rate);
+            var group_min_time=d3.min(rate, function(d){ return d.x; });
+            var group_max_time=d3.max(rate, function(d){ return d.x; });
+            if(group_min_time<min_time)
+                min_time=group_min_time;
+            if(group_max_time>max_time)
+                max_time=group_max_time;
+            var group_max_rate=d3.max(rate, function(d){ return d.y+1 });
+            if(group_max_rate>max_rate)
+                max_rate=group_max_rate;
+        }
     }
 
     var xScale = d3.scale.linear()
@@ -649,29 +652,32 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
 
     for(var i=0; i<group_ids.length; i++)
     {
-        rate_svg.append("path")
-            .attr("id", parent_id+"-group-"+group_ids[i])
-            .datum(rate_data.get(group_ids[i]))
-            .attr("class", "data-line")
-            .style("stroke", p(i))
-            .attr("d", line);
-        legend.append("text")
-            .attr("id",parent_id+"-label-group-"+group_ids[i])
-            .attr("group_id",group_ids[i])
-            .attr("class","legend-label")
-            .attr("x", 40)
-            .attr("y", (i-1) *  20 + 5)
-            .style("fill", p(i))
-            .text(group_names[i])
-            .on("click", function(d) {
-                var group_id=this.attributes['group_id'].value;
-                var active=d3.select("#"+parent_id+"-group-"+group_id).attr("active")=="true" ? false : true,
-                    newOpacity = active ? 0 : 1,
-                    newLabelOpacity = active ? 0.25 : 1;
-                d3.select("#"+parent_id+"-label-group-"+group_id).style("opacity",newLabelOpacity);
-                d3.select("#"+parent_id+"-group-"+group_id).style("opacity",newOpacity);
-                d3.select("#"+parent_id+"-group-"+group_id).attr("active",active);
-            });
+        if(rate_data.get(group_ids[i])!=null)
+        {
+            rate_svg.append("path")
+                .attr("id", parent_id+"-group-"+group_ids[i])
+                .datum(rate_data.get(group_ids[i]))
+                .attr("class", "data-line")
+                .style("stroke", p(i))
+                .attr("d", line);
+            legend.append("text")
+                .attr("id",parent_id+"-label-group-"+group_ids[i])
+                .attr("group_id",group_ids[i])
+                .attr("class","legend-label")
+                .attr("x", 40)
+                .attr("y", (i-1) *  20 + 5)
+                .style("fill", p(i))
+                .text(group_names[i])
+                .on("click", function(d) {
+                    var group_id=this.attributes['group_id'].value;
+                    var active=d3.select("#"+parent_id+"-group-"+group_id).attr("active")=="true" ? false : true,
+                        newOpacity = active ? 0 : 1,
+                        newLabelOpacity = active ? 0.25 : 1;
+                    d3.select("#"+parent_id+"-label-group-"+group_id).style("opacity",newLabelOpacity);
+                    d3.select("#"+parent_id+"-group-"+group_id).style("opacity",newOpacity);
+                    d3.select("#"+parent_id+"-group-"+group_id).attr("active",active);
+                });
+        }
     }
 
     rate_svg.append("text")
@@ -702,14 +708,17 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
         {
             var group_id=group_ids[k];
             var group_times=[];
-            var realigned_trial_events=group_trial_events.get(group_id)
-            for(var j=0; j<realigned_trial_events.length; j++)
+            if(group_trial_events.get(group_id)!=null)
             {
-                if(realigned_trial_events[j].name==event_type)
-                    group_times.push(realigned_trial_events[j].t);
+                var realigned_trial_events=group_trial_events.get(group_id)
+                for(var j=0; j<realigned_trial_events.length; j++)
+                {
+                    if(realigned_trial_events[j].name==event_type)
+                        group_times.push(realigned_trial_events[j].t);
+                }
+                if(group_times.length>0)
+                    times.push(d3.mean(group_times));
             }
-            if(group_times.length>0)
-                times.push(d3.mean(group_times));
         }
         if(times.length>0)
         {
@@ -779,16 +788,19 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
         min_y_d=null;
         for(var j=0; j<group_ids.length; j++)
         {
-            rate=rate_data.get(group_ids[j]);
-            var i = bisectTime(rate, x0, 1);
-            d0 = rate[i - 1];
-            d1 = rate[i];
-            d = x0 - d0.x > d1.x - x0 ? d1 : d0;
-            y_dist=Math.abs(d.y-y0);
-            if(y_dist<min_y_dist)
+            if(rate_data.get(group_ids[j])!=null)
             {
-                min_y_dist=y_dist;
-                min_y_d=d;
+                rate=rate_data.get(group_ids[j]);
+                var i = bisectTime(rate, x0, 1);
+                d0 = rate[i - 1];
+                d1 = rate[i];
+                d = x0 - d0.x > d1.x - x0 ? d1 : d0;
+                y_dist=Math.abs(d.y-y0);
+                if(y_dist<min_y_dist)
+                {
+                    min_y_dist=y_dist;
+                    min_y_d=d;
+                }
             }
         }
         focus.attr("transform", "translate(" + xScale(min_y_d.x) + "," + yScale(min_y_d.y) + ")");
@@ -805,18 +817,20 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
         for(var i=0; i<group_ids.length; i++)
         {
             var group_id=group_ids[i];
-            var rate=get_firing_rate(realigned_data.get(group_id), binwidth, kernelwidth);
-            var group_min_time=d3.min(rate, function(d){ return d.x; });
-            var group_max_time=d3.max(rate, function(d){ return d.x; });
-            if(group_min_time<min_time)
-                min_time=group_min_time;
-            if(group_max_time>max_time)
-                max_time=group_max_time;
-            var group_max_rate=d3.max(rate, function(d){ return d.y+ 1 });
-            if(group_max_rate>max_rate)
-                max_rate=group_max_rate;
-            rate_data.set(group_id, rate);
-
+            if(realigned_data.get(group_id)!=null)
+            {
+                var rate=get_firing_rate(realigned_data.get(group_id), binwidth, kernelwidth);
+                var group_min_time=d3.min(rate, function(d){ return d.x; });
+                var group_max_time=d3.max(rate, function(d){ return d.x; });
+                if(group_min_time<min_time)
+                    min_time=group_min_time;
+                if(group_max_time>max_time)
+                    max_time=group_max_time;
+                var group_max_rate=d3.max(rate, function(d){ return d.y+ 1 });
+                if(group_max_rate>max_rate)
+                    max_rate=group_max_rate;
+                rate_data.set(group_id, rate);
+            }
         }
 
         yScale.domain([0, max_rate +.1*max_rate]);
@@ -832,15 +846,18 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
             for(var k=0; k<group_ids.length; k++)
             {
                 var group_id=group_ids[k];
-                var group_times=[];
-                var trial_events=realigned_trial_events.get(group_id);
-                for(var j=0; j<trial_events.length; j++)
+                if(realigned_trial_events.get(group_id)!=null)
                 {
-                    if(trial_events[j].name==event_type)
-                        group_times.push(trial_events[j].t);
+                    var group_times=[];
+                    var trial_events=realigned_trial_events.get(group_id);
+                    for(var j=0; j<trial_events.length; j++)
+                    {
+                        if(trial_events[j].name==event_type)
+                            group_times.push(trial_events[j].t);
+                    }
+                    if(group_times.length>0)
+                        times.push(d3.mean(group_times));
                 }
-                if(group_times.length>0)
-                    times.push(d3.mean(group_times));
             }
             if(times.length>0)
             {
@@ -862,10 +879,13 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
         for(var i=0; i<group_ids.length; i++)
         {
             var group_id=group_ids[i];
-            rate_svg.selectAll('#'+parent_id+'-group-'+group_id).datum(rate_data.get(group_id))
-                .transition().duration(1000)
-                .attr("class", "data-line")
-                .attr("d", line);
+            if(rate_data.get(group_id)!=null)
+            {
+                rate_svg.selectAll('#'+parent_id+'-group-'+group_id).datum(rate_data.get(group_id))
+                    .transition().duration(1000)
+                    .attr("class", "data-line")
+                    .attr("d", line);
+            }
         }
         rate_svg.selectAll(".text").data(hist).remove();
         rate_svg.select(".y.axis").call(yAxis);
@@ -895,16 +915,19 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
     for(var i=0; i<group_ids.length; i++)
     {
         var group_id=group_ids[i];
-        var rate=mean_rates.get(group_id);
-        var group_min_time=d3.min(rate, function(d){ return d.x; });
-        var group_max_time=d3.max(rate, function(d){ return d.x; });
-        if(group_min_time<min_time)
-            min_time=group_min_time;
-        if(group_max_time>max_time)
-            max_time=group_max_time;
-        var group_max_rate=d3.max(rate, function(d){ return d.y+ d.stderr });
-        if(group_max_rate>max_rate)
-            max_rate=group_max_rate;
+        if(mean_rates.get(group_ids[i])!=null)
+        {
+            var rate=mean_rates.get(group_id);
+            var group_min_time=d3.min(rate, function(d){ return d.x; });
+            var group_max_time=d3.max(rate, function(d){ return d.x; });
+            if(group_min_time<min_time)
+                min_time=group_min_time;
+            if(group_max_time>max_time)
+                max_time=group_max_time;
+            var group_max_rate=d3.max(rate, function(d){ return d.y+ d.stderr });
+            if(group_max_rate>max_rate)
+                max_rate=group_max_rate;
+        }
     }
 
     var xScale = d3.scale.linear()
@@ -941,48 +964,51 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
 
     for(var group_idx=0; group_idx<group_ids.length; group_idx++)
     {
-        var mean_rate=mean_rates.get(group_ids[group_idx]);
+        if(mean_rates.get(group_ids[group_idx])!=null)
+        {
+            var mean_rate=mean_rates.get(group_ids[group_idx]);
 
-        // Define a convenience function to calculate the
-        // path for a slice of the data.
-        var slice = function(d,i) {
-            var x = i ? mean_rate[i-1].x : d.x,
-                y = i ? mean_rate[i-1].y : d.y,
-                stderr = i ? mean_rate[i-1].stderr : d.stderr,
-                x0 = xScale(x),
-                x1 = xScale(d.x),
-                y0min = yScale(y - stderr),
-                y0max = yScale(y + stderr),
-                y1min = yScale(d.y - stderr),
-                y1max = yScale(d.y + stderr);
-            return "M" + x0 + "," + y0min +
-                "L" + x0 + "," + y0max +
-                "L" + x1 + "," + y1max +
-                "L" + x1 + "," + y1min +
-                "L" + x0 + "," + y0min;
+            // Define a convenience function to calculate the
+            // path for a slice of the data.
+            var slice = function(d,i) {
+                var x = i ? mean_rate[i-1].x : d.x,
+                    y = i ? mean_rate[i-1].y : d.y,
+                    stderr = i ? mean_rate[i-1].stderr : d.stderr,
+                    x0 = xScale(x),
+                    x1 = xScale(d.x),
+                    y0min = yScale(y - stderr),
+                    y0max = yScale(y + stderr),
+                    y1min = yScale(d.y - stderr),
+                    y1max = yScale(d.y + stderr);
+                return "M" + x0 + "," + y0min +
+                    "L" + x0 + "," + y0max +
+                    "L" + x1 + "," + y1max +
+                    "L" + x1 + "," + y1min +
+                    "L" + x0 + "," + y0min;
+            }
+
+            rate_svg.selectAll(".slice.mean_rates")
+                .data(mean_rate)
+                .enter().append("path")
+                .attr("class", "slice_dataset_"+group_ids[group_idx])
+                .attr("fill", p(group_idx))
+                .attr("fill-opacity", "0.4")
+                .attr("stroke", "none")
+                .attr("d", slice);
+
+            rate_svg.append("path")
+                .attr("id", parent_id+"-group-"+group_ids[group_idx])
+                .datum(mean_rate)
+                .attr("class", "data-line")
+                .style("stroke", p(group_idx))
+                .attr("d", line);
+            rate_svg.append("text")
+                .attr("class","legend-label")
+                .attr("x",width-max_length*7)
+                .attr("y",margin.top+group_idx*20)
+                .style("fill", p(group_idx))
+                .text(group_names[group_idx]);
         }
-
-        rate_svg.selectAll(".slice.mean_rates")
-            .data(mean_rate)
-            .enter().append("path")
-            .attr("class", "slice_dataset_"+group_ids[group_idx])
-            .attr("fill", p(group_idx))
-            .attr("fill-opacity", "0.4")
-            .attr("stroke", "none")
-            .attr("d", slice);
-
-        rate_svg.append("path")
-            .attr("id", parent_id+"-group-"+group_ids[group_idx])
-            .datum(mean_rate)
-            .attr("class", "data-line")
-            .style("stroke", p(group_idx))
-            .attr("d", line);
-        rate_svg.append("text")
-            .attr("class","legend-label")
-            .attr("x",width-max_length*7)
-            .attr("y",margin.top+group_idx*20)
-            .style("fill", p(group_idx))
-            .text(group_names[group_idx]);
     }
 
     rate_svg.append("text")
@@ -1012,14 +1038,17 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         for(var k=0; k<group_ids.length; k++)
         {
             var group_id=group_ids[k];
-            var group_times=[];
-            var realigned_trial_events=group_trial_events.get(group_id)
-            for(var j=0; j<realigned_trial_events.length; j++)
+            if(group_trial_events.get(group_id)!=null)
             {
-                if(realigned_trial_events[j].name==event_type)
-                    group_times.push(realigned_trial_events[j].t);
+                var group_times=[];
+                var realigned_trial_events=group_trial_events.get(group_id)
+                for(var j=0; j<realigned_trial_events.length; j++)
+                {
+                    if(realigned_trial_events[j].name==event_type)
+                        group_times.push(realigned_trial_events[j].t);
+                }
+                times.push(d3.mean(group_times));
             }
-            times.push(d3.mean(group_times));
         }
         var mean_time=d3.mean(times);
         var min_time=d3.min(times);
@@ -1086,16 +1115,19 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         min_y_d=null;
         for(var j=0; j<group_ids.length; j++)
         {
-            rate=mean_rates.get(group_ids[j]);
-            var i = bisectTime(rate, x0, 1);
-            d0 = rate[i - 1];
-            d1 = rate[i];
-            d = x0 - d0.x > d1.x - x0 ? d1 : d0;
-            y_dist=Math.abs(d.y-y0);
-            if(y_dist<min_y_dist)
+            if(mean_rates.get(group_ids[j])!=null)
             {
-                min_y_dist=y_dist;
-                min_y_d=d;
+                rate=mean_rates.get(group_ids[j]);
+                var i = bisectTime(rate, x0, 1);
+                d0 = rate[i - 1];
+                d1 = rate[i];
+                d = x0 - d0.x > d1.x - x0 ? d1 : d0;
+                y_dist=Math.abs(d.y-y0);
+                if(y_dist<min_y_dist)
+                {
+                    min_y_dist=y_dist;
+                    min_y_d=d;
+                }
             }
         }
         focus.attr("transform", "translate(" + xScale(min_y_d.x) + "," + yScale(min_y_d.y) + ")");
@@ -1112,16 +1144,19 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         for(var i=0; i<group_ids.length; i++)
         {
             var group_id=group_ids[i];
-            var rate=mean_rates.get(group_id);
-            var group_min_time=d3.min(rate, function(d){ return d.x; });
-            var group_max_time=d3.max(rate, function(d){ return d.x; });
-            if(group_min_time<min_time)
-                min_time=group_min_time;
-            if(group_max_time>max_time)
-                max_time=group_max_time;
-            var group_max_rate=d3.max(rate, function(d){ return d.y+d.stderr });
-            if(group_max_rate>max_rate)
-                max_rate=group_max_rate;
+            if(mean_rates.get(group_id)!=null)
+            {
+                var rate=mean_rates.get(group_id);
+                var group_min_time=d3.min(rate, function(d){ return d.x; });
+                var group_max_time=d3.max(rate, function(d){ return d.x; });
+                if(group_min_time<min_time)
+                    min_time=group_min_time;
+                if(group_max_time>max_time)
+                    max_time=group_max_time;
+                var group_max_rate=d3.max(rate, function(d){ return d.y+d.stderr });
+                if(group_max_rate>max_rate)
+                    max_rate=group_max_rate;
+            }
 
         }
 
@@ -1138,14 +1173,17 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
             for(var k=0; k<group_ids.length; k++)
             {
                 var group_id=group_ids[k];
-                var group_times=[];
-                var trial_events=realigned_trial_events.get(group_id);
-                for(var j=0; j<trial_events.length; j++)
+                if(realigned_trial_events.get(group_id)!=null)
                 {
-                    if(trial_events[j].name==event_type)
-                        group_times.push(trial_events[j].t);
+                    var group_times=[];
+                    var trial_events=realigned_trial_events.get(group_id);
+                    for(var j=0; j<trial_events.length; j++)
+                    {
+                        if(trial_events[j].name==event_type)
+                            group_times.push(trial_events[j].t);
+                    }
+                    times.push(d3.mean(group_times));
                 }
-                times.push(d3.mean(group_times));
             }
             var mean_time=d3.mean(times);
             var min_time=d3.min(times);
@@ -1164,36 +1202,39 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         for(var i=0; i<group_ids.length; i++)
         {
             var group_id=group_ids[i];
-            var mean_rate=mean_rates.get(group_id);
-            rate_svg.selectAll('#'+parent_id+'-group-'+group_id).datum(mean_rate)
-                .transition().duration(1000)
-                .attr("class", "data-line")
-                .attr("d", line);
-            var slice = function(d,i) {
-                var x = i ? mean_rate[i-1].x : d.x,
-                    y = i ? mean_rate[i-1].y : d.y,
-                    stderr = i ? mean_rate[i-1].stderr : d.stderr,
-                    x0 = xScale(x),
-                    x1 = xScale(d.x),
-                    y0min = yScale(y - stderr),
-                    y0max = yScale(y + stderr),
-                    y1min = yScale(d.y - stderr),
-                    y1max = yScale(d.y + stderr);
-                return "M" + x0 + "," + y0min +
-                    "L" + x0 + "," + y0max +
-                    "L" + x1 + "," + y1max +
-                    "L" + x1 + "," + y1min +
-                    "L" + x0 + "," + y0min;
+            if(mean_rates.get(group_id)!=null)
+            {
+                var mean_rate=mean_rates.get(group_id);
+                rate_svg.selectAll('#'+parent_id+'-group-'+group_id).datum(mean_rate)
+                    .transition().duration(1000)
+                    .attr("class", "data-line")
+                    .attr("d", line);
+                var slice = function(d,i) {
+                    var x = i ? mean_rate[i-1].x : d.x,
+                        y = i ? mean_rate[i-1].y : d.y,
+                        stderr = i ? mean_rate[i-1].stderr : d.stderr,
+                        x0 = xScale(x),
+                        x1 = xScale(d.x),
+                        y0min = yScale(y - stderr),
+                        y0max = yScale(y + stderr),
+                        y1min = yScale(d.y - stderr),
+                        y1max = yScale(d.y + stderr);
+                    return "M" + x0 + "," + y0min +
+                        "L" + x0 + "," + y0max +
+                        "L" + x1 + "," + y1max +
+                        "L" + x1 + "," + y1min +
+                        "L" + x0 + "," + y0min;
+                }
+                rate_svg.selectAll(".slice_dataset_"+group_id).remove();
+                rate_svg.selectAll(".slice.mean_rates")
+                    .data(mean_rate)
+                    .enter().append("path")
+                    .attr("class", "slice_dataset_"+group_id)
+                    .attr("fill", p(i))
+                    .attr("fill-opacity", "0.4")
+                    .attr("stroke", "none")
+                    .attr("d", slice);
             }
-            rate_svg.selectAll(".slice_dataset_"+group_id).remove();
-            rate_svg.selectAll(".slice.mean_rates")
-                .data(mean_rate)
-                .enter().append("path")
-                .attr("class", "slice_dataset_"+group_id)
-                .attr("fill", p(i))
-                .attr("fill-opacity", "0.4")
-                .attr("stroke", "none")
-                .attr("d", slice);
         }
         rate_svg.selectAll(".text").data(hist).remove();
         rate_svg.select(".y.axis").call(yAxis);

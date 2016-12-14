@@ -1,6 +1,7 @@
 {% load staticfiles %}
 <script type="text/html" id="analysis_results-template">
     <h1><%= name %></h1>
+    <a href="" onclick="return exportToBODB(<%= id %>);">Export to BODB</a>
     <div id="analysis_results-<%= id %>">
         <table>
             <tr>

@@ -116,7 +116,6 @@ class Experiment(models.Model):
     # user who last modified the entry
     last_modified_by = models.ForeignKey(User,null=True,blank=True,related_name='last_modified_by')
     subject_species=models.ForeignKey('Species', related_name='subject')
-    pubmed_id=models.CharField(max_length=50, blank=True)
 
     class Meta:
         app_label='sensorimotordb'
@@ -157,6 +156,11 @@ class Experiment(models.Model):
 
 
 class Condition(models.Model):
+    CONDITION_TYPE_CHOICES = (
+        ('', ''),
+        ('grasp_performance', 'grasp performance'),
+        ('grasp_observation', 'grasp observation'),
+    )
     experiment=models.ForeignKey('Experiment')
     name=models.CharField(max_length=100)
     description=models.TextField()

@@ -26,12 +26,15 @@ def test_analysis(analysis_id, reset=False):
     results.baseline_rel_evt="lon"
     results.baseline_rel_start=-500
     results.baseline_rel_end=0
+    results.baseline_rel_end_evt=""
     results.obj_view_woi_rel_evt="lon"
     results.obj_view_woi_rel_start=50
     results.obj_view_woi_rel_end=450
-    results.grasp_woi_rel_evt="do"
-    results.grasp_woi_rel_start=-500
-    results.grasp_woi_rel_end=0
+    results.obj_view_woi_rel_end_evt=""
+    results.grasp_woi_rel_evt="mo"
+    results.grasp_woi_rel_end_evt="do"
+    #results.grasp_woi_rel_start=-500
+    #results.grasp_woi_rel_end=0
     results.save()
 
     level_mapping=AnalysisResultsLevelMapping(analysis_results=results, level=Level.objects.get(id=1))

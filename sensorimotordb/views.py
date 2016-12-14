@@ -2,6 +2,7 @@ import json
 from django.db.models import Q
 from h5py import h5
 from wsgiref.util import FileWrapper
+import scipy.io
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage

@@ -2,6 +2,7 @@ import json
 from django.db.models import Q
 from h5py import h5
 from wsgiref.util import FileWrapper
+from haystack.management.commands import rebuild_index
 import scipy.io
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
@@ -126,6 +127,10 @@ class ExperimentImportView(LoginRequiredMixin, UpdateView):
 
                     condition_map[(condition_form.cleaned_data['trial_type'],int(condition_form.cleaned_data['object']))]=grasp_condition.id
         self.import_kraskov_data(condition_map)
+        try:
+            rebuild_index.Command().handle(interactive=False)
+        except:
+            pass
         return redirect('/sensorimotordb/experiment/%d/' % self.object.id)
 
     def import_kraskov_data(self, condition_map):

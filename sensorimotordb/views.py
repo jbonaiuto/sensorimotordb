@@ -3,6 +3,7 @@ from django.db.models import Q
 from h5py import h5
 from wsgiref.util import FileWrapper
 from haystack.management.commands import rebuild_index
+import math
 import scipy.io
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
@@ -60,6 +61,32 @@ class JSONResponseMixin(object):
 class IndexView(LoginRequiredMixin, TemplateView):
     template_name = 'sensorimotordb/index.html'
 
+
+def get_events(trial):
+    ev_idx = -1
+
+    # get indices of area, unit type, index, and events
+    for idx, (dtype, o) in enumerate(trial.dtype.descr):
+        if dtype == 'ev':
+            ev_idx = idx
+
+    ev = trial[ev_idx]
+    ev_idx=-1
+    for idx, (dtype, o) in enumerate(ev.dtype.descr):
+        if dtype == 'ev':
+            ev_idx = idx
+    events=ev[0][0][ev_idx]
+    return events
+
+def get_key(mat_file):
+    key='U'
+    if 'au' in mat_file:
+        key='au'
+    elif 'AU' in mat_file:
+        key='AU'
+    return key
+
+excluded_events=['gng','err','wrn','LCDoff']
 
 class ExperimentImportView(LoginRequiredMixin, UpdateView):
     model=Experiment
@@ -136,136 +163,120 @@ class ExperimentImportView(LoginRequiredMixin, UpdateView):
     def import_kraskov_data(self, condition_map):
         data_file=os.path.join(settings.MEDIA_ROOT,'experiment_data','%s' % self.object.id,'orig_data.mat')
         mat_file = scipy.io.loadmat(data_file)
+        key=get_key(mat_file)
+
         trial_numbers = {}
-        for i in range(len(mat_file['U'][0])):
+        for i in range(len(mat_file[key][0])):
             print('importing unit %d' % i)
+            unit=mat_file[key][0][i]
             area_idx = -1
             unittype_idx = -1
             index_idx = -1
-            events_idx = -1
 
             # get indices of area, unit type, index, and events
-            for idx, (dtype, o) in enumerate(mat_file['U'][0][i].dtype.descr):
+            for idx, (dtype, o) in enumerate(unit.dtype.descr):
                 if dtype == 'area':
                     area_idx = idx
-                elif dtype == 'unittype':
+                elif dtype == 'unit':
                     unittype_idx = idx
                 elif dtype == 'index':
                     index_idx = idx
-                elif dtype == 'events':
-                    events_idx = idx
 
             # create unit
-            unit = Unit()
-            area = mat_file['U'][0][i][area_idx][0]
+            unit_obj = Unit()
+            area = unit[area_idx][0]
             region = BrainRegion.objects.filter(Q(Q(name=area) | Q(abbreviation=area)))
-            unit.area = region[0]
-            unit.type = mat_file['U'][0][i][unittype_idx][0]
-            unit.save()
+            unit_obj.area = region[0]
+            unit_obj.type = unit[unittype_idx][0]
+            unit_obj.save()
 
-            if not unit.id in trial_numbers:
-                trial_numbers[unit.id] = {}
+            if not unit_obj.id in trial_numbers:
+                trial_numbers[unit_obj.id] = {}
 
-            index = mat_file['U'][0][i][index_idx]
-            events = mat_file['U'][0][i][events_idx]
+            index = unit[index_idx]
+            events=get_events(unit)
 
             trialtype_idx = -1
             object_idx = -1
             trial_start_idx = -1
-            go_idx = -1
-            mo_idx = -1
-            do_idx = -1
-            ho_idx = -1
-            hoff_idx = -1
             trial_end_idx = -1
+            err_idx=-1
+            evt_idx={}
             for idx, (dtype, o) in enumerate(events[0].dtype.descr):
-                if dtype == 'trialtype':
+                if dtype == 'hm':
                     trialtype_idx = idx
-                elif dtype == 'object':
+                elif dtype == 'obj':
                     object_idx = idx
-                elif dtype == 'TrialStart':
+                elif dtype == 'LCDon':
                     trial_start_idx = idx
-                elif dtype == 'Go':
-                    go_idx = idx
-                elif dtype == 'MO':
-                    mo_idx = idx
-                elif dtype == 'DO':
-                    do_idx = idx
-                elif dtype == 'HO':
-                    ho_idx = idx
-                elif dtype == 'HOff':
-                    hoff_idx = idx
-                elif dtype == 'TrialEnd':
+                elif dtype == 'HPN':
                     trial_end_idx = idx
+                elif dtype == 'err':
+                    err_idx=idx
+                elif not dtype in excluded_events:
+                    evt_idx[dtype]=idx
 
             trial_types = events[0][0][trialtype_idx][0]
             objects = events[0][0][object_idx][0]
             trial_start_times = events[0][0][trial_start_idx][0]
-            go_events = events[0][0][go_idx][0]
-            mo_events = events[0][0][mo_idx][0]
-            do_events = events[0][0][do_idx][0]
-            ho_events = events[0][0][ho_idx][0]
-            hoff_events = events[0][0][hoff_idx][0]
             trial_end_times = events[0][0][trial_end_idx][0]
+            errors=events[0][0][err_idx][0]
+            event_times={}
+            for ev_type in evt_idx:
+                event_times[ev_type]=events[0][0][evt_idx[ev_type]][0]
 
             # iterate through trials
+            num_trials=0
             for j in range(len(trial_types)):
-                # create trial
-                trial = RecordingTrial()
-                trial.condition = Condition.objects.get(id=condition_map[(trial_types[j],objects[j])])
-                if not trial.condition.id in trial_numbers[unit.id]:
-                    trial_numbers[unit.id][trial.condition.id] = 0
-                trial_numbers[unit.id][trial.condition.id] += 1
-                trial.trial_number = trial_numbers[unit.id][trial.condition.id]
-                trial.start_time = trial_start_times[j]
-                trial.end_time = trial_end_times[j]
-                trial.save()
+                if not math.isnan(trial_start_times[j]) and not math.isnan(trial_end_times[j]) and errors[j]==0:
+                    num_trials=num_trials+1
+                    # create trial
+                    trial = RecordingTrial()
+                    trial.condition = Condition.objects.get(id=condition_map[(trial_types[j],objects[j])])
+                    if not trial.condition.id in trial_numbers[unit_obj.id]:
+                        trial_numbers[unit_obj.id][trial.condition.id] = 0
+                    trial_numbers[unit_obj.id][trial.condition.id] += 1
+                    trial.trial_number = trial_numbers[unit_obj.id][trial.condition.id]
+                    trial.start_time = trial_start_times[j]
+                    trial.end_time = trial_end_times[j]
+                    trial.save()
 
-                next_trial_start_time = None
-                if j < len(trial_types) - 1:
-                    next_trial_start_time = trial_start_times[j + 1]
+                    next_trial_start_time = None
+                    if j < len(trial_types) - 1:
+                        next_trial_start_time = trial_start_times[j + 1]
 
-                previous_trial = None
-                if trial_numbers[unit.id][trial.condition.id] > 1:
-                    previous_trial = RecordingTrial.objects.get(condition=trial.condition,
-                        unit_recordings__unit=unit, trial_number=trial_numbers[unit.id][trial.condition.id] - 1)
+                    previous_trial = None
+                    if trial_numbers[unit_obj.id][trial.condition.id] > 1:
+                        previous_trial = RecordingTrial.objects.get(condition=trial.condition,
+                            unit_recordings__unit=unit_obj, trial_number=trial_numbers[unit_obj.id][trial.condition.id] - 1)
 
-                unit_recording = UnitRecording(unit=unit, trial=trial)
-                # load spikes
-                spike_times = []
-                for k in range(len(index)):
-                    if previous_trial is None:
-                        if index[k, 0] >= trial.start_time - 1.0:
+                    unit_recording = UnitRecording(unit=unit_obj, trial=trial)
+                    # load spikes
+                    spike_times = []
+                    for k in range(len(index)):
+                        if previous_trial is None:
+                            if index[k, 0] >= trial.start_time - 1.0:
+                                if next_trial_start_time is None:
+                                    if index[k, 0] < trial.end_time + 1.0:
+                                        spike_times.append(index[k, 0])
+                                elif index[k, 0] < trial.end_time + 1.0 and index[k, 0] < next_trial_start_time:
+                                    spike_times.append(index[k, 0])
+                        elif index[k, 0] >= trial.start_time - 1.0 and index[k, 0] >= previous_trial.end_time:
                             if next_trial_start_time is None:
                                 if index[k, 0] < trial.end_time + 1.0:
                                     spike_times.append(index[k, 0])
                             elif index[k, 0] < trial.end_time + 1.0 and index[k, 0] < next_trial_start_time:
                                 spike_times.append(index[k, 0])
-                    elif index[k, 0] >= trial.start_time - 1.0 and index[k, 0] >= previous_trial.end_time:
-                        if next_trial_start_time is None:
-                            if index[k, 0] < trial.end_time + 1.0:
-                                spike_times.append(index[k, 0])
-                        elif index[k, 0] < trial.end_time + 1.0 and index[k, 0] < next_trial_start_time:
-                            spike_times.append(index[k, 0])
 
-                unit_recording.spike_times = ','.join([str(x) for x in sorted(spike_times)])
-                unit_recording.save()
+                    unit_recording.spike_times = ','.join([str(x) for x in sorted(spike_times)])
+                    unit_recording.save()
 
-                # create trial events
-                go_event = Event(name='go', description='go signal', trial=trial, time=go_events[j])
-                go_event.save()
-
-                mo_event = Event(name='mo', description='movement onset', trial=trial, time=mo_events[j])
-                mo_event.save()
-
-                do_event = Event(name='do', description='object displacement onset', trial=trial, time=do_events[j])
-                do_event.save()
-
-                ho_event = Event(name='ho', description='stable hold onset', trial=trial, time=ho_events[j])
-                ho_event.save()
-
-                hoff_event = Event(name='hoff', description='hold offset', trial=trial, time=hoff_events[j])
-                hoff_event.save()
+                    # create trial events
+                    for ev_type in event_times:
+                        if not math.isnan(event_times[ev_type][j]):
+                            event=Event(name=ev_type, description=ev_type, trial=trial, time=event_times[ev_type][j])
+                            event.save()
+            print('%d trials' % num_trials)
 
 
 class ImportView(LoginRequiredMixin, CreateView):
@@ -282,18 +293,13 @@ class ImportView(LoginRequiredMixin, CreateView):
     def get_event_types(self, data_file):
         event_types=[]
         mat_file = scipy.io.loadmat(data_file)
-        for i in range(len(mat_file['U'][0])):
-            events_idx = -1
+        key=get_key(mat_file)
+        for i in range(len(mat_file[key][0])):
+            trial=mat_file[key][0][i]
+            events=get_events(trial)
 
-            # get indices of area, unit type, index, and events
-            for idx, (dtype, o) in enumerate(mat_file['U'][0][i].dtype.descr):
-                if dtype == 'events':
-                    events_idx = idx
-
-            events = mat_file['U'][0][i][events_idx]
-
-            for idx, (dtype, o) in enumerate(events[0].dtype.descr):
-                if not (dtype == 'trialtype' or dtype == 'object' or dtype == 'TrialStart' or dtype == 'TrialEnd'):
+            for idx, (dtype, o) in enumerate(events.dtype.descr):
+                if not (dtype == 'hm' or dtype == 'obj' or dtype == 'LCDon' or dtype == 'HPN' or dtype in excluded_events):
                     if dtype.lower() not in event_types:
                         event_types.append(dtype.lower())
         return event_types
@@ -301,23 +307,19 @@ class ImportView(LoginRequiredMixin, CreateView):
 
     def init_conditions(self, data_file):
         mat_file = scipy.io.loadmat(data_file)
+        key=get_key(mat_file)
         condition_type={}
 
-        for i in range(len(mat_file['U'][0])):
-            events_idx = -1
+        for i in range(len(mat_file[key][0])):
+            trial=mat_file[key][0][i]
+            events=get_events(trial)
 
-            # get indices of area, unit type, index, and events
-            for idx, (dtype, o) in enumerate(mat_file['U'][0][i].dtype.descr):
-                if dtype == 'events':
-                    events_idx = idx
-
-            events = mat_file['U'][0][i][events_idx]
             trialtype_idx = -1
             object_idx = -1
-            for idx, (dtype, o) in enumerate(events[0].dtype.descr):
-                if dtype == 'trialtype':
+            for idx, (dtype, o) in enumerate(events.dtype.descr):
+                if dtype == 'hm':
                     trialtype_idx = idx
-                elif dtype == 'object':
+                elif dtype == 'obj':
                     object_idx = idx
 
             trial_types = events[0][0][trialtype_idx][0]

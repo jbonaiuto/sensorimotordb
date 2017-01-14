@@ -327,9 +327,9 @@
         }
         if(conditions_to_load==0)
         {
-            for(var i=0; i<condition_unit_ids.get(condition_id).length; i++)
+            for(var i=0; i<unit_ids.length; i++)
             {
-                var unit_id=condition_unit_ids.get(condition_id)[i];
+                var unit_id=unit_ids[i];
                 $('#unit-'+unit_id+'-plots').empty();
                 var rate_svg=drawPopulationFiringRate('unit-'+unit_id+'-plots', 'unit-'+unit_id+'-plots_legend',
                         realigned_unit_condition_spikes.get(unit_id), realigned_unit_condition_trial_events.get(unit_id),

@@ -710,6 +710,44 @@
             "factor": 5,
             "value": "largeconewhole"
         }
+    },
+    {
+        "model": "sensorimotordb.Analysis",
+        "pk": 2,
+        "fields": {
+            "name": "Mirror Type classification",
+            "description": "Classification of mirror neurons into F-F, F-S, F-ns, S-F, S-S, S-ns, and ns-ns"
+        }
+    },
+    {
+        "model": "sensorimotordb.MirrorTypeClassificationAnalysis",
+        "pk": 2,
+        "fields": {
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 6,
+        "fields": {
+            "analysis": 2,
+            "name": "Trial type"
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 16,
+        "fields": {
+            "factor": 6,
+            "value": "execution"
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 17,
+        "fields": {
+            "factor": 6,
+            "value": "observation"
+        }
     }
 ]
 

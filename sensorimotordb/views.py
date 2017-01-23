@@ -17,8 +17,8 @@ import h5py
 import os
 from registration.forms import User
 from tastypie.models import ApiKey
-from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, ExperimentForm, ConditionFormSet, ExperimentImportForm, GraspConditionFormSet
-from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, Species, BrainRegion, RecordingTrial, UnitRecording, GraspCondition
+from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, ExperimentForm, ConditionFormSet, ExperimentImportForm, GraspConditionFormSet, MirrorTypeClassificationAnalysisResultsForm
+from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, Species, BrainRegion, RecordingTrial, UnitRecording, GraspCondition, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis
 from uscbp import settings
 from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
 
@@ -413,7 +413,39 @@ class AnalysisResultsDetailView(LoginRequiredMixin, DetailView):
         id=self.kwargs.get('pk', None)
         if VisuomotorClassificationAnalysisResults.objects.filter(id=id).exists():
             return redirect('/sensorimotordb/visuomotor_classification_analysis_results/%s/' % id)
+        elif MirrorTypeClassificationAnalysisResults.objects.filter(id=id).exists():
+            return redirect('/sensorimotordb/mirror_type_classification_analysis_results/%s/' % id)
 
+
+class DeleteAnalysisResultsView(JSONResponseMixin,BaseDetailView):
+    model=AnalysisResults
+    def get_context_data(self, **kwargs):
+        context={'msg':u'No POST data sent.' }
+        if self.request.is_ajax():
+            self.object=self.get_object()
+            if VisuomotorClassificationAnalysisResults.objects.filter(id=self.object.id):
+                results=VisuomotorClassificationAnalysisResults.objects.get(id=self.object.id)
+                for classification in UnitClassification.objects.filter(analysis_results=results):
+                    classification.delete()
+                for unit_results in VisuomotorClassificationUnitAnalysisResults.objects.filter(analysis_results=results):
+                    unit_results.delete()
+                for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=results):
+                    level_mapping.delete()
+                results.delete()
+                self.object.delete()
+            elif MirrorTypeClassificationAnalysisResults.objects.filter(id=self.object.id):
+                results=MirrorTypeClassificationAnalysisResults.objects.get(id=self.object.id)
+                for classification in UnitClassification.objects.filter(analysis_results=results):
+                    classification.delete()
+                for unit_results in MirrorTypeClassificationUnitAnalysisResults.objects.filter(analysis_results=results):
+                    unit_results.delete()
+                for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=results):
+                    level_mapping.delete()
+                results.delete()
+                self.object.delete()
+            context={'id': self.request.POST['id']}
+
+        return context
 
 class VisuomotorClassificationAnalysisResultsDetailView(AnalysisResultsDetailView):
     model=VisuomotorClassificationAnalysisResults
@@ -443,6 +475,43 @@ class DeleteVisuomotorClassificationAnalysisResultsView(JSONResponseMixin,BaseDe
             for classification in UnitClassification.objects.filter(analysis_results=self.object):
                 classification.delete()
             for unit_results in VisuomotorClassificationUnitAnalysisResults.objects.filter(analysis_results=self.object):
+                unit_results.delete()
+            for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=self.object):
+                level_mapping.delete()
+            self.object.delete()
+            context={'id': self.request.POST['id']}
+
+        return context
+
+
+class MirrorTypeClassificationAnalysisResultsDetailView(AnalysisResultsDetailView):
+    model=MirrorTypeClassificationAnalysisResults
+    template_name = 'sensorimotordb/analysis/mirror_type_classification_analysis_results_view.html'
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        context = AnalysisResultsDetailView.get_context_data(self, **kwargs)
+        context['factors']=Factor.objects.filter(analysis=self.object.analysis)
+        context['bodb_server']=settings.BODB_SERVER
+        context['api_key']=ApiKey.objects.get(user=self.request.user).key
+        context['username']=self.request.user.username
+        return context
+
+
+class DeleteMirrorTypeClassificationAnalysisResultsView(JSONResponseMixin,BaseDetailView):
+    model=MirrorTypeClassificationAnalysisResults
+
+    def get_context_data(self, **kwargs):
+        context={'msg':u'No POST data sent.' }
+        if self.request.is_ajax():
+            self.object=self.get_object()
+            for classification in UnitClassification.objects.filter(analysis_results=self.object):
+                classification.delete()
+            for unit_results in MirrorTypeClassificationUnitAnalysisResults.objects.filter(analysis_results=self.object):
                 unit_results.delete()
             for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=self.object):
                 level_mapping.delete()
@@ -647,5 +716,65 @@ class CreateVisuomotorClassificationAnalysisView(LoginRequiredMixin,CreateView):
                 for condition_id in condition_ids:
                     mapping.conditions.add(Condition.objects.get(id=condition_id))
         analysis=VisuomotorClassificationAnalysis.objects.get(id=self.object.analysis.id)
+        analysis.run(self.object)
+        return redirect('/sensorimotordb/experiment/%d/' % self.object.experiment.id)
+
+
+class CreateMirrorTypeClassificationAnalysisView(LoginRequiredMixin,CreateView):
+    model = MirrorTypeClassificationAnalysisResults
+    form_class = MirrorTypeClassificationAnalysisResultsForm
+    template_name = 'sensorimotordb/analysis/mirror_type_classification_analysis_results_create.html'
+
+    def get_context_data(self, **kwargs):
+        context_data=super(CreateMirrorTypeClassificationAnalysisView,self).get_context_data(**kwargs)
+        context_data['factors']=Factor.objects.filter(analysis=MirrorTypeClassificationAnalysis.objects.filter()[0]).prefetch_related('levels')
+        context_data['conditions']=[]
+        experiment_id=self.request.GET.get('experiment',None)
+        if experiment_id is not None:
+            context_data['conditions']=Condition.objects.filter(experiment__id=experiment_id)
+        return context_data
+
+    def get_form(self, form_class=None):
+        form=super(CreateMirrorTypeClassificationAnalysisView,self).get_form(form_class=form_class)
+        experiment_id=self.request.GET.get('experiment',None)
+        if experiment_id is not None:
+            all_evts=Event.objects.filter(trial__condition__experiment__id=experiment_id).values_list('name',flat=True).distinct()
+            form.fields['baseline_rel_evt'].choices=[]
+            form.fields['baseline_rel_end_evt'].choices=[('','')]
+            form.fields['reach_woi_rel_evt'].choices=[]
+            form.fields['reach_woi_rel_end_evt'].choices=[('','')]
+            form.fields['hold_woi_rel_evt'].choices=[]
+            form.fields['hold_woi_rel_end_evt'].choices=[('','')]
+            for evt in all_evts:
+                form.fields['baseline_rel_evt'].choices.append((evt,evt))
+                form.fields['baseline_rel_end_evt'].choices.append((evt,evt))
+                form.fields['reach_woi_rel_evt'].choices.append((evt,evt))
+                form.fields['reach_woi_rel_end_evt'].choices.append((evt,evt))
+                form.fields['hold_woi_rel_evt'].choices.append((evt,evt))
+                form.fields['hold_woi_rel_end_evt'].choices.append((evt,evt))
+
+        return form
+
+    def get_initial(self):
+        initial_data={'analysis': MirrorTypeClassificationAnalysis.objects.filter()[0]}
+        experiment_id=self.request.GET.get('experiment',None)
+        if experiment_id is not None:
+            initial_data['experiment']=experiment_id
+        return initial_data
+
+    def form_valid(self, form):
+        """
+        If the form is valid, save the associated model.
+        """
+        self.object=form.save()
+        for field in self.request.POST:
+            if field.startswith('level_mapping_'):
+                level_id=int(field.split('_')[-1])
+                condition_ids=self.request.POST.getlist(field)
+                mapping=AnalysisResultsLevelMapping(level=Level.objects.get(id=level_id), analysis_results=self.object)
+                mapping.save()
+                for condition_id in condition_ids:
+                    mapping.conditions.add(Condition.objects.get(id=condition_id))
+        analysis=MirrorTypeClassificationAnalysis.objects.get(id=self.object.analysis.id)
         analysis.run(self.object)
         return redirect('/sensorimotordb/experiment/%d/' % self.object.experiment.id)

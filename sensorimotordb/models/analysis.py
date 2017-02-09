@@ -79,30 +79,73 @@ class UnitClassification(MPTTModel,models.Model):
         app_label='sensorimotordb'
 
 
-def get_woi_spikes(unit_recording, rel_evt, rel_start_ms, rel_end_ms, rel_end_evt):
+def get_woi_spikes(unit_recording, trial_start_time, trial_events, rel_evt, rel_start_ms, rel_end_ms, rel_end_evt):
     if len(rel_end_evt) == 0:
-        woi_time_zero = float(unit_recording.trial.start_time)
+        woi_time_zero = float(trial_start_time)
         if not rel_evt == 'start':
-            if Event.objects.filter(name=rel_evt, trial=unit_recording.trial).exists():
-                woi_evt = Event.objects.get(name=rel_evt, trial=unit_recording.trial)
+            if trial_events.filter(name=rel_evt).exists():
+                woi_evt = trial_events.get(name=rel_evt)
                 woi_time_zero = float(woi_evt.time)
             else:
                 return None
         woi_spikes = unit_recording.get_spikes_relative(woi_time_zero, [rel_start_ms, rel_end_ms])
     else:
-        if Event.objects.filter(name=rel_evt, trial=unit_recording.trial).exists() and Event.objects.filter(name=rel_end_evt, trial=unit_recording.trial).exists():
-            woi_time_start = float(unit_recording.trial.start_time)
+        if trial_events.filter(name=rel_evt).exists() and trial_events.filter(name=rel_end_evt).exists():
+            woi_time_start = float(trial_start_time)
             if not rel_evt == 'start':
-                woi_start_evt = Event.objects.get(name=rel_evt, trial=unit_recording.trial)
+                woi_start_evt = trial_events.get(name=rel_evt)
                 woi_time_start = float(woi_start_evt.time)
             woi_time_end = float(unit_recording.trial.start_time)
             if not rel_end_evt == 'start':
-                woi_end_evt = Event.objects.get(name=rel_end_evt, trial=unit_recording.trial)
+                woi_end_evt = trial_events.get(name=rel_end_evt)
                 woi_time_end = float(woi_end_evt.time)
             woi_spikes = unit_recording.get_spikes_fixed([woi_time_start, woi_time_end])
         else:
             return None
     return woi_spikes
+
+def get_woi_firing_rate(unit_recording, trial_start_time, trial_events, rel_evt, rel_start_ms, rel_end_ms, rel_end_evt):
+    rate=None
+    if len(rel_end_evt) == 0:
+        woi_time_zero = trial_start_time
+        found=True
+        if not rel_evt == 'start':
+            found=False
+            for trial_evt in trial_events:
+                if trial_evt.name==rel_evt:
+                    woi_time_zero = float(trial_evt.time)
+                    found=True
+                    break
+        if found:
+            woi_spikes = unit_recording.get_spikes_relative(woi_time_zero, [rel_start_ms, rel_end_ms])
+            rate=len(woi_spikes)/(rel_end_ms-rel_start_ms)
+    else:
+        try:
+            woi_time_start = trial_start_time
+            found_start=True
+            if not rel_evt == 'start':
+                found_start=False
+                for trial_evt in trial_events:
+                    if trial_evt.name==rel_evt:
+                        woi_time_start = float(trial_evt.time)
+                        found_start=True
+                        break
+            woi_time_end = trial_start_time
+            found_end=True
+            if not rel_end_evt == 'start':
+                found_end=False
+                for trial_evt in trial_events:
+                    if trial_evt.name==rel_end_evt:
+                        woi_time_end = float(trial_evt.time)
+                        found_end=True
+                        break
+            if found_start and found_end:
+                woi_spikes = unit_recording.get_spikes_fixed([woi_time_start, woi_time_end])
+                rate=len(woi_spikes)/(woi_time_end-woi_time_start)
+        except:
+            print('Exception')
+            return None
+    return rate
 
 
 class VisuomotorClassificationAnalysisResults(AnalysisResults):
@@ -244,9 +287,9 @@ class VisuomotorClassificationAnalysis(Analysis):
         trial_ids=[]
         visibilities=[]
         objectgrasps=[]
-        num_spikes_diff=[]
+        rate_diff=[]
         condition_ids=[]
-        objectgrasps_spikes={}
+        objectgrasps_rates={}
         for factor_name in ['Grasp Execution: Visibility','Grasp Execution: Object/Grasp']:
             factor=Factor.objects.get(analysis=results.analysis, name=factor_name)
             for level in factor.levels.all():
@@ -258,7 +301,8 @@ class VisuomotorClassificationAnalysis(Analysis):
         for condition in conditions:
             recording_trials=RecordingTrial.objects.filter(condition=condition)
             for trial in recording_trials:
-
+                trial_events=list(Event.objects.filter(trial=trial))
+                trial_start_time=float(trial.start_time)
                 if UnitRecording.objects.filter(trial=trial, unit=unit).count():
                     unit_recording=UnitRecording.objects.get(trial=trial, unit=unit)
 
@@ -268,7 +312,7 @@ class VisuomotorClassificationAnalysis(Analysis):
                     baseline_rel_end=0
                     if results.baseline_rel_end is not None:
                         baseline_rel_end=results.baseline_rel_end/1000.0
-                    baseline_spikes = get_woi_spikes(trial, unit_recording, results.baseline_rel_evt,
+                    baseline_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.baseline_rel_evt,
                         baseline_rel_start, baseline_rel_end, results.baseline_rel_end_evt)
 
                     grasp_woi_rel_start=0
@@ -277,10 +321,10 @@ class VisuomotorClassificationAnalysis(Analysis):
                     grasp_woi_rel_end=0
                     if results.grasp_woi_rel_end is not None:
                         grasp_woi_rel_end=results.grasp_woi_rel_end/1000.0
-                    woi_spikes = get_woi_spikes(trial, unit_recording, results.grasp_woi_rel_evt,
+                    woi_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.grasp_woi_rel_evt,
                         grasp_woi_rel_start, grasp_woi_rel_end, results.grasp_woi_rel_end_evt)
 
-                    if baseline_spikes is not None and woi_spikes is not None:
+                    if baseline_rate is not None and woi_rate is not None:
                         visibility=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Visibility',
                             analysisresultslevelmapping__conditions=condition,
                             analysisresultslevelmapping__analysis_results=results).value
@@ -291,17 +335,17 @@ class VisuomotorClassificationAnalysis(Analysis):
                         trial_ids.append(trial.id)
                         visibilities.append(visibility)
                         objectgrasps.append(objectgrasp)
-                        num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
+                        rate_diff.append(woi_rate-baseline_rate)
 
-                        if not objectgrasp in objectgrasps_spikes:
-                            objectgrasps_spikes[objectgrasp]=[]
-                        objectgrasps_spikes[objectgrasp].append(len(woi_spikes))
+                        if not objectgrasp in objectgrasps_rates:
+                            objectgrasps_rates[objectgrasp]=[]
+                        objectgrasps_rates[objectgrasp].append(woi_rate-baseline_rate)
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
             'visibility': pd.Series(visibilities),
             'objectgrasp': pd.Series(objectgrasps),
-            'num_spikes_diff': pd.Series(num_spikes_diff)
+            'rate_diff': pd.Series(rate_diff)
         })
 
         df=df.set_index(['trial'])
@@ -309,7 +353,7 @@ class VisuomotorClassificationAnalysis(Analysis):
         r_source = robjects.r['source']
         r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/two_way_anova.R'))
         r_two_way_anova = robjects.globalenv['two_way_anova']
-        (anova_results,visibility_pairwise, objectgrasp_pairwise, visibilityobjectgrasp_pairwise,objectgraspvisibility_pairwise)=r_two_way_anova(df,"num_spikes_diff",
+        (anova_results,visibility_pairwise, objectgrasp_pairwise, visibilityobjectgrasp_pairwise,objectgraspvisibility_pairwise)=r_two_way_anova(df,"rate_diff",
             "visibility","objectgrasp")
 
         anova_results=pandas2ri.ri2py_dataframe(anova_results)
@@ -318,12 +362,12 @@ class VisuomotorClassificationAnalysis(Analysis):
         visibilityobjectgrasp_pairwise=pandas2ri.ri2py_dataframe(visibilityobjectgrasp_pairwise)
         objectgraspvisibility_pairwise=pandas2ri.ri2py_dataframe(objectgraspvisibility_pairwise)
 
-        max_spikes=0
+        max_rate=0
         pref_objgrasp=''
-        for objgrasp in objectgrasps_spikes:
-            mean_spikes=np.mean(objectgrasps_spikes[objgrasp])
-            if mean_spikes>max_spikes:
-                max_spikes=mean_spikes
+        for objgrasp in objectgrasps_rates:
+            mean_rate=np.mean(objectgrasps_rates[objgrasp])
+            if mean_rate>max_rate:
+                max_rate=mean_rate
                 pref_objgrasp=objgrasp
 
         return anova_results,visibility_pairwise,objectgrasp_pairwise,visibilityobjectgrasp_pairwise,objectgraspvisibility_pairwise,pref_objgrasp
@@ -333,9 +377,9 @@ class VisuomotorClassificationAnalysis(Analysis):
         trial_ids=[]
         trial_types=[]
         objectgrasps=[]
-        num_spikes_diff=[]
+        rate_diff=[]
         condition_ids=[]
-        objectgrasps_spikes={}
+        objectgrasps_rates={}
         for factor_name in ['Object Presentation - Trial Type','Object Presentation - Object']:
             factor=Factor.objects.get(analysis=results.analysis, name=factor_name)
             for level in factor.levels.all():
@@ -347,7 +391,8 @@ class VisuomotorClassificationAnalysis(Analysis):
         for condition in conditions:
             recording_trials=RecordingTrial.objects.filter(condition=condition)
             for trial in recording_trials:
-
+                trial_events=list(Event.objects.filter(trial=trial))
+                trial_start_time=float(trial.start_time)
                 if UnitRecording.objects.filter(trial=trial, unit=unit).count():
                     unit_recording=UnitRecording.objects.get(trial=trial, unit=unit)
 
@@ -357,7 +402,7 @@ class VisuomotorClassificationAnalysis(Analysis):
                     baseline_rel_end=0
                     if results.baseline_rel_end is not None:
                         baseline_rel_end=results.baseline_rel_end/1000.0
-                    baseline_spikes = get_woi_spikes(trial, unit_recording, results.baseline_rel_evt,
+                    baseline_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.baseline_rel_evt,
                         baseline_rel_start, baseline_rel_end, results.baseline_rel_end_evt)
 
                     obj_view_woi_rel_start=0
@@ -366,10 +411,10 @@ class VisuomotorClassificationAnalysis(Analysis):
                     obj_view_woi_rel_end=0
                     if results.obj_view_woi_rel_end is not None:
                         obj_view_woi_rel_end=results.obj_view_woi_rel_end/1000.0
-                    woi_spikes = get_woi_spikes(trial, unit_recording, results.obj_view_woi_rel_evt,
+                    woi_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.obj_view_woi_rel_evt,
                         obj_view_woi_rel_start, obj_view_woi_rel_end, results.obj_view_woi_rel_end_evt)
 
-                    if baseline_spikes is not None and woi_spikes is not None:
+                    if baseline_rate is not None and woi_rate is not None:
                         trial_type=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Trial Type',
                             analysisresultslevelmapping__conditions=condition,
                             analysisresultslevelmapping__analysis_results=results).value
@@ -380,17 +425,17 @@ class VisuomotorClassificationAnalysis(Analysis):
                         trial_ids.append(trial.id)
                         trial_types.append(trial_type)
                         objectgrasps.append(objectgrasp)
-                        num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
+                        rate_diff.append(woi_rate-baseline_rate)
 
-                        if not objectgrasp in objectgrasps_spikes:
-                            objectgrasps_spikes[objectgrasp]=[]
-                        objectgrasps_spikes[objectgrasp].append(len(woi_spikes))
+                        if not objectgrasp in objectgrasps_rates:
+                            objectgrasps_rates[objectgrasp]=[]
+                        objectgrasps_rates[objectgrasp].append(woi_rate-baseline_rate)
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
             'trial_type': pd.Series(trial_types),
             'objectgrasp': pd.Series(objectgrasps),
-            'num_spikes_diff': pd.Series(num_spikes_diff)
+            'rate_diff': pd.Series(rate_diff)
         })
 
         df=df.set_index(['trial'])
@@ -398,7 +443,7 @@ class VisuomotorClassificationAnalysis(Analysis):
         r_source = robjects.r['source']
         r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/two_way_anova.R'))
         r_two_way_anova = robjects.globalenv['two_way_anova']
-        (anova_results,trialtype_pairwise,objectgrasp_pairwise,trialtypeobjectgrasp_pairwise,objectgrasptrialtype_pairwise)=r_two_way_anova(df,"num_spikes_diff",
+        (anova_results,trialtype_pairwise,objectgrasp_pairwise,trialtypeobjectgrasp_pairwise,objectgrasptrialtype_pairwise)=r_two_way_anova(df,"rate_diff",
             "trial_type","objectgrasp")
 
         anova_results=pandas2ri.ri2py_dataframe(anova_results)
@@ -407,12 +452,12 @@ class VisuomotorClassificationAnalysis(Analysis):
         trialtypeobjectgrasp_pairwise=pandas2ri.ri2py_dataframe(trialtypeobjectgrasp_pairwise)
         objectgrasptrialtype_pairwise=pandas2ri.ri2py_dataframe(objectgrasptrialtype_pairwise)
 
-        max_spikes=0
+        max_rate=0
         pref_objgrasp=''
-        for objgrasp in objectgrasps_spikes:
-            mean_spikes=np.mean(objectgrasps_spikes[objgrasp])
-            if mean_spikes>max_spikes:
-                max_spikes=mean_spikes
+        for objgrasp in objectgrasps_rates:
+            mean_rate=np.mean(objectgrasps_rates[objgrasp])
+            if mean_rate>max_rate:
+                max_rate=mean_rate
                 pref_objgrasp=objgrasp
 
         return anova_results,trialtype_pairwise,objectgrasp_pairwise,trialtypeobjectgrasp_pairwise,objectgrasptrialtype_pairwise,pref_objgrasp
@@ -421,7 +466,7 @@ class VisuomotorClassificationAnalysis(Analysis):
     def test_unit_obs_grasp(self, results, unit):
         trial_ids=[]
         objectgrasps=[]
-        num_spikes_diff=[]
+        rate_diff=[]
         condition_ids=[]
         for factor_name in ['Grasp Observation: Object/Grasp']:
             factor=Factor.objects.get(analysis=results.analysis, name=factor_name)
@@ -434,7 +479,8 @@ class VisuomotorClassificationAnalysis(Analysis):
         for condition in conditions:
             recording_trials=RecordingTrial.objects.filter(condition=condition)
             for trial in recording_trials:
-
+                trial_events=list(Event.objects.filter(trial=trial))
+                trial_start_time=float(trial.start_time)
                 if UnitRecording.objects.filter(trial=trial, unit=unit).count():
                     unit_recording=UnitRecording.objects.get(trial=trial, unit=unit)
 
@@ -444,7 +490,7 @@ class VisuomotorClassificationAnalysis(Analysis):
                     baseline_rel_end=0
                     if results.baseline_rel_end is not None:
                         baseline_rel_end=results.baseline_rel_end/1000.0
-                    baseline_spikes = get_woi_spikes(trial, unit_recording, results.baseline_rel_evt,
+                    baseline_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.baseline_rel_evt,
                         baseline_rel_start, baseline_rel_end, results.baseline_rel_end_evt)
 
                     grasp_woi_rel_start=0
@@ -453,22 +499,22 @@ class VisuomotorClassificationAnalysis(Analysis):
                     grasp_woi_rel_end=0
                     if results.grasp_woi_rel_end is not None:
                         grasp_woi_rel_end=results.grasp_woi_rel_end/1000.0
-                    woi_spikes = get_woi_spikes(trial, unit_recording, results.grasp_woi_rel_evt,
+                    woi_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.grasp_woi_rel_evt,
                         grasp_woi_rel_start, grasp_woi_rel_end, results.grasp_woi_rel_end_evt)
 
-                    if baseline_spikes is not None and woi_spikes is not None:
+                    if baseline_rate is not None and woi_rate is not None:
                         objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Observation: Object/Grasp',
                             analysisresultslevelmapping__conditions=condition,
                             analysisresultslevelmapping__analysis_results=results).value
 
                         trial_ids.append(trial.id)
                         objectgrasps.append(objectgrasp)
-                        num_spikes_diff.append(len(woi_spikes)-len(baseline_spikes))
+                        rate_diff.append(woi_rate-baseline_rate)
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
             'objectgrasp': pd.Series(objectgrasps),
-            'num_spikes_diff': pd.Series(num_spikes_diff)
+            'rate_diff': pd.Series(rate_diff)
         })
 
         df=df.set_index(['trial'])
@@ -476,7 +522,7 @@ class VisuomotorClassificationAnalysis(Analysis):
         r_source = robjects.r['source']
         r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/one_way_anova.R'))
         r_one_way_anova = robjects.globalenv['one_way_anova']
-        (anova_results,objectgrasp_pairwise)=r_one_way_anova(df,"num_spikes_diff","objectgrasp")
+        (anova_results,objectgrasp_pairwise)=r_one_way_anova(df,"rate_diff","objectgrasp")
 
         anova_results=pandas2ri.ri2py_dataframe(anova_results)
         objectgrasp_pairwise=pandas2ri.ri2py_dataframe(objectgrasp_pairwise)
@@ -542,8 +588,8 @@ class MirrorTypeClassificationAnalysis(Analysis):
         for unit_id in unit_ids:
             print('testing %d' % unit_id)
             unit=Unit.objects.get(id=unit_id)
-            (exe_anova_results,exe_pairwise,exe_spikes)=self.test_unit(r_one_way_anova, results, unit, 'execution')
-            (obs_anova_results,obs_pairwise,obs_spikes)=self.test_unit(r_one_way_anova, results, unit, 'observation')
+            (exe_anova_results,exe_pairwise,exe_rates)=self.test_unit(r_one_way_anova, results, unit, 'execution')
+            (obs_anova_results,obs_pairwise,obs_rates)=self.test_unit(r_one_way_anova, results, unit, 'observation')
 
             unit_results=VisuomotorClassificationUnitAnalysisResults(analysis_results=results,
                 results_text='\n'.join(['<h2>Execution</h2>',str(exe_anova_results),
@@ -560,13 +606,13 @@ class MirrorTypeClassificationAnalysis(Analysis):
             if exe_anova_results[4][0][0]<0.05:
                 # Reach compared to baseline
                 if exe_pairwise[1]<0.05:
-                    if np.mean(exe_spikes['reach'])>np.mean(exe_spikes['baseline']):
+                    if np.mean(exe_rates['reach'])>np.mean(exe_rates['baseline']):
                         exe_classification='F'
                     else:
                         exe_classification='S'
                 # Hold compared to baseline
                 elif exe_pairwise[0]<0.05:
-                    if np.mean(exe_spikes['hold'])>np.mean(exe_spikes['baseline']):
+                    if np.mean(exe_rates['hold'])>np.mean(exe_rates['baseline']):
                         exe_classification='F'
                     else:
                         exe_classification='S'
@@ -574,12 +620,12 @@ class MirrorTypeClassificationAnalysis(Analysis):
             obs_anova_results=pandas2ri.ri2py_dataframe(obs_anova_results[1])
             if obs_anova_results[4][0][0]<0.05:
                 if obs_pairwise[1]<0.05:
-                    if np.mean(obs_spikes['reach'])>np.mean(obs_spikes['baseline']):
+                    if np.mean(obs_rates['reach'])>np.mean(obs_rates['baseline']):
                         obs_classification='F'
                     else:
                         obs_classification='S'
-                elif exe_pairwise[0]<0.05:
-                    if np.mean(obs_spikes['hold'])>np.mean(exe_spikes['baseline']):
+                elif obs_pairwise[0]<0.05:
+                    if np.mean(obs_rates['hold'])>np.mean(exe_rates['baseline']):
                         obs_classification='F'
                     else:
                         obs_classification='S'
@@ -591,13 +637,15 @@ class MirrorTypeClassificationAnalysis(Analysis):
         print('%.4f %% S-F cells' % (unit_classifications['S-F'].units.count()/float(len(unit_ids))*100.0))
         print('%.4f %% S-S cells' % (unit_classifications['S-S'].units.count()/float(len(unit_ids))*100.0))
         print('%.4f %% S-ns cells' % (unit_classifications['S-ns'].units.count()/float(len(unit_ids))*100.0))
+        print('%.4f %% ns-F cells' % (unit_classifications['ns-F'].units.count()/float(len(unit_ids))*100.0))
+        print('%.4f %% ns-S cells' % (unit_classifications['ns-S'].units.count()/float(len(unit_ids))*100.0))
         print('%.4f %% ns-ns cells' % (unit_classifications['ns-ns'].units.count()/float(len(unit_ids))*100.0))
 
     def test_unit(self, r_one_way_anova, results, unit, trial_type):
         trial_ids=[]
-        spikes=[]
+        rates=[]
         wois=[]
-        all_spikes={
+        all_rates={
             'baseline':[],
             'reach':[],
             'hold':[]
@@ -611,68 +659,67 @@ class MirrorTypeClassificationAnalysis(Analysis):
             if not condition.id in condition_ids:
                 condition_ids.append(condition.id)
 
-        conditions=Condition.objects.filter(id__in=condition_ids)
-        for condition in conditions:
-            unit_recordings=UnitRecording.objects.filter(trial__condition=condition, unit=unit).select_related('trial')
-            for unit_recording in unit_recordings:
-                baseline_rel_start=0
-                if results.baseline_rel_start is not None:
-                    baseline_rel_start=results.baseline_rel_start/1000.0
-                baseline_rel_end=0
-                if results.baseline_rel_end is not None:
-                    baseline_rel_end=results.baseline_rel_end/1000.0
-                baseline_spikes = get_woi_spikes(unit_recording, results.baseline_rel_evt,
-                    baseline_rel_start, baseline_rel_end, results.baseline_rel_end_evt)
+        unit_recordings=UnitRecording.objects.filter(trial__condition__id__in=condition_ids, unit=unit).select_related('trial')
+        for trial_idx,unit_recording in enumerate(unit_recordings):
+            trial_events=list(Event.objects.filter(trial=unit_recording.trial))
+            trial_start_time=float(unit_recording.trial.start_time)
 
-                reach_woi_rel_start=0
-                if results.reach_woi_rel_start is not None:
-                    reach_woi_rel_start=results.reach_woi_rel_start/1000.0
-                reach_woi_rel_end=0
-                if results.reach_woi_rel_end is not None:
-                    reach_woi_rel_end=results.reach_woi_rel_end/1000.0
-                reach_woi_spikes = get_woi_spikes(unit_recording, results.reach_woi_rel_evt,
-                    reach_woi_rel_start, reach_woi_rel_end, results.reach_woi_rel_end_evt)
+            baseline_rel_start=0
+            if results.baseline_rel_start is not None:
+                baseline_rel_start=results.baseline_rel_start/1000.0
+            baseline_rel_end=0
+            if results.baseline_rel_end is not None:
+                baseline_rel_end=results.baseline_rel_end/1000.0
+            baseline_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.baseline_rel_evt,
+                baseline_rel_start, baseline_rel_end, results.baseline_rel_end_evt)
 
-                hold_woi_rel_start=0
-                if results.hold_woi_rel_start is not None:
-                    hold_woi_rel_start=results.hold_woi_rel_start/1000.0
-                hold_woi_rel_end=0
-                if results.hold_woi_rel_end is not None:
-                    hold_woi_rel_end=results.hold_woi_rel_end/1000.0
-                hold_woi_spikes = get_woi_spikes(unit_recording, results.hold_woi_rel_evt,
-                    hold_woi_rel_start, hold_woi_rel_end, results.hold_woi_rel_end_evt)
+            reach_woi_rel_start=0
+            if results.reach_woi_rel_start is not None:
+                reach_woi_rel_start=results.reach_woi_rel_start/1000.0
+            reach_woi_rel_end=0
+            if results.reach_woi_rel_end is not None:
+                reach_woi_rel_end=results.reach_woi_rel_end/1000.0
+            reach_woi_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.reach_woi_rel_evt,
+                reach_woi_rel_start, reach_woi_rel_end, results.reach_woi_rel_end_evt)
 
-                if baseline_spikes is not None and reach_woi_spikes is not None and hold_woi_spikes is not None:
-                    trial_ids.append(unit_recording.trial.id)
-                    spikes.append(len(baseline_spikes))
-                    wois.append('baseline')
+            hold_woi_rel_start=0
+            if results.hold_woi_rel_start is not None:
+                hold_woi_rel_start=results.hold_woi_rel_start/1000.0
+            hold_woi_rel_end=0
+            if results.hold_woi_rel_end is not None:
+                hold_woi_rel_end=results.hold_woi_rel_end/1000.0
+            hold_woi_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.hold_woi_rel_evt,
+                hold_woi_rel_start, hold_woi_rel_end, results.hold_woi_rel_end_evt)
 
-                    trial_ids.append(unit_recording.trial.id)
-                    spikes.append(len(reach_woi_spikes))
-                    wois.append('reach')
+            if baseline_rate is not None and reach_woi_rate is not None and hold_woi_rate is not None:
 
-                    trial_ids.append(unit_recording.trial.id)
-                    spikes.append(len(hold_woi_spikes))
-                    wois.append('hold')
+                trial_ids.append(trial_idx+1)
+                rates.append(baseline_rate)
+                wois.append('baseline')
 
-                    all_spikes['baseline'].append(len(baseline_spikes))
-                    all_spikes['reach'].append(len(reach_woi_spikes))
-                    all_spikes['hold'].append(len(hold_woi_spikes))
+                trial_ids.append(trial_idx+1)
+                rates.append(reach_woi_rate)
+                wois.append('reach')
+
+                trial_ids.append(trial_idx+1)
+                rates.append(hold_woi_rate)
+                wois.append('hold')
+
+                all_rates['baseline'].append(baseline_rate)
+                all_rates['reach'].append(reach_woi_rate)
+                all_rates['hold'].append(hold_woi_rate)
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
-            'spikes': pd.Series(spikes),
+            'rates': pd.Series(rates),
             'woi': pd.Series(wois),
         })
         #df.to_csv(path_or_buf='/home/jbonaiuto/%s.csv' % trial_type)
 
-        #df=df.set_index(['trial'])
-
-        (anova_results,pairwise)=r_one_way_anova(df,"trial","spikes","woi")
+        (anova_results,pairwise)=r_one_way_anova(df,"trial","rates","woi")
 
         print(anova_results)
         #anova_results=pandas2ri.ri2py_dataframe(anova_results)
         #print(anova_results)
         #pairwise=pandas2ri.ri2py_dataframe(pairwise)
-
-        return anova_results,pairwise,all_spikes
+        return anova_results,pairwise,all_rates

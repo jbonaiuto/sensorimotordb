@@ -286,10 +286,11 @@ class UnitRecording(models.Model):
     def __init__(self, *args, **kwargs):
         super(UnitRecording,self).__init__(*args, **kwargs)
         spikes=self.spike_times.split(',')
-        self.spike_times_array=np.zeros(len(spikes))
+        spike_times=[]
         for idx,spike in enumerate(spikes):
             if len(spike) and float(spike)>=float(self.trial.start_time)-1.0 and float(spike)<float(self.trial.end_time)+1.0:
-                self.spike_times_array[idx]=float(spike)
+                spike_times.append(float(spike))
+        self.spike_times_array=np.array(spike_times)
 
     def export(self, group):
         group.attrs['unit']=self.unit.id

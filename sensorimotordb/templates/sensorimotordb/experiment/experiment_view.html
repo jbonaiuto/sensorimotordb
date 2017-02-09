@@ -45,7 +45,7 @@
     var condition_plots=new Map();
     var unit_plots=new Map();
 
-    var conditions_to_load=0;
+    var conditions_loaded=0;
     var event_types=['start'];
 
     /**
@@ -80,7 +80,7 @@
         var data = {};
         var args = {
             type: "GET",
-            url: "/sensorimotordb/api/v1/visuomotor_classification_analysis_results/?experiment={{ object.id }}&limit=0&format=json",
+            url: "/sensorimotordb/api/v1/analysis_results/?experiment={{ object.id }}&limit=0&format=json",
             data: data,
             success: loadedAnalysisResultsData,
             error: function(data) {
@@ -106,6 +106,19 @@
                 var compiledTmpl = _.template(tmplMarkup, results);
                 $(this).append(compiledTmpl);
             });
+        }
+        if(resp.meta.next!=null)
+        {
+            var data = {};
+            var args = {
+                type: "GET",
+                url: resp.meta.next,
+                data: data,
+                success: loadedAnalysisResultsData,
+                error: function(data) {
+                    //alert("Something went wrong!");
+                } };
+            $.ajax(args);
         }
     }
 
@@ -137,8 +150,6 @@
      */
     function loadedConditionsData(resp)
     {
-        // Number of conditions to load recording trials for
-        conditions_to_load = resp.objects.length;
         for(var i=0; i<resp.objects.length; i++)
         {
             // Add condition to list
@@ -159,18 +170,36 @@
             realigned_condition_unit_spikes.set(condition.id, new Map());
             realigned_condition_unit_trial_events.set(condition.id, new Map());
             condition_unit_ids.set(condition.id, []);
-
-            // Load recording trials for condition
+        }
+        if(resp.meta.next!=null)
+        {
             var data = {};
             var args = {
                 type: "GET",
-                url: "/sensorimotordb/api/v1/full_recording_trial/?condition="+condition.id+"&limit=0&format=json",
+                url: resp.meta.next,
                 data: data,
-                success: loadedRecordingTrialData,
+                success: loadConditions,
                 error: function(data) {
                     //alert("Something went wrong!");
                 } };
             $.ajax(args);
+        }
+        else
+        {
+            for(var i=0; i<condition_ids.length; i++)
+            {
+                // Load recording trials for condition
+                var data = {};
+                var args = {
+                    type: "GET",
+                    url: "/sensorimotordb/api/v1/full_recording_trial/?condition="+condition_ids[i]+"&limit=0&format=json",
+                    data: data,
+                    success: loadedRecordingTrialData,
+                    error: function(data) {
+                        //alert("Something went wrong!");
+                    } };
+                $.ajax(args);
+            }
         }
     }
 
@@ -186,6 +215,7 @@
      */
     function loadedRecordingTrialData(resp)
     {
+        var condition_id=-1;
         // For each recording trial
         for(var j=0; j<resp.objects.length; j++)
         {
@@ -194,7 +224,7 @@
             var start_time=parseFloat(recording_trial.start_time);
 
             // Get condition ID
-            var condition_id=parseInt(recording_trial.condition.split('/')[5]);
+            condition_id=parseInt(recording_trial.condition.split('/')[5]);
 
             // Iterate through unit recordings
             for(var k=0; k<recording_trial.unit_recordings.length; k++)
@@ -293,48 +323,65 @@
                 }
             }
         }
-
-        var align_event = d3.select("#align_event").node().value;
-        var condition_unit_labels=[];
-        for(var i=0; i<condition_unit_ids.get(condition_id).length; i++)
+        if(resp.meta.next!=null)
         {
-            var unit_id=condition_unit_ids.get(condition_id)[i];
-            condition_unit_labels.push(unit_labels[unit_ids.indexOf(unit_id)]);
-            realigned_condition_unit_spikes.get(condition_id).set(unit_id,
-                    realign_spikes(condition_unit_trials.get(condition_id).get(unit_id),
-                            condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
-            realigned_condition_unit_trial_events.get(condition_id).set(unit_id,
-                    realign_events(condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
+            var data = {};
+            var args = {
+                type: "GET",
+                url: resp.meta.next,
+                data: data,
+                success: loadedRecordingTrialData,
+                error: function(data) {
+                    //alert("Something went wrong!");
+                } };
+            $.ajax(args);
         }
-
-        $('#condition-'+condition_id+'-plots').empty();
-        var rate_svg=drawPopulationFiringRate('condition-'+condition_id+'-plots',
-                'condition-'+condition_id+'-plots_legend', realigned_condition_unit_spikes.get(condition_id),
-                realigned_condition_unit_trial_events.get(condition_id), event_types,
-                condition_unit_ids.get(condition_id), condition_unit_labels, 0.5);
-        condition_plots.set(condition_id, rate_svg)
-
-        conditions_to_load=conditions_to_load-1;
-
-        for(var i=0; i<condition_unit_ids.get(condition_id).length; i++)
+        else
         {
-            var unit_id=condition_unit_ids.get(condition_id)[i];
-            realigned_unit_condition_spikes.get(unit_id).set(condition_id,
-                    realign_spikes(unit_condition_trials.get(unit_id).get(condition_id),
-                            unit_condition_trial_events.get(unit_id).get(condition_id), align_event));
-            realigned_unit_condition_trial_events.get(unit_id).set(condition_id,
-                    realign_events(unit_condition_trial_events.get(unit_id).get(condition_id), align_event));
-        }
-        if(conditions_to_load==0)
-        {
-            for(var i=0; i<unit_ids.length; i++)
+            conditions_loaded+=1;
+            if(condition_id>-1)
             {
-                var unit_id=unit_ids[i];
-                $('#unit-'+unit_id+'-plots').empty();
-                var rate_svg=drawPopulationFiringRate('unit-'+unit_id+'-plots', 'unit-'+unit_id+'-plots_legend',
-                        realigned_unit_condition_spikes.get(unit_id), realigned_unit_condition_trial_events.get(unit_id),
-                        event_types, condition_ids, condition_names, 0.5);
-                unit_plots.set(unit_id, rate_svg);
+                var align_event = d3.select("#align_event").node().value;
+                var condition_unit_labels=[];
+                for(var i=0; i<condition_unit_ids.get(condition_id).length; i++)
+                {
+                    var unit_id=condition_unit_ids.get(condition_id)[i];
+                    condition_unit_labels.push(unit_labels[unit_ids.indexOf(unit_id)]);
+                    realigned_condition_unit_spikes.get(condition_id).set(unit_id,
+                            realign_spikes(condition_unit_trials.get(condition_id).get(unit_id),
+                                    condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
+                    realigned_condition_unit_trial_events.get(condition_id).set(unit_id,
+                            realign_events(condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
+                }
+
+                $('#condition-'+condition_id+'-plots').empty();
+                var rate_svg=drawPopulationFiringRate('condition-'+condition_id+'-plots',
+                        'condition-'+condition_id+'-plots_legend', realigned_condition_unit_spikes.get(condition_id),
+                        realigned_condition_unit_trial_events.get(condition_id), event_types,
+                        condition_unit_ids.get(condition_id), condition_unit_labels, 0.5);
+                condition_plots.set(condition_id, rate_svg)
+
+                for(var i=0; i<condition_unit_ids.get(condition_id).length; i++)
+                {
+                    var unit_id=condition_unit_ids.get(condition_id)[i];
+                    realigned_unit_condition_spikes.get(unit_id).set(condition_id,
+                            realign_spikes(unit_condition_trials.get(unit_id).get(condition_id),
+                                    unit_condition_trial_events.get(unit_id).get(condition_id), align_event));
+                    realigned_unit_condition_trial_events.get(unit_id).set(condition_id,
+                            realign_events(unit_condition_trial_events.get(unit_id).get(condition_id), align_event));
+                }
+            }
+            if(conditions_loaded==condition_ids.length)
+            {
+                for(var i=0; i<unit_ids.length; i++)
+                {
+                    var unit_id=unit_ids[i];
+                    $('#unit-'+unit_id+'-plots').empty();
+                    var rate_svg=drawPopulationFiringRate('unit-'+unit_id+'-plots', 'unit-'+unit_id+'-plots_legend',
+                            realigned_unit_condition_spikes.get(unit_id), realigned_unit_condition_trial_events.get(unit_id),
+                            event_types, condition_ids, condition_names, 0.5);
+                    unit_plots.set(unit_id, rate_svg);
+                }
             }
         }
     }
@@ -345,18 +392,17 @@
 
         for(var i=0; i<condition_ids.length; i++)
         {
-            var condition_id=condition_ids[i];
-            for(var j=0; j<condition_unit_ids.get(condition_id).length; j++)
+            for(var j=0; j<condition_unit_ids.get(condition_ids[i]).length; j++)
             {
-                var unit_id=condition_unit_ids.get(condition_id)[j];
+                var unit_id=condition_unit_ids.get(condition_ids[i])[j];
 
-                if(condition_unit_trials.get(condition_id)!=null && condition_unit_trials.get(condition_id).get(unit_id)!=null)
+                if(condition_unit_trials.get(condition_ids[i])!=null && condition_unit_trials.get(condition_ids[i]).get(unit_id)!=null)
                 {
-                    realigned_condition_unit_spikes.get(condition_id).set(unit_id,
-                            realign_spikes(condition_unit_trials.get(condition_id).get(unit_id),
-                                    condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
-                    realigned_condition_unit_trial_events.get(condition_id).set(unit_id,
-                            realign_events(condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
+                    realigned_condition_unit_spikes.get(condition_ids[i]).set(unit_id,
+                            realign_spikes(condition_unit_trials.get(condition_ids[i]).get(unit_id),
+                                    condition_unit_trial_events.get(condition_ids[i]).get(unit_id), align_event));
+                    realigned_condition_unit_trial_events.get(condition_ids[i]).set(unit_id,
+                            realign_events(condition_unit_trial_events.get(condition_ids[i]).get(unit_id), align_event));
 
                 }
             }
@@ -368,15 +414,15 @@
             var unit_id=unit_ids[j];
             for(var i=0; i<unit_condition_ids.get(unit_id).length; i++)
             {
-                var condition_id=unit_condition_ids.get(unit_id)[i];
+                var unit_condition_id=unit_condition_ids.get(unit_id)[i];
 
-                if(unit_condition_trials.get(unit_id)!=null && unit_condition_trials.get(unit_id).get(condition_id)!=null)
+                if(unit_condition_trials.get(unit_id)!=null && unit_condition_trials.get(unit_id).get(unit_condition_id)!=null)
                 {
-                    realigned_unit_condition_spikes.get(unit_id).set(condition_id,
-                            realign_spikes(unit_condition_trials.get(unit_id).get(condition_id),
-                                    unit_condition_trial_events.get(unit_id).get(condition_id), align_event));
-                    realigned_unit_condition_trial_events.get(unit_id).set(condition_id,
-                            realign_events(unit_condition_trial_events.get(unit_id).get(condition_id), align_event));
+                    realigned_unit_condition_spikes.get(unit_id).set(unit_condition_id,
+                            realign_spikes(unit_condition_trials.get(unit_id).get(unit_condition_id),
+                                    unit_condition_trial_events.get(unit_id).get(unit_condition_id), align_event));
+                    realigned_unit_condition_trial_events.get(unit_id).set(unit_condition_id,
+                            realign_events(unit_condition_trial_events.get(unit_id).get(unit_condition_id), align_event));
                 }
             }
             unit_plots.get(unit_id).update(realigned_unit_condition_spikes.get(unit_id),
@@ -396,7 +442,7 @@
             var data={'id':id, 'csrfmiddlewaretoken': '{{ csrf_token }}'};
             var args={
                 type:"POST",
-                url:'/sensorimotordb/visuomotor_classification_analysis_results/'+id+'/delete/',
+                url:'/sensorimotordb/analysis_results/'+id+'/delete/',
                 data: data,
                 success: doneAnalysisResultsDelete };
             $.ajax(args);

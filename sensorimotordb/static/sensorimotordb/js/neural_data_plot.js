@@ -584,9 +584,9 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
 
     var binwidth = parseInt(d3.select("#binwidth").node().value);
     var kernelwidth = parseInt(d3.select("#kernelwidth").node().value);
-    var min_time=10000;
-    var max_time=-10000;
-    var max_rate=0;
+    var min_times=[];
+    var max_times=[];
+    var max_rates=[];
     var rate_data=new Map();
     for(var i=0; i<group_ids.length; i++)
     {
@@ -597,15 +597,18 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
             rate_data.set(group_id,rate);
             var group_min_time=d3.min(rate, function(d){ return d.x; });
             var group_max_time=d3.max(rate, function(d){ return d.x; });
-            if(group_min_time<min_time)
-                min_time=group_min_time;
-            if(group_max_time>max_time)
-                max_time=group_max_time;
+            min_times.push(group_min_time);
+            max_times.push(group_max_time);
             var group_max_rate=d3.max(rate, function(d){ return d.y+1 });
-            if(group_max_rate>max_rate)
-                max_rate=group_max_rate;
+            max_rates.push(group_max_rate);
         }
     }
+    //var min_time=d3.mean(min_times);
+    var min_time=d3.mean(min_times);
+    //var min_time=d3.max(min_times);
+    var max_time=d3.mean(max_times);
+    //var max_time=d3.min(max_times);
+    var max_rate=d3.max(max_rates);
 
     var xScale = d3.scale.linear()
         .range([0, width])
@@ -811,27 +814,29 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
         binwidth = parseInt(d3.select("#binwidth").node().value);
         kernelwidth = parseInt(d3.select("#kernelwidth").node().value);
         rate_data=new Map();
-        var min_time=10000;
-        var max_time=-10000;
-        var max_rate=0;
+        var min_times=[];
+        var max_times=[];
+        var max_rates=[];
         for(var i=0; i<group_ids.length; i++)
         {
             var group_id=group_ids[i];
             if(realigned_data.get(group_id)!=null)
             {
                 var rate=get_firing_rate(realigned_data.get(group_id), binwidth, kernelwidth);
+                rate_data.set(group_id,rate);
                 var group_min_time=d3.min(rate, function(d){ return d.x; });
                 var group_max_time=d3.max(rate, function(d){ return d.x; });
-                if(group_min_time<min_time)
-                    min_time=group_min_time;
-                if(group_max_time>max_time)
-                    max_time=group_max_time;
-                var group_max_rate=d3.max(rate, function(d){ return d.y+ 1 });
-                if(group_max_rate>max_rate)
-                    max_rate=group_max_rate;
-                rate_data.set(group_id, rate);
+                min_times.push(group_min_time);
+                max_times.push(group_max_time);
+                var group_max_rate=d3.max(rate, function(d){ return d.y+1 });
+                max_rates.push(group_max_rate);
             }
         }
+        var min_time=d3.mean(min_times);
+        //var min_time=d3.max(min_times);
+        var max_time=d3.mean(max_times);
+        //var max_time=d3.min(max_times);
+        var max_rate=d3.max(max_rates);
 
         yScale.domain([0, max_rate +.1*max_rate]);
         yAxis.scale(yScale);
@@ -908,9 +913,9 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    var min_time=10000;
-    var max_time=-10000;
-    var max_rate=0;
+    var min_times=[];
+    var max_times=[];
+    var max_rates=[];
     var mean_rates=group_mean_rates;
     for(var i=0; i<group_ids.length; i++)
     {
@@ -918,17 +923,17 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         if(mean_rates.get(group_ids[i])!=null)
         {
             var rate=mean_rates.get(group_id);
-            var group_min_time=d3.min(rate, function(d){ return d.x; });
-            var group_max_time=d3.max(rate, function(d){ return d.x; });
-            if(group_min_time<min_time)
-                min_time=group_min_time;
-            if(group_max_time>max_time)
-                max_time=group_max_time;
-            var group_max_rate=d3.max(rate, function(d){ return d.y+ d.stderr });
-            if(group_max_rate>max_rate)
-                max_rate=group_max_rate;
+            min_times.push(d3.min(rate, function(d){ return d.x; }));
+            max_times.push(d3.max(rate, function(d){ return d.x; }))
+            max_rates.push(d3.max(rate, function(d){ return d.y+ d.stderr }))
         }
     }
+    var min_time=d3.min(min_times);
+    //var min_time=d3.max(min_times);
+    var max_time=d3.max(max_times);
+    //var max_time=d3.min(max_times);
+    //var max_rate=d3.max(max_rates);
+    var max_rate=d3.max(max_rates);
 
     var xScale = d3.scale.linear()
         .range([0, width])
@@ -1137,10 +1142,10 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
     rate_svg.update=function update(realigned_mean_rates, realigned_trial_events){
         binwidth = parseInt(d3.select("#binwidth").node().value);
         kernelwidth = parseInt(d3.select("#kernelwidth").node().value);
-        var min_time=10000;
-        var max_time=-10000;
-        var max_rate=0;
-        mean_rates=realigned_mean_rates;
+        var min_times=[];
+        var max_times=[];
+        var max_rates=[];
+        var mean_rates=realigned_mean_rates;
         for(var i=0; i<group_ids.length; i++)
         {
             var group_id=group_ids[i];
@@ -1149,16 +1154,18 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
                 var rate=mean_rates.get(group_id);
                 var group_min_time=d3.min(rate, function(d){ return d.x; });
                 var group_max_time=d3.max(rate, function(d){ return d.x; });
-                if(group_min_time<min_time)
-                    min_time=group_min_time;
-                if(group_max_time>max_time)
-                    max_time=group_max_time;
+                min_times.push(group_min_time);
+                max_times.push(group_max_time);
                 var group_max_rate=d3.max(rate, function(d){ return d.y+d.stderr });
-                if(group_max_rate>max_rate)
-                    max_rate=group_max_rate;
+                max_rates.push(group_max_rate);
             }
-
         }
+        var min_time=d3.min(min_times);
+        //var min_time=d3.max(min_times);
+        var max_time=d3.max(max_times);
+        //var max_time=d3.min(max_times);
+        //var max_rate=d3.max(max_rates);
+        var max_rate=d3.max(max_rates);
 
         yScale.domain([0, max_rate +.1*max_rate]);
         yAxis.scale(yScale);

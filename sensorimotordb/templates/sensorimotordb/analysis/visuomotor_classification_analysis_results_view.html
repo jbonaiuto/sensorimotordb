@@ -9,692 +9,715 @@
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_plot.js' %}"></script>
 <script>
 
-    var classifications=[];
-    var current_unit_ids=[];
-    var factors=[];
-    var level_mappings=new Map();
-    var conditions_to_load=[];
-    var condition_unit_trials=new Map();
-    var condition_unit_trial_events=new Map();
-    var realigned_condition_unit_trial_events=new Map();
-    var realigned_condition_unit_rates=new Map();
-    var realigned_factor_level_trial_events=new Map();
-    var realigned_factor_level_mean_rates=new Map();
-    var factor_event_types=new Map();
-    var realigned_times=[];
-    var results;
-    var factor_plots=new Map();
+var classifications=[];
+var current_unit_ids=[];
+var factors=[];
+var level_mappings=new Map();
+var conditions_to_load=[];
+var condition_unit_trials=new Map();
+var condition_unit_trial_events=new Map();
+var realigned_condition_unit_trial_events=new Map();
+var realigned_condition_unit_rates=new Map();
+var realigned_factor_level_trial_events=new Map();
+var realigned_factor_level_mean_rates=new Map();
+var factor_event_types=new Map();
+var realigned_times=[];
+var results;
+var factor_plots=new Map();
 
-    $(document).ready(function(){
-        $('<img src="{% static 'sensorimotordb/img/loading.gif' %}"/>');
-        var data = {};
-        var args = {
-            type: "GET",
-            url: "/sensorimotordb/api/v1/visuomotor_classification_analysis_results/{{ object.id }}/?format=json",
-            data: data,
-            success: loadedAnalysisResultsData,
-            error: function(data) {
-                //alert("Something went wrong!");
-            } };
-        $.ajax(args);
+$(document).ready(function(){
+    // Load analysis results
+    $('<img src="{% static 'sensorimotordb/img/loading.gif' %}"/>');
+    var data = {};
+    var args = {
+        type: "GET",
+        url: "/sensorimotordb/api/v1/visuomotor_classification_analysis_results/{{ object.id }}/?format=json",
+        data: data,
+        success: loadedAnalysisResultsData,
+        error: function(data) {
+            //alert("Something went wrong!");
+        } };
+    $.ajax(args);
+});
+
+/**
+ * Loaded analysis results
+ * @param resp
+ */
+function loadedAnalysisResultsData(resp)
+{
+    results=resp;
+    classifications=resp.unit_classifications;
+    factors=resp.analysis.factors;
+
+    // Fill in analysis info
+    $('.analysis_results_info').each(function(index, element){
+        $(this).empty();
+        var tmplMarkup = $('#analysis_results-template').html();
+        var compiledTmpl = _.template(tmplMarkup, results);
+        $(this).append(compiledTmpl);
     });
 
-    /**
-     * Loaded analysis results
-     * @param resp
-     */
-    function loadedAnalysisResultsData(resp)
-    {
-        results=resp;
-        classifications=resp.unit_classifications;
-        factors=resp.analysis.factors;
+    // List of conditions to load
+    conditions_to_load=[];
 
-        $('.analysis_results_info').each(function(index, element){
-            $(this).empty();
-            var tmplMarkup = $('#analysis_results-template').html();
-            var compiledTmpl = _.template(tmplMarkup, results);
+    // Figure out conditions per level and conditions to load
+    for(var mapping_idx=0; mapping_idx<resp.level_mappings.length; mapping_idx++)
+    {
+        var mapping=resp.level_mappings[mapping_idx];
+        var level_id=parseInt(mapping.level.split('/')[5]);
+        level_mappings.set(level_id,[]);
+        for(var condition_idx=0; condition_idx<mapping.conditions.length; condition_idx++)
+        {
+            var condition_id=parseInt(mapping.conditions[condition_idx].split('/')[5]);
+            level_mappings.get(level_id).push(condition_id);
+            if(conditions_to_load.indexOf(condition_id)<0)
+                conditions_to_load.push(condition_id);
+        }
+    }
+    // PRocess each unit
+    for(var unit_idx=0; unit_idx<resp.unit_analysis_results.length; unit_idx++)
+    {
+        // Get classification label
+        var unit_results=resp.unit_analysis_results[unit_idx];
+        for(var class_idx=0; class_idx<resp.unit_classifications.length; class_idx++)
+        {
+            for(var class_unit_idx=0; class_unit_idx<resp.unit_classifications[class_idx].units.length; class_unit_idx++)
+            {
+                if(resp.unit_classifications[class_idx].units[class_unit_idx].id==unit_results.unit.id)
+                {
+                    unit_results.classification=resp.unit_classifications[class_idx].label;
+                    break
+                }
+            }
+        }
+
+        // Fill in unit results info
+        unit_results.results_text=unit_results.results_text.replace(/\n/g,'<br>');
+        unit_results.results_text=unit_results.results_text.replace(/ /g,'&nbsp;');
+        unit_results.pairwise_results_text=unit_results.pairwise_results_text.replace(/\n/g,'<br>');
+        unit_results.pairwise_results_text=unit_results.pairwise_results_text.replace(/ /g,'&nbsp;');
+        $('.unit_analysis_results_list').each(function(index, element){
+            unit_results.level=3;
+            unit_results.idx=unit_idx;
+            var tmplMarkup = $('#unit_analysis_results-template').html();
+            var compiledTmpl = _.template(tmplMarkup, unit_results);
             $(this).append(compiledTmpl);
         });
-        conditions_to_load=[];
-        for(var mapping_idx=0; mapping_idx<resp.level_mappings.length; mapping_idx++)
-        {
-            var mapping=resp.level_mappings[mapping_idx];
-            var level_id=parseInt(mapping.level.split('/')[5]);
-            level_mappings.set(level_id,[]);
-            for(var condition_idx=0; condition_idx<mapping.conditions.length; condition_idx++)
-            {
-                var condition_id=parseInt(mapping.conditions[condition_idx].split('/')[5]);
-                level_mappings.get(level_id).push(condition_id);
-                if(conditions_to_load.indexOf(condition_id)<0)
-                    conditions_to_load.push(condition_id);
-            }
-        }
-        for(var unit_idx=0; unit_idx<resp.unit_analysis_results.length; unit_idx++)
-        {
-            var unit_results=resp.unit_analysis_results[unit_idx];
-            for(var class_idx=0; class_idx<resp.unit_classifications.length; class_idx++)
-            {
-                for(var class_unit_idx=0; class_unit_idx<resp.unit_classifications[class_idx].units.length; class_unit_idx++)
-                {
-                    if(resp.unit_classifications[class_idx].units[class_unit_idx].id==unit_results.unit.id)
-                    {
-                        unit_results.classification=resp.unit_classifications[class_idx].label;
-                        break
-                    }
-                }
-            }
-            unit_results.results_text=unit_results.results_text.replace(/\n/g,'<br>');
-            unit_results.results_text=unit_results.results_text.replace(/ /g,'&nbsp;');
-            unit_results.pairwise_results_text=unit_results.pairwise_results_text.replace(/\n/g,'<br>');
-            unit_results.pairwise_results_text=unit_results.pairwise_results_text.replace(/ /g,'&nbsp;');
-            $('.unit_analysis_results_list').each(function(index, element){
-                unit_results.level=3;
-                unit_results.idx=unit_idx;
-                var tmplMarkup = $('#unit_analysis_results-template').html();
-                var compiledTmpl = _.template(tmplMarkup, unit_results);
-                $(this).append(compiledTmpl);
-            });
-        }
-        d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
-        d3.selectAll("#kernelwidth").on("change", function(){ dispatch.statechange()});
-        dispatch.on("statechange", update);
-
-        var data=[
-                "All neurons",
-                [
-                        -1,
-                        []
-                ],
-                {}
-        ];
-        for(var idx=0; idx<resp.unit_classifications.length; idx++)
-        {
-            var classification=resp.unit_classifications[idx];
-            if(classification.parent==null)
-            {
-                for(var unit_idx=0; unit_idx<classification.units.length; unit_idx++)
-                    data[1][1].push(classification.units[unit_idx]);
-                data[2][classification.label]=[
-                        classification.label,
-                        [
-                                classification.id,
-                                classification.units
-                        ],
-                        {}
-                ];
-            }
-        }
-        for(var idx=0; idx<resp.unit_classifications.length; idx++)
-        {
-            var classification=resp.unit_classifications[idx];
-            if(classification.parent!=null)
-            {
-                var parent_id=parseInt(classification.parent.split('/')[5]);
-                for(var child_label in data[2])
-                {
-                    var child=data[2][child_label];
-                    if(child[1][0]==parent_id)
-                    {
-                        child[2][classification.label]=[
-                            classification.label,
-                            [
-                                classification.id,
-                                classification.units
-                            ],
-                            {}
-                        ];
-                    }
-                }
-            }
-        }
-        function count_function(d)
-        {
-            return d[1][1].length;
-        }
-
-        function label_function(d)
-        {
-            return d[2]+": "+d[4][1].length+" neurons";
-        }
-
-        function legend_function(d)
-        {
-            return "<h3>"+d[2]+"</h3>";
-        }
-
-        var color = d3.scale.category20c();
-
-        function color_function(d)
-        {
-            return color(d[2]);
-        }
-        d3.select(self.frameElement).style("height", "800px");
-        init_code_hierarchy_plot("analysis_results-"+resp.id+"-pie",data,count_function,color_function,label_function,legend_function);
     }
 
-    function addClassification(data, classification)
+    // Update firing rates and plot if bin or kernel width changed
+    d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
+    d3.selectAll("#kernelwidth").on("change", function(){ dispatch.statechange()});
+    dispatch.on("statechange", update_plot);
+
+    // Build data structure for doughnut chart
+    var data=[
+        "All neurons",
+        [
+            -1,
+            []
+        ],
+        {}
+    ];
+    // Add nodes to structure
+    var classifications_added=[];
+    // Until all classifications have been added
+    while(classifications_added.length<resp.unit_classifications.length)
     {
-        if(classification.parent==null)
+        // Iterate through classifications
+        for(var idx=0; idx<resp.unit_classifications.length; idx++)
         {
-            for(var unit_idx=0; unit_idx<classification.units.length; unit_idx++)
-                data[1][1].push(classification.units[unit_idx]);
-            data[2][classification.label]=[
-                classification.label,
-                [
-                    classification.id,
-                    classification.units
-                ],
-                {}
-            ];
+            /// If not already added
+            if(classifications_added.indexOf(idx)<0)
+            {
+                var classification=resp.unit_classifications[idx];
+                // If successfully added (won't be if parent not already added), add to structure
+                if(addClassificationToHierarchy(data, classification))
+                    classifications_added.push(idx);
+            }
+        }
+    }
+    function count_function(d)
+    {
+        return d[1][1].length;
+    }
+
+    // Create plot
+    d3.select(self.frameElement).style("height", "800px");
+    init_code_hierarchy_plot("analysis_results-"+resp.id+"-pie", data);
+}
+
+/**
+ * Recursive function to add a classification to the data hierarchy
+ * @param data
+ * @param classification
+ * @return {Boolean}
+ */
+function addClassificationToHierarchy(data, classification)
+{
+    // If there is no parent for this classification or this node is the parent
+    if(classification.parent==null || data[1][0]==parseInt(classification.parent.split('/')[5]))
+    {
+        // Add units to this node
+        for(var unit_idx=0; unit_idx<classification.units.length; unit_idx++)
+            data[1][1].push(classification.units[unit_idx]);
+        // Set node data
+        data[2][classification.label]=[
+            classification.label,
+            [
+                classification.id,
+                classification.units
+            ],
+            {}
+        ];
+        return true;
+    }
+    else
+    {
+        // Loop through this node's children
+        for(var child_label in data[2])
+        {
+            var child=data[2][child_label];
+            // Stop if successfully added to child
+            if(addClassificationToHierarchy(child, classification))
+                return true;
+        }
+    }
+    return false;
+}
+
+
+/**
+ * Initialize hierarchical pie chart
+ * @param element_id
+ * @param data
+ */
+function init_code_hierarchy_plot(element_id, data)
+{
+    var plot = document.getElementById(element_id);
+
+    while (plot.hasChildNodes())
+    {
+        plot.removeChild(plot.firstChild);
+    }
+
+    /**
+     * Doughnut chart data structure count function - how many neurons in classification
+     */
+    function count_function(d)
+    {
+        return d[1][1].length;
+    }
+
+    /**
+     * Generate a label for this classification
+     * @param d
+     * @return {String}
+     */
+    function label_function(d)
+    {
+        return d[2]+": "+d[4][1].length+" neurons";
+    }
+
+    /**
+     * Generate a legend for this classification
+     * @param d
+     * @return {String}
+     */
+    function legend_function(d)
+    {
+        return "<h3>"+d[2]+"</h3>";
+    }
+
+    var color = d3.scale.category20c();
+
+    /**
+     * Generate a color for this classification
+     * @param d
+     * @return {*}
+     */
+    function color_function(d)
+    {
+        return color(d[2]);
+    }
+
+    var width = 450;
+    var height = width;
+    var x_margin = 40;
+    var y_margin = 40;
+
+    var max_depth=3;
+
+    var data_slices = [];
+    var max_level = 4;
+
+    var svg = d3.select("#"+element_id).append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", "translate(" + width / 2 + "," + height * .52 + ")");
+
+    function process_data(data,level,start_deg,stop_deg)
+    {
+        var name = data[0];
+        var total = count_function(data);
+        var children = data[2];
+        var current_deg = start_deg;
+        if (level > max_level)
+        {
+            return;
+        }
+        if (start_deg == stop_deg)
+        {
+            return;
+        }
+        data_slices.push([start_deg,stop_deg,name,level,data[1]]);
+        for (var key in children)
+        {
+            child = children[key];
+            var inc_deg = (stop_deg-start_deg)/total*count_function(child);
+            var child_start_deg = current_deg;
+            current_deg+=inc_deg;
+            var child_stop_deg = current_deg;
+            var span_deg = child_stop_deg-child_start_deg;
+            process_data(child,level+1,child_start_deg,child_stop_deg);
+        }
+    }
+
+    process_data(data,0,0,360./180.0*Math.PI);
+
+    var ref = data_slices[0];
+    var next_ref = ref;
+    var last_refs = [];
+
+    var thickness = width/2.0/(max_level+2)*1.1;
+
+    var arc = d3.svg.arc()
+            .startAngle(function(d) { if(d[3]==0){return d[0];}return d[0]+0.01; })
+            .endAngle(function(d) { if(d[3]==0){return d[1];}return d[1]-0.01; })
+            .innerRadius(function(d) { return 1.1*d[3]*thickness; })
+            .outerRadius(function(d) { return (1.1*d[3]+1)*thickness; });
+
+    var slices = svg.selectAll(".form")
+            .data(function(d) { return data_slices; })
+            .enter()
+            .append("g");
+    slices.append("path")
+            .attr("d", arc)
+            .attr("id",function(d,i){return element_id+i;})
+            .style("fill", function(d) { return color_function(d);})
+            .attr("class","form");
+    slices.on("click",animate);
+
+    slices.append("svg:title")
+            .text(label_function);
+
+
+    function get_start_angle(d,ref)
+    {
+        if (ref)
+        {
+            var ref_span = ref[1]-ref[0];
+            return (d[0]-ref[0])/ref_span*Math.PI*2.0
         }
         else
         {
-            if(classification.parent!=null)
+            return d[0];
+        }
+    }
+
+    function get_stop_angle(d,ref)
+    {
+        if (ref)
+        {
+            var ref_span = ref[1]-ref[0];
+            return (d[1]-ref[0])/ref_span*Math.PI*2.0
+        }
+        else
+        {
+            return d[0];
+        }
+    }
+
+    function get_level(d,ref)
+    {
+        if (ref)
+        {
+            return d[3]-ref[3];
+        }
+        else
+        {
+            return d[3];
+        }
+    }
+
+    function rebaseTween(new_ref)
+    {
+        return function(d)
+        {
+            var level = d3.interpolate(get_level(d,ref),get_level(d,new_ref));
+            var start_deg = d3.interpolate(get_start_angle(d,ref),get_start_angle(d,new_ref));
+            var stop_deg = d3.interpolate(get_stop_angle(d,ref),get_stop_angle(d,new_ref));
+            var opacity = d3.interpolate(100,0);
+            return function(t)
             {
-                var parent_id=parseInt(classification.parent.split('/')[5]);
-                for(var child_label in data[2])
-                {
-                    var child=data[2][child_label];
-                    if(child[1][0]==parent_id)
-                    {
-                        child[2][classification.label]=[
-                            classification.label,
-                            [
-                                classification.id,
-                                classification.units
-                            ],
-                            {}
-                        ];
-                        return data;
-                    }
-                    else
-                    {
-                        data[2]=addClassification(data[2], child);
-                    }
-                }
+                return arc([start_deg(t),stop_deg(t),d[2],level(t)]);
             }
         }
     }
 
-    function init_code_hierarchy_plot(element_id,data,count_function,color_function,title_function,legend_function)
-    {
-        var plot = document.getElementById(element_id);
+    var animating = false;
 
-        while (plot.hasChildNodes())
+    function animate(d) {
+        if (animating)
         {
-            plot.removeChild(plot.firstChild);
+            return;
         }
+        var legend = d3.select("#"+element_id+"_legend")
 
-        var width = 450;
-        var height = width;
-        var x_margin = 40;
-        var y_margin = 40;
-
-        var max_depth=3;
-
-        var data_slices = [];
-        var max_level = 4;
-
-        var svg = d3.select("#"+element_id).append("svg")
-                .attr("width", width)
-                .attr("height", height)
-                .append("g")
-                .attr("transform", "translate(" + width / 2 + "," + height * .52 + ")");
-
-        function process_data(data,level,start_deg,stop_deg)
+        animating = true;
+        var revert = false;
+        var new_ref;
+        if (d == ref && last_refs.length > 0)
         {
-            var name = data[0];
-            var total = count_function(data);
-            var children = data[2];
-            var current_deg = start_deg;
-            if (level > max_level)
-            {
-                return;
-            }
-            if (start_deg == stop_deg)
-            {
-                return;
-            }
-            data_slices.push([start_deg,stop_deg,name,level,data[1]]);
-            for (var key in children)
-            {
-                child = children[key];
-                var inc_deg = (stop_deg-start_deg)/total*count_function(child);
-                var child_start_deg = current_deg;
-                current_deg+=inc_deg;
-                var child_stop_deg = current_deg;
-                var span_deg = child_stop_deg-child_start_deg;
-                process_data(child,level+1,child_start_deg,child_stop_deg);
-            }
+            revert = true;
+            last_ref = last_refs.pop();
         }
-
-        process_data(data,0,0,360./180.0*Math.PI);
-
-        var ref = data_slices[0];
-        var next_ref = ref;
-        var last_refs = [];
-
-        var thickness = width/2.0/(max_level+2)*1.1;
-
-        var arc = d3.svg.arc()
-                .startAngle(function(d) { if(d[3]==0){return d[0];}return d[0]+0.01; })
-                .endAngle(function(d) { if(d[3]==0){return d[1];}return d[1]-0.01; })
-                .innerRadius(function(d) { return 1.1*d[3]*thickness; })
-                .outerRadius(function(d) { return (1.1*d[3]+1)*thickness; });
-
-        var slices = svg.selectAll(".form")
-                .data(function(d) { return data_slices; })
-                .enter()
-                .append("g");
-        slices.append("path")
-                .attr("d", arc)
-                .attr("id",function(d,i){return element_id+i;})
-                .style("fill", function(d) { return color_function(d);})
-                .attr("class","form");
-        slices.on("click",animate);
-
-        if (title_function != undefined)
+        if (revert)
         {
-            slices.append("svg:title")
-                    .text(title_function);
-        }
-        function get_start_angle(d,ref)
-        {
-            if (ref)
-            {
-                var ref_span = ref[1]-ref[0];
-                return (d[0]-ref[0])/ref_span*Math.PI*2.0
-            }
-            else
-            {
-                return d[0];
-            }
-        }
-
-        function get_stop_angle(d,ref)
-        {
-            if (ref)
-            {
-                var ref_span = ref[1]-ref[0];
-                return (d[1]-ref[0])/ref_span*Math.PI*2.0
-            }
-            else
-            {
-                return d[0];
-            }
-        }
-
-        function get_level(d,ref)
-        {
-            if (ref)
-            {
-                return d[3]-ref[3];
-            }
-            else
-            {
-                return d[3];
-            }
-        }
-
-        function rebaseTween(new_ref)
-        {
-            return function(d)
-            {
-                var level = d3.interpolate(get_level(d,ref),get_level(d,new_ref));
-                var start_deg = d3.interpolate(get_start_angle(d,ref),get_start_angle(d,new_ref));
-                var stop_deg = d3.interpolate(get_stop_angle(d,ref),get_stop_angle(d,new_ref));
-                var opacity = d3.interpolate(100,0);
-                return function(t)
-                {
-                    return arc([start_deg(t),stop_deg(t),d[2],level(t)]);
-                }
-            }
-        }
-
-        var animating = false;
-
-        function animate(d) {
-            if (animating)
-            {
-                return;
-            }
-            var legend = d3.select("#"+element_id+"_legend")
-
-            animating = true;
-            var revert = false;
-            var new_ref;
-            if (d == ref && last_refs.length > 0)
-            {
-                revert = true;
-                last_ref = last_refs.pop();
-            }
-            if (revert)
-            {
-                d = last_ref;
-                legend.html(legend_function(d));
-                loadUnitRates(d[4][1]);
-                new_ref = ref;
-                svg.selectAll(".form")
-                        .filter(
-                        function (b)
-                        {
-                            if (b[0].toFixed(5) >= last_ref[0].toFixed(5) && b[1].toFixed(5) <= last_ref[1].toFixed(5)  && b[3] >= last_ref[3])
-                            {
-                                return true;
-                            }
-                            return false;
-                        }
-                )
-                        .transition().duration(1000).style("opacity","1").attr("pointer-events","all");
-            }
-            else
-            {
-                legend.html(legend_function(d));
-                loadUnitRates(d[4][1]);
-                new_ref = d;
-                svg.selectAll(".form")
-                        .filter(
-                        function (b)
-                        {
-                            if (b[0].toFixed(5) < d[0].toFixed(5) || b[1].toFixed(5) > d[1].toFixed(5) || b[3] < d[3])
-                            {
-                                return true;
-                            }
-                            return false;
-                        }
-                )
-                        .transition().duration(1000).style("opacity","0").attr("pointer-events","none");
-            }
+            d = last_ref;
+            legend.html(legend_function(d));
+            loadUnitRates(d[4][1]);
+            new_ref = ref;
             svg.selectAll(".form")
                     .filter(
                     function (b)
                     {
-                        if (b[0].toFixed(5) >= new_ref[0].toFixed(5) && b[1].toFixed(5) <= new_ref[1].toFixed(5) && b[3] >= new_ref[3])
+                        if (b[0].toFixed(5) >= last_ref[0].toFixed(5) && b[1].toFixed(5) <= last_ref[1].toFixed(5)  && b[3] >= last_ref[3])
                         {
                             return true;
                         }
                         return false;
                     }
             )
-                    .transition().duration(1000).attrTween("d",rebaseTween(d));
-            setTimeout(function(){
-                animating = false;
-                if (! revert)
-                {
-                    last_refs.push(ref);
-                    ref = d;
-                }
-                else
-                {
-                    ref = d;
-                }
-            },1000);
-        };
-
-    }
-
-    function loadUnitRates(units)
-    {
-        current_unit_ids=[];
-        for(var unit_idx=0; unit_idx<units.length; unit_idx++)
-        {
-            var unit_id=units[unit_idx].id;
-            current_unit_ids.push(unit_id);
-        }
-
-        for(var unit_results_idx=0; unit_results_idx<results.unit_analysis_results.length; unit_results_idx++)
-        {
-            var id=results.unit_analysis_results[unit_results_idx].id;
-            var found=false;
-            for(var unit_idx=0; unit_idx<units.length; unit_idx++)
-            {
-                var unit_id=units[unit_idx].id;
-                if(units[unit_idx].id==results.unit_analysis_results[unit_results_idx].unit.id)
-                {
-                    $('#unit_analysis_results-'+id).show();
-                    found=true;
-                    break
-                }
-            }
-            if(!found)
-                $('#unit_analysis_results-'+id).hide();
-        }
-
-        $('#analysis_results-'+results.id+'-mean_rate').empty();
-        $('#analysis_results-'+results.id+'-mean_rate').append('<img src="/static/sensorimotordb/img/loading.gif">');
-        if(conditions_to_load.length>0)
-        {
-            for(var condition_idx=0; condition_idx<conditions_to_load.length; condition_idx++)
-            {
-                var condition_id=conditions_to_load[condition_idx];
-                // Initialize map of condition-unit recordings
-                condition_unit_trials.set(condition_id, new Map());
-                condition_unit_trial_events.set(condition_id, new Map());
-                //realigned_condition_unit_spikes.set(condition_id, new Map());
-                realigned_condition_unit_rates.set(condition_id, new Map());
-                realigned_condition_unit_trial_events.set(condition_id, new Map());
-            }
-
-            // Load recording trials for condition
-            var data = {};
-            var args = {
-                type: "GET",
-                url: "/sensorimotordb/api/v1/full_recording_trial/?condition__in="+conditions_to_load.join(',')+"&limit=0&format=json",
-                data: data,
-                success: loadedRecordingTrialData,
-                error: function(data) {
-                    //alert("Something went wrong!");
-                } };
-            $.ajax(args);
+                    .transition().duration(1000).style("opacity","1").attr("pointer-events","all");
         }
         else
         {
-            update_rates();
-            plotFactors();
+            legend.html(legend_function(d));
+            loadUnitRates(d[4][1]);
+            new_ref = d;
+            svg.selectAll(".form")
+                    .filter(
+                    function (b)
+                    {
+                        if (b[0].toFixed(5) < d[0].toFixed(5) || b[1].toFixed(5) > d[1].toFixed(5) || b[3] < d[3])
+                        {
+                            return true;
+                        }
+                        return false;
+                    }
+            )
+                    .transition().duration(1000).style("opacity","0").attr("pointer-events","none");
         }
+        svg.selectAll(".form")
+                .filter(
+                function (b)
+                {
+                    if (b[0].toFixed(5) >= new_ref[0].toFixed(5) && b[1].toFixed(5) <= new_ref[1].toFixed(5) && b[3] >= new_ref[3])
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+        )
+                .transition().duration(1000).attrTween("d",rebaseTween(d));
+        setTimeout(function(){
+            animating = false;
+            if (! revert)
+            {
+                last_refs.push(ref);
+                ref = d;
+            }
+            else
+            {
+                ref = d;
+            }
+        },1000);
+    };
+
+}
+
+function loadUnitRates(units)
+{
+    // Update list of current units
+    current_unit_ids=[];
+    for(var unit_idx=0; unit_idx<units.length; unit_idx++)
+    {
+        var unit_id=units[unit_idx].id;
+        current_unit_ids.push(unit_id);
     }
 
-    /**
-     * Loaded recording trials for a condition
-     * @param resp
-     */
-    function loadedRecordingTrialData(resp)
+    // Show and hide right unit statistics
+    for(var unit_results_idx=0; unit_results_idx<results.unit_analysis_results.length; unit_results_idx++)
     {
-        conditions_to_load=[];
-        // For each recording trial
-        for(var j=0; j<resp.objects.length; j++)
+        var id=results.unit_analysis_results[unit_results_idx].id;
+        var found=false;
+        for(var unit_idx=0; unit_idx<units.length; unit_idx++)
         {
-            var recording_trial=resp.objects[j];
-            var trial_number=recording_trial.trial_number;
-            var start_time=parseFloat(recording_trial.start_time);
-
-            // Get condition ID
-            var condition_id=parseInt(recording_trial.condition.split('/')[5]);
-
-            // Iterate through unit recordings
-            for(var k=0; k<recording_trial.unit_recordings.length; k++)
+            var unit_id=units[unit_idx].id;
+            if(units[unit_idx].id==results.unit_analysis_results[unit_results_idx].unit.id)
             {
-                var unit_recording=recording_trial.unit_recordings[k];
-                var unit=unit_recording.unit;
+                $('#unit_analysis_results-'+id).show();
+                found=true;
+                break
+            }
+        }
+        if(!found)
+            $('#unit_analysis_results-'+id).hide();
+    }
 
-                // If this is the first instance of this unit in this condition
-                if(!condition_unit_trials.get(condition_id).has(unit.id))
-                {
-                    condition_unit_trial_events.get(condition_id).set(unit.id, []);
-                    condition_unit_trials.get(condition_id).set(unit.id, []);
-                }
+    // Set rate to loading
+    $('#analysis_results-'+results.id+'-mean_rate').empty();
+    $('#analysis_results-'+results.id+'-mean_rate').append('<img src="/static/sensorimotordb/img/loading.gif">');
 
-                var start_event={
-                    t: start_time,
+    // If conditions have not been loaded unit
+    if(conditions_to_load.length>0)
+    {
+        // Initialize condition data structures
+        for(var condition_idx=0; condition_idx<conditions_to_load.length; condition_idx++)
+        {
+            var condition_id=conditions_to_load[condition_idx];
+            // Initialize map of condition-unit recordings
+            condition_unit_trials.set(condition_id, new Map());
+            condition_unit_trial_events.set(condition_id, new Map());
+            //realigned_condition_unit_spikes.set(condition_id, new Map());
+            realigned_condition_unit_rates.set(condition_id, new Map());
+            realigned_condition_unit_trial_events.set(condition_id, new Map());
+        }
+
+        // Load recording trials for conditions
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/api/v1/full_recording_trial/?condition__in="+conditions_to_load.join(',')+"&limit=0&format=json",
+            data: data,
+            success: loadedRecordingTrialData,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+    // Update firing rates and plot if already loaded
+    else
+    {
+        update_rates();
+        plotFactors();
+    }
+}
+
+/**
+ * Loaded recording trials for all conditions
+ * @param resp
+ */
+function loadedRecordingTrialData(resp)
+{
+    // Reset = loaded all conditions
+    conditions_to_load=[];
+
+    // For each recording trial
+    for(var j=0; j<resp.objects.length; j++)
+    {
+        var recording_trial=resp.objects[j];
+        var trial_number=recording_trial.trial_number;
+        var start_time=parseFloat(recording_trial.start_time);
+
+        // Get condition ID
+        var condition_id=parseInt(recording_trial.condition.split('/')[5]);
+
+        // Iterate through unit recordings
+        for(var k=0; k<recording_trial.unit_recordings.length; k++)
+        {
+            var unit_recording=recording_trial.unit_recordings[k];
+            var unit=unit_recording.unit;
+
+            // If this is the first instance of this unit in this condition
+            if(!condition_unit_trials.get(condition_id).has(unit.id))
+            {
+                condition_unit_trial_events.get(condition_id).set(unit.id, []);
+                condition_unit_trials.get(condition_id).set(unit.id, []);
+            }
+
+            var start_event={
+                t: start_time,
+                trial: trial_number,
+                name: 'start',
+                description: 'trial start'
+            };
+            condition_unit_trial_events.get(condition_id).get(unit.id).push(start_event);
+            for(var l=0; l<recording_trial.events.length; l++)
+            {
+                var evt=recording_trial.events[l];
+                var current_event={
+                    t: parseFloat(evt.time),
                     trial: trial_number,
-                    name: 'start',
-                    description: 'trial start'
+                    name: evt.name,
+                    description: evt.description
                 };
-                condition_unit_trial_events.get(condition_id).get(unit.id).push(start_event);
-                for(var l=0; l<recording_trial.events.length; l++)
-                {
-                    var evt=recording_trial.events[l];
-                    var current_event={
-                        t: parseFloat(evt.time),
-                        trial: trial_number,
-                        name: evt.name,
-                        description: evt.description
-                    };
-                    condition_unit_trial_events.get(condition_id).get(unit.id).push(current_event);
-                }
+                condition_unit_trial_events.get(condition_id).get(unit.id).push(current_event);
+            }
 
-                if(unit_recording.spike_times.length>0)
+            if(unit_recording.spike_times.length>0)
+            {
+                var spike_times=unit_recording.spike_times.split(',');
+                for(var l=0; l<spike_times.length; l++)
                 {
-                    var spike_times=unit_recording.spike_times.split(',');
-                    for(var l=0; l<spike_times.length; l++)
-                    {
-                        var spk={
-                            x: parseFloat(spike_times[l]),
-                            y: trial_number
-                        };
-                        condition_unit_trials.get(condition_id).get(unit.id).push(spk);
-                    }
+                    var spk={
+                        x: parseFloat(spike_times[l]),
+                        y: trial_number
+                    };
+                    condition_unit_trials.get(condition_id).get(unit.id).push(spk);
                 }
             }
         }
+    }
 
+    // If no more recordings to load - update rates and plot
+    if(resp.meta.next==null)
+    {
         update_rates();
 
         plotFactors();
     }
-
-    function update_rates()
+    // Otherwise load next batch
+    else
     {
-        var align_event = d3.select("#align_event").node().value;
-        var bin_width = parseInt(d3.select("#binwidth").node().value);
-        var kernel_width = parseInt(d3.select("#kernelwidth").node().value);
-        var realigned_spikes=new Map();
-        var min_time=1000;
-        var max_time=-1000;
-        for(let condition_id of condition_unit_trials.keys())
+        var data = {};
+        var args = {
+            type: "GET",
+            url: resp.meta.next,
+            data: data,
+            success: loadedRecordingTrialData,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+}
+
+/**
+ * Update firing rates
+ */
+function update_rates()
+{
+    // Get rate calculation parameters
+    var align_event = d3.select("#align_event").node().value;
+    var bin_width = parseInt(d3.select("#binwidth").node().value);
+    var kernel_width = parseInt(d3.select("#kernelwidth").node().value);
+
+    // Realigned spikes for each condition - map of unit recordings
+    var realigned_spikes=new Map();
+
+    // Realign spikes and compute time limits
+    var min_times=[];
+    var max_times=[];
+
+    // Iterate through conditions
+    for(let condition_id of condition_unit_trials.keys())
+    {
+        // realigned spikes for each condition
+        realigned_spikes.set(condition_id,new Map());
+
+        // For each unit in this condition
+        for(let unit_id of condition_unit_trials.get(condition_id).keys())
         {
-            realigned_spikes.set(condition_id,new Map());
-            for(let unit_id of condition_unit_trials.get(condition_id).keys())
+            var unit_spikes=condition_unit_trials.get(condition_id).get(unit_id);
+            var unit_events=condition_unit_trial_events.get(condition_id).get(unit_id);
+            // Realign spikes to align event
+            var realigned_unit_spikes=realign_spikes(unit_spikes, unit_events, align_event);
+            realigned_spikes.get(condition_id).set(unit_id,realigned_unit_spikes);
+
+            // Realign trial events to align event
+            var realigned_unit_events=realign_events(unit_events, align_event);
+            realigned_condition_unit_trial_events.get(condition_id).set(unit_id, realigned_unit_events);
+
+            // Update min and max times
+            min_times.push(d3.min(realigned_unit_spikes, function(d) { return d.x; }));
+            max_times.push(d3.max(realigned_unit_spikes, function(d) { return d.x; }));
+        }
+    }
+
+    // Compute realigned time bins
+    var min_time=d3.mean(min_times);
+    var max_time=d3.mean(max_times);
+    var xScale = d3.scale.linear()
+            .domain([min_time, max_time]);
+    var bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width);
+    realigned_times=d3.range(xScale.domain()[0], xScale.domain()[1], bin_width);
+
+    // Compute firing rate of each unit trial using fixed time bins
+    for(let condition_id of realigned_spikes.keys())
+    {
+        for(let unit_id of realigned_spikes.get(condition_id).keys())
+        {
+            var unit_spikes=realigned_spikes.get(condition_id).get(unit_id);
+            var cutoff_spikes=[];
+            for(var idx=0; idx<unit_spikes.length; idx++)
             {
-                if(condition_unit_trials.get(condition_id).has(unit_id))
+                if(unit_spikes[idx].x>=min_time && unit_spikes[idx].x<=max_time)
                 {
-                    var unit_spikes=realign_spikes(condition_unit_trials.get(condition_id).get(unit_id),
-                            condition_unit_trial_events.get(condition_id).get(unit_id), align_event);
-                    realigned_spikes.get(condition_id).set(unit_id,unit_spikes);
-                    realigned_condition_unit_trial_events.get(condition_id).set(unit_id,
-                            realign_events(condition_unit_trial_events.get(condition_id).get(unit_id), align_event));
-                    var unit_min_time=d3.min(unit_spikes, function(d) { return d.x; });
-                    var unit_max_time=d3.max(unit_spikes, function(d) { return d.x; });
-                    if(unit_min_time<min_time)
-                        min_time=unit_min_time;
-                    if(unit_max_time>max_time)
-                        max_time=unit_max_time;
+                    cutoff_spikes.push({
+                                x: unit_spikes[idx].x,
+                                y: unit_spikes[idx].y
+                            });
+                }
+            }
+            // Compute unit firing rate with fixed time bins
+            var rate=get_standard_firing_rate(cutoff_spikes, bins, bin_width, kernel_width);
+            realigned_condition_unit_rates.get(condition_id).set(unit_id,rate);
+        }
+    }
+
+    // For each factor
+    for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
+    {
+        var each_level_evt_types=[];
+        var factor=factors[factor_idx];
+        for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
+        {
+            var level=factor.levels[level_idx];
+            var level_mapping=level_mappings.get(level.id);
+            for(var condition_idx=0; condition_idx<level_mapping.length; condition_idx++)
+            {
+                var condition_id=level_mapping[condition_idx];
+                for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
+                {
+                    var unit_id=current_unit_ids[unit_idx];
+                    if(realigned_condition_unit_trial_events.get(condition_id).has(unit_id))
+                    {
+                        var unit_evts=realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
+                        for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
+                        {
+                            var evt=unit_evts[event_idx];
+                            if(each_level_evt_types.indexOf(evt.name)<0)
+                                each_level_evt_types.push(evt.name);
+                        }
+                    }
                 }
             }
         }
-        var xScale = d3.scale.linear()
-                .domain([min_time, max_time]);
-        var bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width);
-        realigned_times=d3.range(xScale.domain()[0], xScale.domain()[1], bin_width);
 
-        for(let condition_id of realigned_spikes.keys())
+        var all_evt_types=[];
+        for(var evt_type_idx=0; evt_type_idx<each_level_evt_types.length; evt_type_idx++)
         {
-            for(let unit_id of realigned_spikes.get(condition_id).keys())
-            {
-                var unit_spikes=realigned_spikes.get(condition_id).get(unit_id);
-                // Compute unit firing rate
-                var rate=get_standard_firing_rate(unit_spikes, bins, bin_width, kernel_width);
-                realigned_condition_unit_rates.get(condition_id).set(unit_id,rate);
-            }
-        }
-
-        for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
-        {
-            var each_level_evt_types=[];
-            var factor=factors[factor_idx];
+            var evt_type=each_level_evt_types[evt_type_idx];
+            var all_have=true;
             for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
             {
                 var level=factor.levels[level_idx];
                 var level_mapping=level_mappings.get(level.id);
-                for(var condition_idx=0; condition_idx<level_mapping.length; condition_idx++)
-                {
-                    var condition_id=level_mapping[condition_idx];
-                    for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
-                    {
-                        var unit_id=current_unit_ids[unit_idx];
-                        if(realigned_condition_unit_trial_events.get(condition_id).has(unit_id))
-                        {
-                            var unit_evts=realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
-                            for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
-                            {
-                                var evt=unit_evts[event_idx];
-                                if(each_level_evt_types.indexOf(evt.name)<0)
-                                    each_level_evt_types.push(evt.name);
-                            }
-                        }
-                    }
-                }
-            }
-            var all_evt_types=[];
-            for(var evt_type_idx=0; evt_type_idx<each_level_evt_types.length; evt_type_idx++)
-            {
-                var evt_type=each_level_evt_types[evt_type_idx];
-                var all_have=true;
-                for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
-                {
-                    var level=factor.levels[level_idx];
-                    var level_mapping=level_mappings.get(level.id);
-                    var has_evt=false;
-                    for(var condition_idx=0; condition_idx<level_mapping.length; condition_idx++)
-                    {
-                        var condition_id=level_mapping[condition_idx];
-                        var unit_rates=[];
-                        for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
-                        {
-                            var unit_id=current_unit_ids[unit_idx];
-                            if(realigned_condition_unit_rates.get(condition_id).has(unit_id))
-                            {
-                                var unit_rate=realigned_condition_unit_rates.get(condition_id).get(unit_id);
-                                unit_rates.push(unit_rate);
-                                var unit_evts=realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
-                                for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
-                                {
-                                    var evt=unit_evts[event_idx];
-                                    if(evt.name==evt_type)
-                                    {
-                                        has_evt=true;
-                                        break
-                                    }
-                                }
-                            }
-                            if(has_evt)
-                                break
-                        }
-                        if(has_evt)
-                            break
-                    }
-                    if(!has_evt)
-                    {
-                        all_have=false;
-                        break
-                    }
-                }
-                if(all_have)
-                    all_evt_types.push(evt_type);
-            }
-            factor_event_types.set(factor.id, all_evt_types);
-            
-            realigned_factor_level_trial_events.set(factor.id, new Map());
-            realigned_factor_level_mean_rates.set(factor.id, new Map());
-            // Create a plot for this factor
-            for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
-            {
-                var level=factor.levels[level_idx];
-                var level_mapping=level_mappings.get(level.id)
-                realigned_factor_level_trial_events.get(factor.id).set(level.id,[]);
-
-                var condition_rates=[];
-
+                var has_evt=false;
                 for(var condition_idx=0; condition_idx<level_mapping.length; condition_idx++)
                 {
                     var condition_id=level_mapping[condition_idx];
@@ -710,73 +733,123 @@
                             for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
                             {
                                 var evt=unit_evts[event_idx];
-                                if(factor_event_types.get(factor.id).indexOf(evt.name)>-1)
-                                    realigned_factor_level_trial_events.get(factor.id).get(level.id).push(evt);
+                                if(evt.name==evt_type)
+                                {
+                                    has_evt=true;
+                                    break
+                                }
                             }
                         }
+                        if(has_evt)
+                            break
                     }
-                    var condition_mean_rate=mean_firing_rate(unit_rates, realigned_times);
-                    condition_rates.push(condition_mean_rate);
+                    if(has_evt)
+                        break
                 }
-                if(level_mapping.length>1)
+                if(!has_evt)
                 {
-                    var level_mean_rate=mean_firing_rate(condition_rates, realigned_times);
-                    realigned_factor_level_mean_rates.get(factor.id).set(level.id, level_mean_rate);
+                    all_have=false;
+                    break
                 }
-                else
-                {
-                    realigned_factor_level_mean_rates.get(factor.id).set(level.id, condition_rates[0]);
-                }
-            }    
+            }
+            if(all_have)
+                all_evt_types.push(evt_type);
         }
-    }
+        factor_event_types.set(factor.id, all_evt_types);
 
-    function plotFactors()
-    {
-        var parent_id="analysis_results-"+results.id+"-mean_rate";
-        $('#'+parent_id).empty();
-        factor_plots=new Map();
-        for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
+        realigned_factor_level_trial_events.set(factor.id, new Map());
+        realigned_factor_level_mean_rates.set(factor.id, new Map());
+        // Create a plot for this factor
+        for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
         {
-            var factor=factors[factor_idx];
-            var factor_parent_id='analysis_results-'+results.id+'-factor-'+factor.id+'-mean_rate';
-            $('#'+parent_id).append('<div id="'+factor_parent_id+'" style="text-align:center"><h3>'+factor.name+'</h3></div>');
-            var level_ids=[];
-            var level_labels=[];
+            var level=factor.levels[level_idx];
+            var level_mapping=level_mappings.get(level.id);
+            realigned_factor_level_trial_events.get(factor.id).set(level.id,[]);
 
-            // Create a plot for this factor
-            for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
+            var condition_rates=[];
+
+            for(var condition_idx=0; condition_idx<level_mapping.length; condition_idx++)
             {
-                var level=factor.levels[level_idx];
-                level_labels.push(level.value);
-                level_ids.push(level.id);                                
-            }            
-
-            var rate_svg=drawMeanFiringRates(factor_parent_id, realigned_factor_level_mean_rates.get(factor.id), 
-                    realigned_factor_level_trial_events.get(factor.id), factor_event_types.get(factor.id),
-                    level_ids, level_labels, 0.5);
-            factor_plots.set(factor.id, rate_svg);
+                var condition_id=level_mapping[condition_idx];
+                var unit_rates=[];
+                for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
+                {
+                    var unit_id=current_unit_ids[unit_idx];
+                    if(realigned_condition_unit_rates.get(condition_id).has(unit_id))
+                    {
+                        var unit_rate=realigned_condition_unit_rates.get(condition_id).get(unit_id);
+                        unit_rates.push(unit_rate);
+                        var unit_evts=realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
+                        for(var event_idx=0; event_idx<unit_evts.length; event_idx++)
+                        {
+                            var evt=unit_evts[event_idx];
+                            if(factor_event_types.get(factor.id).indexOf(evt.name)>-1)
+                                realigned_factor_level_trial_events.get(factor.id).get(level.id).push(evt);
+                        }
+                    }
+                }
+                var condition_mean_rate=mean_firing_rate(unit_rates, realigned_times);
+                condition_rates.push(condition_mean_rate);
+            }
+            if(level_mapping.length>1)
+            {
+                var level_mean_rate=mean_firing_rate(condition_rates, realigned_times);
+                realigned_factor_level_mean_rates.get(factor.id).set(level.id, level_mean_rate);
+            }
+            else
+            {
+                realigned_factor_level_mean_rates.get(factor.id).set(level.id, condition_rates[0]);
+            }
         }
     }
+}
 
-    function update()
+function plotFactors()
+{
+    var parent_id="analysis_results-"+results.id+"-mean_rate";
+    $('#'+parent_id).empty();
+    factor_plots=new Map();
+    for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
     {
-        update_rates();
-        for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
+        var factor=factors[factor_idx];
+        var factor_parent_id='analysis_results-'+results.id+'-factor-'+factor.id+'-mean_rate';
+        $('#'+parent_id).append('<div id="'+factor_parent_id+'" style="text-align:center"><h3>'+factor.name+'</h3></div>');
+        var level_ids=[];
+        var level_labels=[];
+
+        // Create a plot for this factor
+        for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
         {
-            var factor=factors[factor_idx];
-            factor_plots.get(factor.id).update(realigned_factor_level_mean_rates.get(factor.id), realigned_factor_level_trial_events.get(factor.id));
-
+            var level=factor.levels[level_idx];
+            level_labels.push(level.value);
+            level_ids.push(level.id);
         }
 
+        var rate_svg=drawMeanFiringRates(factor_parent_id, realigned_factor_level_mean_rates.get(factor.id),
+                realigned_factor_level_trial_events.get(factor.id), factor_event_types.get(factor.id),
+                level_ids, level_labels, 0.5);
+        factor_plots.set(factor.id, rate_svg);
+    }
+}
+
+function update_plot()
+{
+    update_rates();
+    for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
+    {
+        var factor=factors[factor_idx];
+        factor_plots.get(factor.id).update(realigned_factor_level_mean_rates.get(factor.id), realigned_factor_level_trial_events.get(factor.id));
+
     }
 
-    function exportToBODB(analysis_id)
-    {
-        var win = window.open('{{ bodb_server }}/bodb/sed/neurophysiology/sensorimotordb/import/?_popup=1&analysis_id={{ object.id }}&api_key={{ api_key }}&user={{ username }}', 'Export to BODB', 'height=800,width=1000,resizable=yes,scrollbars=yes');
-        win.focus();
-        return false;
-    }
+}
+
+function exportToBODB(analysis_id)
+{
+    var win = window.open('{{ bodb_server }}/bodb/sed/neurophysiology/sensorimotordb/import/?_popup=1&analysis_id={{ object.id }}&api_key={{ api_key }}&user={{ username }}', 'Export to BODB', 'height=800,width=1000,resizable=yes,scrollbars=yes');
+    win.focus();
+    return false;
+}
 
 </script>
 {% endblock %}

@@ -18,34 +18,65 @@ function loadObject(resource_uri)
 }
 
 
-function realign_spikes(trials, trial_events, event_name)
+/**
+ *
+ * @param trials - list of spikes with x=spike time, y=trial number
+ * @param trial_events - list of events with t=time, trial=trial number
+ * @param event_name
+ * @return {Array}
+ */
+function realign_spikes(trial_spikes, trial_events, event_name)
 {
-    var realigned=[];
-    var align_evt=[];
+    // List of realigned spikes
+    var realigned_spikes=[];
 
-    for(var trial_idx=0; trial_idx<trials.length; trial_idx++)
+    // Align event for each trial
+    var trialAlignEvents=new Map();
+
+    // Iterate through all spikes
+    for(var spike_idx=0; spike_idx<trial_spikes.length; spike_idx++)
     {
-        var start_evt_idx=-1;
+        // Index of align event
         var align_evt_idx=-1;
-        for(var evt_idx=0; evt_idx<trial_events.length; evt_idx++)
+        // Get trial ID for this spike
+        var trial_id=trial_spikes[spike_idx].y;
+
+        // Get align event index from map if it is already there
+        if(trialAlignEvents.has(trial_id))
         {
-            if(trial_events[evt_idx].trial==trials[trial_idx].y)
-            {
-                if(trial_events[evt_idx].name=='start')
-                    start_evt_idx=evt_idx;
-                else if(trial_events[evt_idx].name==event_name)
-                    align_evt_idx=evt_idx;
-            }
+            align_evt_idx=trialAlignEvents.get(trial_id);
         }
-        if(align_evt_idx<0)
-            align_evt_idx=start_evt_idx;
-        var align_evt=trial_events[align_evt_idx];
-        realigned.push({
-            x: (trials[trial_idx].x-align_evt.t)*1000.0,
-            y: trials[trial_idx].y
-        });
+        // Otherwise figure out align event
+        else
+        {
+            // Iterate through all events
+            for(var evt_idx=0; evt_idx<trial_events.length; evt_idx++)
+            {
+                // If this event is for this trial
+                if(trial_events[evt_idx].trial==trial_id)
+                {
+                    // If this is the align event -set align event index and stop looking
+                    if(event_name==trial_events[evt_idx].name)
+                    {
+                        align_evt_idx=evt_idx;
+                        break
+                    }
+                }
+            }
+            trialAlignEvents.set(trial_id,align_evt_idx)
+        }
+        if(align_evt_idx>-1)
+        {
+            // Get align event
+            var align_evt=trial_events[align_evt_idx];
+            // Push realigned spike time
+            realigned_spikes.push({
+                x: (trial_spikes[spike_idx].x-align_evt.t)*1000.0,
+                y: trial_spikes[spike_idx].y
+            });
+        }
     }
-    return realigned;
+    return realigned_spikes;
 }
 
 function realign_events(trial_events, event_name)

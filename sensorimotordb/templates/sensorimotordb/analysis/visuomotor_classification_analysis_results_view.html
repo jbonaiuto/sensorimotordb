@@ -160,8 +160,11 @@ function addClassificationToHierarchy(data, classification)
     if(classification.parent==null || data[1][0]==parseInt(classification.parent.split('/')[5]))
     {
         // Add units to this node
-        for(var unit_idx=0; unit_idx<classification.units.length; unit_idx++)
-            data[1][1].push(classification.units[unit_idx]);
+        if(classification.parent==null)
+        {
+            for(var unit_idx=0; unit_idx<classification.units.length; unit_idx++)
+                data[1][1].push(classification.units[unit_idx]);
+        }
         // Set node data
         data[2][classification.label]=[
             classification.label,

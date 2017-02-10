@@ -174,17 +174,6 @@ class VisuomotorClassificationUnitAnalysisResults(UnitAnalysisResults):
         app_label='sensorimotordb'
 
 
-class UnitClassification(MPTTModel,models.Model):
-    # parent BOP
-    parent = TreeForeignKey('self', null=True, blank=True, related_name='children')
-    analysis_results=models.ForeignKey(VisuomotorClassificationAnalysisResults, related_name='unit_classifications')
-    label=models.CharField(max_length=1000, blank=False)
-    units=models.ManyToManyField(Unit)
-
-    class Meta:
-        app_label='sensorimotordb'
-
-
 class VisuomotorClassificationAnalysis(Analysis):
 
     class Meta:

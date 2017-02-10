@@ -109,6 +109,26 @@ class AnalysisResultsDetailView(LoginRequiredMixin, DetailView):
             return redirect('/sensorimotordb/visuomotor_classification_analysis_results/%s/' % id)
 
 
+class DeleteAnalysisResultsView(JSONResponseMixin,BaseDetailView):
+    model=AnalysisResults
+    def get_context_data(self, **kwargs):
+        context={'msg':u'No POST data sent.' }
+        if self.request.is_ajax():
+            self.object=self.get_object()
+            if VisuomotorClassificationAnalysisResults.objects.filter(id=self.object.id):
+                results=VisuomotorClassificationAnalysisResults.objects.get(id=self.object.id)
+                for classification in UnitClassification.objects.filter(analysis_results=results):
+                    classification.delete()
+                for unit_results in VisuomotorClassificationUnitAnalysisResults.objects.filter(analysis_results=results):
+                    unit_results.delete()
+                for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=results):
+                    level_mapping.delete()
+                results.delete()
+                self.object.delete()
+            context={'id': self.request.POST['id']}
+
+        return context
+
 class VisuomotorClassificationAnalysisResultsDetailView(AnalysisResultsDetailView):
     model=VisuomotorClassificationAnalysisResults
     template_name = 'sensorimotordb/analysis/visuomotor_classification_analysis_results_view.html'

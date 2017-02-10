@@ -198,9 +198,9 @@ function drawHistogram(id, parent_id, data, trial_events, event_types)
         .text("Firing Rate (Hz)");
 
     // Events
-    var event_notes=[];
-    var event_lines=[];
-    var event_areas=[];
+    var event_notes=new Map();
+    var event_lines=new Map();
+    var event_areas=new Map();
     for(var i=0; i<event_types.length; i++)
     {
         var event_type=event_types[i];
@@ -215,7 +215,7 @@ function drawHistogram(id, parent_id, data, trial_events, event_types)
             var mean_time=d3.mean(times);
             var min_time=d3.min(times);
             var max_time=d3.max(times);
-            event_lines.push(
+            event_lines.set(event_type,
                 histo_svg.append("line")
                     .attr("x1", xScale(mean_time))
                     .attr("y1", yScale(0))
@@ -224,7 +224,7 @@ function drawHistogram(id, parent_id, data, trial_events, event_types)
                     .classed("annotation-line",true)
             );
             var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-            event_areas.push(
+            event_areas.set(event_type,
                 histo_svg.append("line")
                     .attr("x1", area_x)
                     .attr("y1", yScale(0))
@@ -235,7 +235,7 @@ function drawHistogram(id, parent_id, data, trial_events, event_types)
                     .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px")
             );
             var event_note=
-                event_notes.push(
+                event_notes.set(event_type,
                     histo_svg.selectAll(".g-note")
                         .data([event_type])
                         .enter().append("text")
@@ -335,15 +335,15 @@ function drawHistogram(id, parent_id, data, trial_events, event_types)
                 var mean_time=d3.mean(times);
                 var min_time=d3.min(times);
                 var max_time=d3.max(times);
-                event_lines[i]
+                event_lines.get(event_type)
                     .attr("x1", xScale(mean_time))
                     .attr("x2",xScale(mean_time));
                 var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-                event_areas[i]
+                event_areas.get(event_type)
                     .attr("x1", area_x)
                     .attr("x2", area_x)
                     .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
-                event_notes[i].attr("x", xScale(mean_time))
+                event_notes.get(event_type).attr("x", xScale(mean_time))
             }
         }
         histo_svg.selectAll(".text").data(hist).remove();
@@ -431,9 +431,9 @@ function drawFiringRate(id, parent_id, data, trial_events, event_types)
         .text("Firing Rate (Hz)");
 
     // Events
-    var event_notes=[];
-    var event_lines=[];
-    var event_areas=[];
+    var event_notes=new Map();
+    var event_lines=new Map();
+    var event_areas=new Map();
     for(var i=0; i<event_types.length; i++)
     {
         var event_type=event_types[i];
@@ -448,7 +448,7 @@ function drawFiringRate(id, parent_id, data, trial_events, event_types)
             var mean_time=d3.mean(times);
             var min_time=d3.min(times);
             var max_time=d3.max(times);
-            event_lines.push(
+            event_lines.set(event_type,
                 rate_svg.append("line")
                     .attr("x1", xScale(mean_time))
                     .attr("y1", yScale(0))
@@ -457,7 +457,7 @@ function drawFiringRate(id, parent_id, data, trial_events, event_types)
                     .classed("annotation-line",true)
             );
             var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-            event_areas.push(
+            event_areas.set(event_type,
                 rate_svg.append("line")
                     .attr("x1", area_x)
                     .attr("y1", yScale(0))
@@ -467,7 +467,7 @@ function drawFiringRate(id, parent_id, data, trial_events, event_types)
                     .style("stroke", p(i))
                     .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px")
             );
-            event_notes.push(
+            event_notes.set(event_type,
                 rate_svg.selectAll(".g-note")
                     .data([event_type])
                     .enter().append("text")
@@ -545,15 +545,15 @@ function drawFiringRate(id, parent_id, data, trial_events, event_types)
                 var mean_time=d3.mean(times);
                 var min_time=d3.min(times);
                 var max_time=d3.max(times);
-                event_lines[i]
+                event_lines.get(event_type)
                     .attr("x1", xScale(mean_time))
                     .attr("x2",xScale(mean_time));
                 var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-                event_areas[i]
+                event_areas.get(event_type)
                     .attr("x1", area_x)
                     .attr("x2", area_x)
                     .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
-                event_notes[i].attr("x", xScale(mean_time))
+                event_notes.get(event_type).attr("x", xScale(mean_time))
             }
         }
 
@@ -700,9 +700,9 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
         .text("Firing Rate (Hz)");
 
     // Events
-    var event_notes=[];
-    var event_lines=[];
-    var event_areas=[];
+    var event_notes=new Map();
+    var event_lines=new Map();
+    var event_areas=new Map();
     for(var i=0; i<event_types.length; i++)
     {
         var event_type=event_types[i];
@@ -728,7 +728,7 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
             var mean_time=d3.mean(times);
             var min_time=d3.min(times);
             var max_time=d3.max(times);
-            event_lines.push(
+            event_lines.set(event_type,
                 rate_svg.append("line")
                     .attr("x1", xScale(mean_time))
                     .attr("y1", yScale(0))
@@ -737,7 +737,7 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
                     .classed("annotation-line",true)
             );
             var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-            event_areas.push(
+            event_areas.set(event_type,
                 rate_svg.append("line")
                     .attr("x1", area_x)
                     .attr("y1", yScale(0))
@@ -747,7 +747,7 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
                     .style("stroke", p(i))
                     .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px")
             );
-            event_notes.push(
+            event_notes.set(event_type,
                 rate_svg.selectAll(".g-note")
                     .data([event_type])
                     .enter().append("text")
@@ -869,15 +869,15 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
                 var mean_time=d3.mean(times);
                 var min_time=d3.min(times);
                 var max_time=d3.max(times);
-                event_lines[i]
+                event_lines.get(event_type)
                     .attr("x1", xScale(mean_time))
                     .attr("x2",xScale(mean_time));
                 var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-                event_areas[i]
+                event_areas.get(event_type)
                     .attr("x1", area_x)
                     .attr("x2", area_x)
                     .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
-                event_notes[i].attr("x", xScale(mean_time))
+                event_notes.get(event_type).attr("x", xScale(mean_time))
             }
         }
 
@@ -1033,9 +1033,9 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         .text("Firing Rate (Hz)");
 
     // Events
-    var event_notes=[];
-    var event_lines=[];
-    var event_areas=[];
+    var event_notes=new Map();
+    var event_lines=new Map();
+    var event_areas=new Map();
     for(var i=0; i<event_types.length; i++)
     {
         var event_type=event_types[i];
@@ -1058,7 +1058,7 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         var mean_time=d3.mean(times);
         var min_time=d3.min(times);
         var max_time=d3.max(times);
-        event_lines.push(
+        event_lines.set(event_type,
             rate_svg.append("line")
                 .attr("x1", xScale(mean_time))
                 .attr("y1", yScale(0))
@@ -1067,7 +1067,7 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
                 .classed("annotation-line",true)
         );
         var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-        event_areas.push(
+        event_areas.set(event_type,
             rate_svg.append("line")
                 .attr("x1", area_x)
                 .attr("y1", yScale(0))
@@ -1077,7 +1077,7 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
                 .style("stroke", p(i))
                 .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px")
         );
-        event_notes.push(
+        event_notes.set(event_type,
             rate_svg.selectAll(".g-note")
                 .data([event_type])
                 .enter().append("text")
@@ -1195,15 +1195,15 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
             var mean_time=d3.mean(times);
             var min_time=d3.min(times);
             var max_time=d3.max(times);
-            event_lines[i]
+            event_lines.get(event_type)
                 .attr("x1", xScale(mean_time))
                 .attr("x2",xScale(mean_time));
             var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-            event_areas[i]
+            event_areas.get(event_type)
                 .attr("x1", area_x)
                 .attr("x2", area_x)
                 .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
-            event_notes[i].attr("x", xScale(mean_time))
+            event_notes.get(event_type).attr("x", xScale(mean_time))
         }
 
         for(var i=0; i<group_ids.length; i++)

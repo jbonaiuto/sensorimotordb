@@ -1,9 +1,9 @@
 from django.contrib.auth.models import User
 from django import forms
-from django.forms.models import ModelForm
+from django.forms.models import ModelForm, inlineformset_factory
 from registration.forms import RegistrationForm
 from registration.users import UsernameField
-from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis
+from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis, Species, Condition, GraspObservationCondition, GraspCondition
 
 
 class VisuomotorClassificationAnalysisResultsForm(ModelForm):
@@ -27,6 +27,64 @@ class VisuomotorClassificationAnalysisResultsForm(ModelForm):
     class Meta:
         model=VisuomotorClassificationAnalysisResults
         exclude=('total_num_units',)
+
+
+class ExperimentForm(ModelForm):
+    collator = forms.ModelChoiceField(queryset=User.objects.all(),widget=forms.HiddenInput,required=False)
+    last_modified_by = forms.ModelChoiceField(queryset=User.objects.all(),widget=forms.HiddenInput,required=False)
+    title = forms.CharField(max_length=200, required=True)
+    brief_description = forms.CharField(widget=forms.Textarea(attrs={'cols':'57','rows':'3'}),required=True)
+    narrative = forms.CharField(widget=forms.Textarea(attrs={'cols':'57','rows':'5'}),required=False)
+    subject_species=forms.ModelChoiceField(queryset=Species.objects.all(), required=True)
+    data_file=forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=True)
+
+    class Meta:
+        model = Experiment
+        exclude=('creation_time','last_modified_time')
+
+
+class ExperimentImportForm(ModelForm):
+    class Meta:
+        model=Experiment
+        exclude=('collator','last_modified_by','title','brief_description','narrative','subject_species')
+
+
+class ConditionInlineForm(ModelForm):
+    experiment=forms.ModelChoiceField(queryset=Experiment.objects.all(),widget=forms.HiddenInput,required=True)
+    name=forms.CharField(max_length=100, required=True)
+    description=forms.CharField(widget=forms.Textarea(attrs={'cols':'57','rows':'3'}),required=True)
+    type=forms.ChoiceField(choices=Condition.CONDITION_TYPE_CHOICES)
+    epoch_type=forms.CharField(max_length=50,widget=forms.HiddenInput,required=True)
+    trial_type=forms.CharField(max_length=50,widget=forms.HiddenInput,required=True)
+    object=forms.CharField(max_length=50,widget=forms.HiddenInput,required=True)
+
+    class Meta:
+        model=Condition
+        exclude=()
+
+ConditionFormSet = lambda *a, **kw: inlineformset_factory(Experiment,Condition,form=ConditionInlineForm, fk_name='experiment',
+    extra=kw.pop('extra', 0), can_delete=True)(*a, **kw)
+
+
+class GraspConditionInlineForm(ConditionInlineForm):
+    object_distance=forms.DecimalField(required=True)
+    grasp=forms.CharField(max_length=50)
+
+    hand_visible = forms.BooleanField()
+    object_visible = forms.BooleanField()
+
+    demonstrator_species=forms.ModelChoiceField(queryset=Species.objects.all())
+    demonstration_type=forms.ChoiceField(choices=GraspObservationCondition.DEMONSTRATION_CHOICES)
+    viewing_angle=forms.DecimalField()
+    whole_body_visible = forms.BooleanField()
+
+
+    class Meta:
+        model=GraspCondition
+        exclude=()
+
+GraspConditionFormSet = lambda *a, **kw: inlineformset_factory(Experiment,GraspCondition,form=GraspConditionInlineForm, fk_name='experiment',
+    extra=kw.pop('extra', 0), can_delete=True)(*a, **kw)
 
 class ExperimentExportRequestForm(ModelForm):
     requesting_user=forms.ModelChoiceField(User.objects.all(),widget=forms.HiddenInput,required=False)

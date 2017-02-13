@@ -9,7 +9,7 @@ from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
 from tastypie.paginator import Paginator
 from tastypie.utils import trailing_slash
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, VisuomotorClassificationAnalysisResults, UnitClassification, VisuomotorClassificationAnalysis, Analysis, Factor, Level, UnitAnalysisResults, VisuomotorClassificationUnitAnalysisResults, AnalysisResultsLevelMapping
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, VisuomotorClassificationAnalysisResults, UnitClassification, VisuomotorClassificationAnalysis, Analysis, Factor, Level, UnitAnalysisResults, VisuomotorClassificationUnitAnalysisResults, AnalysisResultsLevelMapping, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -337,6 +337,10 @@ class AnalysisResource(ModelResource):
             analysis_res = VisuomotorClassificationAnalysisResource()
             analysis_bundle = analysis_res.build_bundle(obj=VisuomotorClassificationAnalysis.objects.get(id=bundle.obj.id), request=bundle.request)
             bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
+        elif MirrorTypeClassificationAnalysis.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,MirrorTypeClassificationAnalysis):
+            analysis_res = MirrorTypeClassificationAnalysisResource()
+            analysis_bundle = analysis_res.build_bundle(obj=MirrorTypeClassificationAnalysis.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
         return bundle
 
 
@@ -344,6 +348,15 @@ class VisuomotorClassificationAnalysisResource(AnalysisResource):
     class Meta:
         queryset=VisuomotorClassificationAnalysis.objects.all().prefetch_related('factors')
         resource_name='visuomotor_classification_analysis'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
+class MirrorTypeClassificationAnalysisResource(AnalysisResource):
+    class Meta:
+        queryset=MirrorTypeClassificationAnalysis.objects.all().prefetch_related('factors')
+        resource_name='mirror_type_classification_analysis'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
@@ -381,6 +394,10 @@ class AnalysisResultsResource(ModelResource):
             results_res = VisuomotorClassificationAnalysisResultsResource()
             results_bundle = results_res.build_bundle(obj=VisuomotorClassificationAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
             bundle.data = results_res.full_dehydrate(results_bundle).data
+        elif MirrorTypeClassificationAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,MirrorTypeClassificationAnalysisResults):
+            results_res = MirrorTypeClassificationAnalysisResultsResource()
+            results_bundle = results_res.build_bundle(obj=MirrorTypeClassificationAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = results_res.full_dehydrate(results_bundle).data
         return bundle
 
 
@@ -398,6 +415,20 @@ class VisuomotorClassificationAnalysisResultsResource(AnalysisResultsResource):
         cache = SimpleCache(timeout=10)
 
 
+class MirrorTypeClassificationAnalysisResultsResource(AnalysisResultsResource):
+    unit_classifications=fields.ToManyField(UnitClassificationResource,'unit_classifications', full=True)
+    class Meta:
+        queryset=MirrorTypeClassificationAnalysisResults.objects.all().select_related('analysis','experiment').prefetch_related('unit_analysis_results','unit_classifications')
+        resource_name='mirror_type_classification_analysis_results'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        filtering={
+            'analysis': ALL_WITH_RELATIONS,
+            'experiment': ALL_WITH_RELATIONS,
+            }
+        cache = SimpleCache(timeout=10)
+
+
 class UnitAnalysisResultsResource(ModelResource):
     unit=fields.ToOneField(UnitResource, 'unit', full=True)
     class Meta:
@@ -412,6 +443,10 @@ class UnitAnalysisResultsResource(ModelResource):
             results_res = VisuomotorClassificationUnitAnalysisResultsResource()
             results_bundle = results_res.build_bundle(obj=VisuomotorClassificationUnitAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
             bundle.data = results_res.full_dehydrate(results_bundle).data
+        elif MirrorTypeClassificationUnitAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,MirrorTypeClassificationUnitAnalysisResults):
+            results_res = MirrorTypeClassificationUnitAnalysisResultsResource()
+            results_bundle = results_res.build_bundle(obj=MirrorTypeClassificationUnitAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = results_res.full_dehydrate(results_bundle).data
         return bundle
 
 
@@ -419,6 +454,15 @@ class VisuomotorClassificationUnitAnalysisResultsResource(UnitAnalysisResultsRes
     class Meta:
         queryset=VisuomotorClassificationUnitAnalysisResults.objects.all().select_related('unit')
         resource_name='visuomotor_classification_unit_analysis_results'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
+class MirrorTypeClassificationUnitAnalysisResultsResource(UnitAnalysisResultsResource):
+    class Meta:
+        queryset=MirrorTypeClassificationUnitAnalysisResults.objects.all().select_related('unit')
+        resource_name='mirror_type_classification_unit_analysis_results'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)

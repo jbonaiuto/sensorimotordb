@@ -79,9 +79,9 @@ class UnitClassification(MPTTModel,models.Model):
         app_label='sensorimotordb'
 
 
-def get_woi_spikes(unit_recording, trial_events, rel_evt, rel_start_ms, rel_end_ms, rel_end_evt):
+def get_woi_spikes(unit_recording, trial_start_time, trial_events, rel_evt, rel_start_ms, rel_end_ms, rel_end_evt):
     if len(rel_end_evt) == 0:
-        woi_time_zero = float(unit_recording.trial.start_time)
+        woi_time_zero = float(trial_start_time)
         if not rel_evt == 'start':
             if trial_events.filter(name=rel_evt).exists():
                 woi_evt = trial_events.get(name=rel_evt)
@@ -91,7 +91,7 @@ def get_woi_spikes(unit_recording, trial_events, rel_evt, rel_start_ms, rel_end_
         woi_spikes = unit_recording.get_spikes_relative(woi_time_zero, [rel_start_ms, rel_end_ms])
     else:
         if trial_events.filter(name=rel_evt).exists() and trial_events.filter(name=rel_end_evt).exists():
-            woi_time_start = float(unit_recording.trial.start_time)
+            woi_time_start = float(trial_start_time)
             if not rel_evt == 'start':
                 woi_start_evt = trial_events.get(name=rel_evt)
                 woi_time_start = float(woi_start_evt.time)
@@ -282,28 +282,6 @@ class VisuomotorClassificationAnalysis(Analysis):
         print('%.4f %% visuomotor cells' % (unit_classifications['visuomotor'].units.count()/float(len(unit_ids))*100.0))
         print('%.4f %% other cells' % (unit_classifications['other'].units.count()/float(len(unit_ids))*100.0))
 
-
-    def get_woi_spikes(self, trial, unit_recording, rel_evt, rel_start_ms, rel_end_ms, rel_end_evt):
-        if len(rel_end_evt) == 0:
-            woi_time_zero = float(trial.start_time)
-            if not rel_evt == 'start':
-                woi_evt = Event.objects.get(name=rel_evt, trial=trial)
-                woi_time_zero = float(woi_evt.time)
-            woi_spikes = unit_recording.get_spikes_relative(woi_time_zero, [rel_start_ms, rel_end_ms])
-        else:
-            if Event.objects.filter(name=rel_evt, trial=trial).exists() and Event.objects.filter(name=rel_end_evt, trial=trial).exists():
-                woi_time_start = float(trial.start_time)
-                if not rel_evt == 'start':
-                    woi_start_evt = Event.objects.get(name=rel_evt, trial=trial)
-                    woi_time_start = float(woi_start_evt.time)
-                woi_time_end = float(trial.start_time)
-                if not rel_end_evt == 'start':
-                    woi_end_evt = Event.objects.get(name=rel_end_evt, trial=trial)
-                    woi_time_end = float(woi_end_evt.time)
-                woi_spikes = unit_recording.get_spikes_fixed([woi_time_start, woi_time_end])
-            else:
-                return None
-        return woi_spikes
 
     def test_unit_motor(self, results, unit):
         trial_ids=[]
@@ -551,3 +529,197 @@ class VisuomotorClassificationAnalysis(Analysis):
 
         return anova_results,objectgrasp_pairwise
 
+
+class MirrorTypeClassificationAnalysisResults(AnalysisResults):
+    baseline_rel_evt=models.CharField(max_length=1000, blank=False)
+    baseline_rel_start=models.IntegerField(blank=True, null=True)
+    baseline_rel_end=models.IntegerField(blank=True, null=True)
+    baseline_rel_end_evt=models.CharField(max_length=1000, blank=True, null=True)
+    reach_woi_rel_evt=models.CharField(max_length=1000, blank=False)
+    reach_woi_rel_start=models.IntegerField(blank=True, null=True)
+    reach_woi_rel_end=models.IntegerField(blank=True, null=True)
+    reach_woi_rel_end_evt=models.CharField(max_length=1000, blank=True, null=True)
+    hold_woi_rel_evt=models.CharField(max_length=1000, blank=False)
+    hold_woi_rel_start=models.IntegerField(blank=True, null=True)
+    hold_woi_rel_end=models.IntegerField(blank=True, null=True)
+    hold_woi_rel_end_evt=models.CharField(max_length=1000, blank=True, null=True)
+    total_num_units=models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        app_label='sensorimotordb'
+
+
+class MirrorTypeClassificationUnitAnalysisResults(UnitAnalysisResults):
+    pairwise_results_text=models.TextField()
+
+    class Meta:
+        app_label='sensorimotordb'
+
+
+class MirrorTypeClassificationAnalysis(Analysis):
+
+    class Meta:
+        app_label='sensorimotordb'
+
+    def run(self, results):
+        unit_ids=np.unique(UnitRecording.objects.filter(trial__condition__experiment=results.experiment).values_list('unit',
+            flat=True))
+        results.total_num_units=len(unit_ids)
+        results.save()
+
+        unit_classifications={
+            'F-F':UnitClassification(analysis_results=results, label='F-F'),
+            'F-S':UnitClassification(analysis_results=results, label='F-S'),
+            'F-ns':UnitClassification(analysis_results=results, label='F-ns'),
+            'S-F':UnitClassification(analysis_results=results, label='S-F'),
+            'S-S':UnitClassification(analysis_results=results, label='S-S'),
+            'S-ns':UnitClassification(analysis_results=results, label='S-ns'),
+            'ns-F':UnitClassification(analysis_results=results, label='ns-F'),
+            'ns-S':UnitClassification(analysis_results=results, label='ns-S'),
+            'ns-ns':UnitClassification(analysis_results=results, label='ns-ns')
+        }
+        for label, classification in unit_classifications.iteritems():
+            classification.save()
+
+        r_source = robjects.r['source']
+        r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/one_way_anova_repeated_measures.R'))
+        r_one_way_anova = robjects.globalenv['one_way_anova_repeated_measures']
+
+        for unit_id in unit_ids:
+            print('testing %d' % unit_id)
+            unit=Unit.objects.get(id=unit_id)
+            (exe_anova_results,exe_pairwise,exe_rates)=self.test_unit(r_one_way_anova, results, unit, 'execution')
+            (obs_anova_results,obs_pairwise,obs_rates)=self.test_unit(r_one_way_anova, results, unit, 'observation')
+
+            unit_results=VisuomotorClassificationUnitAnalysisResults(analysis_results=results,
+                results_text='\n'.join(['<h2>Execution</h2>',str(exe_anova_results),
+                                        '<h2>Observation</h2>',str(obs_anova_results)]),
+                pairwise_results_text='\n'.join(['<h2>Execution</h2>',
+                                                 str(exe_pairwise),
+                                                 '<h2>Observation</h2>',
+                                                 str(obs_pairwise)]),
+                unit=unit)
+            unit_results.save()
+
+            exe_classification='ns'
+            exe_anova_results=pandas2ri.ri2py_dataframe(exe_anova_results[1])
+            if exe_anova_results[4][0][0]<0.05:
+                # Reach compared to baseline
+                if exe_pairwise[1]<0.05:
+                    if np.mean(exe_rates['reach'])>np.mean(exe_rates['baseline']):
+                        exe_classification='F'
+                    else:
+                        exe_classification='S'
+                # Hold compared to baseline
+                elif exe_pairwise[0]<0.05:
+                    if np.mean(exe_rates['hold'])>np.mean(exe_rates['baseline']):
+                        exe_classification='F'
+                    else:
+                        exe_classification='S'
+            obs_classification='ns'
+            obs_anova_results=pandas2ri.ri2py_dataframe(obs_anova_results[1])
+            if obs_anova_results[4][0][0]<0.05:
+                if obs_pairwise[1]<0.05:
+                    if np.mean(obs_rates['reach'])>np.mean(obs_rates['baseline']):
+                        obs_classification='F'
+                    else:
+                        obs_classification='S'
+                elif obs_pairwise[0]<0.05:
+                    if np.mean(obs_rates['hold'])>np.mean(exe_rates['baseline']):
+                        obs_classification='F'
+                    else:
+                        obs_classification='S'
+            unit_classifications['%s-%s' % (exe_classification,obs_classification)].units.add(Unit.objects.get(id=unit_id))
+
+        print('%.4f %% F-F cells' % (unit_classifications['F-F'].units.count()/float(len(unit_ids))*100.0))
+        print('%.4f %% F-S cells' % (unit_classifications['F-S'].units.count()/float(len(unit_ids))*100.0))
+        print('%.4f %% F-ns cells' % (unit_classifications['F-ns'].units.count()/float(len(unit_ids))*100.0))
+        print('%.4f %% S-F cells' % (unit_classifications['S-F'].units.count()/float(len(unit_ids))*100.0))
+        print('%.4f %% S-S cells' % (unit_classifications['S-S'].units.count()/float(len(unit_ids))*100.0))
+        print('%.4f %% S-ns cells' % (unit_classifications['S-ns'].units.count()/float(len(unit_ids))*100.0))
+        print('%.4f %% ns-F cells' % (unit_classifications['ns-F'].units.count()/float(len(unit_ids))*100.0))
+        print('%.4f %% ns-S cells' % (unit_classifications['ns-S'].units.count()/float(len(unit_ids))*100.0))
+        print('%.4f %% ns-ns cells' % (unit_classifications['ns-ns'].units.count()/float(len(unit_ids))*100.0))
+
+    def test_unit(self, r_one_way_anova, results, unit, trial_type):
+        trial_ids=[]
+        rates=[]
+        wois=[]
+        all_rates={
+            'baseline':[],
+            'reach':[],
+            'hold':[]
+        }
+
+        condition_ids=[]
+        factor=Factor.objects.get(analysis=results.analysis, name='Trial type')
+        level=Level.objects.get(factor=factor, value=trial_type)
+        conditions=AnalysisResultsLevelMapping.objects.get(level=level,analysis_results=results).conditions.all()
+        for condition in conditions:
+            if not condition.id in condition_ids:
+                condition_ids.append(condition.id)
+
+        unit_recordings=UnitRecording.objects.filter(trial__condition__id__in=condition_ids, unit=unit).select_related('trial')
+        for trial_idx,unit_recording in enumerate(unit_recordings):
+            trial_events=list(Event.objects.filter(trial=unit_recording.trial))
+            trial_start_time=float(unit_recording.trial.start_time)
+
+            baseline_rel_start=0
+            if results.baseline_rel_start is not None:
+                baseline_rel_start=results.baseline_rel_start/1000.0
+            baseline_rel_end=0
+            if results.baseline_rel_end is not None:
+                baseline_rel_end=results.baseline_rel_end/1000.0
+            baseline_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.baseline_rel_evt,
+                baseline_rel_start, baseline_rel_end, results.baseline_rel_end_evt)
+
+            reach_woi_rel_start=0
+            if results.reach_woi_rel_start is not None:
+                reach_woi_rel_start=results.reach_woi_rel_start/1000.0
+            reach_woi_rel_end=0
+            if results.reach_woi_rel_end is not None:
+                reach_woi_rel_end=results.reach_woi_rel_end/1000.0
+            reach_woi_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.reach_woi_rel_evt,
+                reach_woi_rel_start, reach_woi_rel_end, results.reach_woi_rel_end_evt)
+
+            hold_woi_rel_start=0
+            if results.hold_woi_rel_start is not None:
+                hold_woi_rel_start=results.hold_woi_rel_start/1000.0
+            hold_woi_rel_end=0
+            if results.hold_woi_rel_end is not None:
+                hold_woi_rel_end=results.hold_woi_rel_end/1000.0
+            hold_woi_rate = get_woi_firing_rate(unit_recording, trial_start_time, trial_events, results.hold_woi_rel_evt,
+                hold_woi_rel_start, hold_woi_rel_end, results.hold_woi_rel_end_evt)
+
+            if baseline_rate is not None and reach_woi_rate is not None and hold_woi_rate is not None:
+
+                trial_ids.append(trial_idx+1)
+                rates.append(baseline_rate)
+                wois.append('baseline')
+
+                trial_ids.append(trial_idx+1)
+                rates.append(reach_woi_rate)
+                wois.append('reach')
+
+                trial_ids.append(trial_idx+1)
+                rates.append(hold_woi_rate)
+                wois.append('hold')
+
+                all_rates['baseline'].append(baseline_rate)
+                all_rates['reach'].append(reach_woi_rate)
+                all_rates['hold'].append(hold_woi_rate)
+
+        df= pd.DataFrame({
+            'trial': pd.Series(trial_ids),
+            'rates': pd.Series(rates),
+            'woi': pd.Series(wois),
+        })
+        #df.to_csv(path_or_buf='/home/jbonaiuto/%s.csv' % trial_type)
+
+        (anova_results,pairwise)=r_one_way_anova(df,"trial","rates","woi")
+
+        print(anova_results)
+        #anova_results=pandas2ri.ri2py_dataframe(anova_results)
+        #print(anova_results)
+        #pairwise=pandas2ri.ri2py_dataframe(pairwise)
+        return anova_results,pairwise,all_rates

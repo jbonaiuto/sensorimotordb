@@ -132,9 +132,7 @@ class ExperimentImportView(LoginRequiredMixin, UpdateView):
 
                 condition_map[(condition_form.cleaned_data['epoch_type'],condition_form.cleaned_data['trial_type'],condition_form.cleaned_data['object'])]=grasp_condition
         else:
-            print(condition_formset.errors)
             return self.form_invalid(form)
-
         self.import_bonini_data(condition_map)
         try:
             rebuild_index.Command().handle(interactive=False)

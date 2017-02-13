@@ -135,24 +135,25 @@ class ExperimentImportView(LoginRequiredMixin, UpdateView):
         condition_map={}
         if condition_formset.is_valid():
             for condition_form in condition_formset.forms:
-                if not condition_form in condition_formset.deleted_forms:
-                    grasp_condition=condition_form.save(commit=False)
-                    if grasp_condition.type=='grasp_performance':
-                        grasp_perf_cond=GraspPerformanceCondition(graspcondition_ptr=grasp_condition)
-                        grasp_perf_cond.__dict__.update(grasp_condition.__dict__)
-                        grasp_perf_cond.hand_visible=condition_form.cleaned_data['hand_visible']
-                        grasp_perf_cond.object_visible=condition_form.cleaned_data['object_visible']
-                        grasp_perf_cond.save()
-                    elif grasp_condition.type=='grasp_observation':
-                        grasp_obs_cond=GraspObservationCondition(graspcondition_ptr=grasp_condition)
-                        grasp_obs_cond.__dict__.update(grasp_condition.__dict__)
-                        grasp_obs_cond.demonstrator_species=condition_form.cleaned_data['demonstrator_species']
-                        grasp_obs_cond.demonstration_type=condition_form.cleaned_data['demonstration_type']
-                        grasp_obs_cond.viewing_angle=condition_form.cleaned_data['viewing_angle']
-                        grasp_obs_cond.whole_body_visible=condition_form.cleaned_data['whole_body_visible']
-                        grasp_obs_cond.save()
+                grasp_condition=condition_form.save(commit=False)
+                if grasp_condition.type=='grasp_performance':
+                    grasp_perf_cond=GraspPerformanceCondition(graspcondition_ptr=grasp_condition)
+                    grasp_perf_cond.__dict__.update(grasp_condition.__dict__)
+                    grasp_perf_cond.hand_visible=condition_form.cleaned_data['hand_visible']
+                    grasp_perf_cond.object_visible=condition_form.cleaned_data['object_visible']
+                    grasp_perf_cond.save()
+                elif grasp_condition.type=='grasp_observation':
+                    grasp_obs_cond=GraspObservationCondition(graspcondition_ptr=grasp_condition)
+                    grasp_obs_cond.__dict__.update(grasp_condition.__dict__)
+                    grasp_obs_cond.demonstrator_species=condition_form.cleaned_data['demonstrator_species']
+                    grasp_obs_cond.demonstration_type=condition_form.cleaned_data['demonstration_type']
+                    grasp_obs_cond.viewing_angle=condition_form.cleaned_data['viewing_angle']
+                    grasp_obs_cond.whole_body_visible=condition_form.cleaned_data['whole_body_visible']
+                    grasp_obs_cond.save()
 
-                    condition_map[(condition_form.cleaned_data['trial_type'],int(condition_form.cleaned_data['object']))]=grasp_condition.id
+                condition_map[(condition_form.cleaned_data['trial_type'],int(condition_form.cleaned_data['object']))]=grasp_condition.id
+        else:
+            return self.form_invalid(form)
         self.import_kraskov_data(condition_map)
         try:
             rebuild_index.Command().handle(interactive=False)

@@ -91,13 +91,13 @@ class GraspConditionInlineForm(ConditionInlineForm):
     object_distance=forms.DecimalField(required=True)
     grasp=forms.CharField(max_length=50)
 
-    hand_visible = forms.BooleanField()
-    object_visible = forms.BooleanField()
+    hand_visible = forms.BooleanField(required=False)
+    object_visible = forms.BooleanField(required=False)
 
     demonstrator_species=forms.ModelChoiceField(queryset=Species.objects.all())
     demonstration_type=forms.ChoiceField(choices=GraspObservationCondition.DEMONSTRATION_CHOICES)
     viewing_angle=forms.DecimalField()
-    whole_body_visible = forms.BooleanField()
+    whole_body_visible = forms.BooleanField(required=False)
 
 
     class Meta:

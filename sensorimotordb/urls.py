@@ -1,6 +1,8 @@
 # urls.py
 from django.conf.urls import patterns, include, url
 from tastypie.api import Api
+from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, VisuomotorClassificationAnalysisResource, VisuomotorClassificationAnalysisResultsResource, UnitClassificationResource, AnalysisResource, FactorResource, LevelResource, UnitAnalysisResultsResource, VisuomotorClassificationUnitAnalysisResultsResource, AnalysisResultsResource, MirrorTypeClassificationUnitAnalysisResultsResource, MirrorTypeClassificationAnalysisResource, MirrorTypeClassificationAnalysisResultsResource
+from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView, CreateVisuomotorClassificationAnalysisView, DeleteVisuomotorClassificationAnalysisResultsView, DeleteAnalysisResultsView, MirrorTypeClassificationAnalysisResultsDetailView, CreateMirrorTypeClassificationAnalysisView, DeleteMirrorTypeClassificationAnalysisResultsView
 from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, VisuomotorClassificationAnalysisResource, VisuomotorClassificationAnalysisResultsResource, UnitClassificationResource, AnalysisResource, FactorResource, LevelResource, UnitAnalysisResultsResource, VisuomotorClassificationUnitAnalysisResultsResource, AnalysisResultsResource
 from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView, CreateVisuomotorClassificationAnalysisView, DeleteVisuomotorClassificationAnalysisResultsView, DeleteAnalysisResultsView, ImportView, ExperimentImportView
 
@@ -27,11 +29,13 @@ v1_api.register(FactorResource())
 v1_api.register(LevelResource())
 v1_api.register(UnitAnalysisResultsResource())
 v1_api.register(VisuomotorClassificationUnitAnalysisResultsResource())
+v1_api.register(MirrorTypeClassificationUnitAnalysisResultsResource())
+v1_api.register(MirrorTypeClassificationAnalysisResource())
+v1_api.register(MirrorTypeClassificationAnalysisResultsResource())
 
 urlpatterns = patterns('',
     (r'^api/', include(v1_api.urls)),
     (r'^search/', SearchView.as_view(), {}, 'search_view'),
-    (r'^import/', ImportView.as_view(), {}, 'import_view'),
     (r'^experiment/(?P<pk>\d+)/$', ExperimentDetailView.as_view(), {}, 'experiment_view'),
     (r'^experiment/(?P<pk>\d+)/import/$', ExperimentImportView.as_view(), {}, 'experiment_import_view'),
     (r'^condition/(?P<pk>\d+)/$', ConditionDetailView.as_view(), {}, 'condition_view'),
@@ -46,6 +50,9 @@ urlpatterns = patterns('',
     (r'^analysis_results/(?P<pk>\d+)/delete/$', DeleteAnalysisResultsView.as_view(), {}, 'analysis_results_delete'),
     (r'^visuomotor_classification_analysis_results/(?P<pk>\d+)/$', VisuomotorClassificationAnalysisResultsDetailView.as_view(), {}, 'visuomotor_classification_analysis_results_view'),
     (r'^visuomotor_classification_analysis/new/$', CreateVisuomotorClassificationAnalysisView.as_view(), {}, 'visuomotor_classification_analysis_add'),
-    (r'^visuomotor_classification_analysis_results/(?P<pk>\d+)/delete/$', DeleteVisuomotorClassificationAnalysisResultsView.as_view(), {}, 'analysis_results_delete'),
+    (r'^visuomotor_classification_analysis_results/(?P<pk>\d+)/delete/$', DeleteVisuomotorClassificationAnalysisResultsView.as_view(), {}, 'visuomotor_classification_analysis_results_delete'),
+    (r'^mirror_type_classification_analysis_results/(?P<pk>\d+)/$', MirrorTypeClassificationAnalysisResultsDetailView.as_view(), {}, 'mirror_type_classification_analysis_results_view'),
+    (r'^mirror_type_classification_analysis/new/$', CreateMirrorTypeClassificationAnalysisView.as_view(), {}, 'mirror_type_classification_analysis_add'),
+    (r'^mirror_type_classification_analysis_results/(?P<pk>\d+)/delete/$', DeleteMirrorTypeClassificationAnalysisResultsView.as_view(), {}, 'mirror_type_classification_analysis_results_delete'),
     (r'', IndexView.as_view(), {}, 'index'),
 )

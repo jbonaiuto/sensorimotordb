@@ -3,7 +3,29 @@ from django import forms
 from django.forms.models import ModelForm, inlineformset_factory
 from registration.forms import RegistrationForm
 from registration.users import UsernameField
-from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis, Species, Condition, GraspObservationCondition, GraspCondition
+from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis, MirrorTypeClassificationAnalysisResults, Species, GraspCondition, Condition, GraspObservationCondition
+
+class MirrorTypeClassificationAnalysisResultsForm(ModelForm):
+    analysis = forms.ModelChoiceField(Analysis.objects.all(),widget=forms.HiddenInput,required=True)
+    experiment = forms.ModelChoiceField(Experiment.objects.all(),widget=forms.HiddenInput,required=True)
+    name=forms.CharField(max_length=100, required=True)
+    description=forms.CharField(widget=forms.Textarea(attrs={'cols':'57','rows':'5'}),required=True)
+    baseline_rel_evt=forms.ChoiceField(label='Baseline relative event',required=True)
+    baseline_rel_start=forms.IntegerField(label='Baseline start (ms)',required=False)
+    baseline_rel_end=forms.IntegerField(label='Baseline end (ms)',required=False)
+    baseline_rel_end_evt=forms.ChoiceField(label='Baseline end event',required=False)
+    reach_woi_rel_evt=forms.ChoiceField(label='Reach WOI relative event', required=True)
+    reach_woi_rel_start=forms.IntegerField(label='Reach WOI start (ms)', required=False)
+    reach_woi_rel_end=forms.IntegerField(label='Reach WOI end (ms)', required=False)
+    reach_woi_rel_end_evt=forms.ChoiceField(label='Reach WOI end event', required=False)
+    hold_woi_rel_evt=forms.ChoiceField(label='Hold WOI relative event', required=True)
+    hold_woi_rel_start=forms.IntegerField(label='Hold WOI start (ms)', required=False)
+    hold_woi_rel_end=forms.IntegerField(label='Hold WOI end (ms)', required=False)
+    hold_woi_rel_end_evt=forms.ChoiceField(label='Hold WOI end event', required=False)
+
+    class Meta:
+        model=MirrorTypeClassificationAnalysisResults
+        exclude=('total_num_units',)
 
 
 class VisuomotorClassificationAnalysisResultsForm(ModelForm):

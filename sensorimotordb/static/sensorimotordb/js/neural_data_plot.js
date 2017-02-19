@@ -335,15 +335,22 @@ function drawHistogram(id, parent_id, data, trial_events, event_types)
                 var mean_time=d3.mean(times);
                 var min_time=d3.min(times);
                 var max_time=d3.max(times);
-                event_lines.get(event_type)
-                    .attr("x1", xScale(mean_time))
-                    .attr("x2",xScale(mean_time));
                 var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-                event_areas.get(event_type)
-                    .attr("x1", area_x)
-                    .attr("x2", area_x)
-                    .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
-                event_notes.get(event_type).attr("x", xScale(mean_time))
+                if(event_lines.has(event_type))
+                {
+                    event_lines.get(event_type)
+                        .attr("x1", xScale(mean_time))
+                        .attr("x2",xScale(mean_time));
+                }
+                if(event_areas.has(event_type))
+                {
+                    event_areas.get(event_type)
+                        .attr("x1", area_x)
+                        .attr("x2", area_x)
+                        .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
+                }
+                if(event_notes.has(event_type))
+                    event_notes.get(event_type).attr("x", xScale(mean_time))
             }
         }
         histo_svg.selectAll(".text").data(hist).remove();
@@ -545,15 +552,22 @@ function drawFiringRate(id, parent_id, data, trial_events, event_types)
                 var mean_time=d3.mean(times);
                 var min_time=d3.min(times);
                 var max_time=d3.max(times);
-                event_lines.get(event_type)
-                    .attr("x1", xScale(mean_time))
-                    .attr("x2",xScale(mean_time));
                 var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-                event_areas.get(event_type)
-                    .attr("x1", area_x)
-                    .attr("x2", area_x)
-                    .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
-                event_notes.get(event_type).attr("x", xScale(mean_time))
+                if(event_lines.has(event_type))
+                {
+                    event_lines.get(event_type)
+                        .attr("x1", xScale(mean_time))
+                        .attr("x2",xScale(mean_time));
+                }
+                if(event_areas.has(event_type))
+                {
+                    event_areas.get(event_type)
+                        .attr("x1", area_x)
+                        .attr("x2", area_x)
+                        .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
+                }
+                if(event_notes.has(event_type))
+                    event_notes.get(event_type).attr("x", xScale(mean_time))
             }
         }
 
@@ -869,15 +883,22 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
                 var mean_time=d3.mean(times);
                 var min_time=d3.min(times);
                 var max_time=d3.max(times);
-                event_lines.get(event_type)
-                    .attr("x1", xScale(mean_time))
-                    .attr("x2",xScale(mean_time));
                 var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-                event_areas.get(event_type)
-                    .attr("x1", area_x)
-                    .attr("x2", area_x)
-                    .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
-                event_notes.get(event_type).attr("x", xScale(mean_time))
+                if(event_lines.has(event_type))
+                {
+                    event_lines.get(event_type)
+                        .attr("x1", xScale(mean_time))
+                        .attr("x2",xScale(mean_time));
+                }
+                if(event_areas.has(event_type))
+                {
+                    event_areas.get(event_type)
+                        .attr("x1", area_x)
+                        .attr("x2", area_x)
+                        .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
+                }
+                if(event_notes.has(event_type))
+                    event_notes.get(event_type).attr("x", xScale(mean_time))
             }
         }
 
@@ -1195,15 +1216,22 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
             var mean_time=d3.mean(times);
             var min_time=d3.min(times);
             var max_time=d3.max(times);
-            event_lines.get(event_type)
-                .attr("x1", xScale(mean_time))
-                .attr("x2",xScale(mean_time));
             var area_x=xScale(min_time)+.5*(xScale(max_time)-xScale(min_time));
-            event_areas.get(event_type)
-                .attr("x1", area_x)
-                .attr("x2", area_x)
-                .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
-            event_notes.get(event_type).attr("x", xScale(mean_time))
+            if(event_lines.has(event_type))
+            {
+                event_lines.get(event_type)
+                    .attr("x1", xScale(mean_time))
+                    .attr("x2",xScale(mean_time));
+            }
+            if(event_areas.has(event_type))
+            {
+                event_areas.get(event_type)
+                    .attr("x1", area_x)
+                    .attr("x2", area_x)
+                    .style("stroke-width", (xScale(max_time)-xScale(min_time)+1)+"px");
+            }
+            if(event_notes.has(event_type))
+                event_notes.get(event_type).attr("x", xScale(mean_time))
         }
 
         for(var i=0; i<group_ids.length; i++)

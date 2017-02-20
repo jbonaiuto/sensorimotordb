@@ -16,8 +16,11 @@ from haystack.management.commands import rebuild_index
 import os
 from registration.forms import User
 from tastypie.models import ApiKey
-from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, ExperimentImportForm, GraspConditionFormSet, ExperimentForm, MirrorTypeClassificationAnalysisResultsForm
-from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, GraspCondition, Species, BrainRegion, RecordingTrial, UnitRecording, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis
+from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, ExperimentImportForm, GraspConditionFormSet, ExperimentForm, \
+    MirrorTypeClassificationAnalysisResultsForm
+from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, GraspCondition, Species, BrainRegion, RecordingTrial, UnitRecording, \
+    MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, \
+    MirrorTypeClassificationAnalysis
 from uscbp import settings
 from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
 
@@ -553,6 +556,26 @@ class DeleteAnalysisResultsView(JSONResponseMixin,BaseDetailView):
                 for classification in UnitClassification.objects.filter(analysis_results=results):
                     classification.delete()
                 for unit_results in MirrorTypeClassificationUnitAnalysisResults.objects.filter(analysis_results=results):
+                    unit_results.delete()
+                for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=results):
+                    level_mapping.delete()
+                results.delete()
+                self.object.delete()
+            context={'id': self.request.POST['id']}
+
+        return context
+
+class DeleteAnalysisResultsView(JSONResponseMixin,BaseDetailView):
+    model=AnalysisResults
+    def get_context_data(self, **kwargs):
+        context={'msg':u'No POST data sent.' }
+        if self.request.is_ajax():
+            self.object=self.get_object()
+            if VisuomotorClassificationAnalysisResults.objects.filter(id=self.object.id):
+                results=VisuomotorClassificationAnalysisResults.objects.get(id=self.object.id)
+                for classification in UnitClassification.objects.filter(analysis_results=results):
+                    classification.delete()
+                for unit_results in VisuomotorClassificationUnitAnalysisResults.objects.filter(analysis_results=results):
                     unit_results.delete()
                 for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=results):
                     level_mapping.delete()

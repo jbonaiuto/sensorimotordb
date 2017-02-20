@@ -3,7 +3,9 @@ from django import forms
 from django.forms.models import ModelForm, inlineformset_factory
 from registration.forms import RegistrationForm
 from registration.users import UsernameField
-from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis, MirrorTypeClassificationAnalysisResults, Species, GraspCondition, Condition, GraspObservationCondition
+from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis, MirrorTypeClassificationAnalysisResults, \
+    Species, Condition, GraspObservationCondition, GraspCondition
+
 
 class MirrorTypeClassificationAnalysisResultsForm(ModelForm):
     analysis = forms.ModelChoiceField(Analysis.objects.all(),widget=forms.HiddenInput,required=True)

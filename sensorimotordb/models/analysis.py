@@ -214,8 +214,9 @@ class VisuomotorClassificationAnalysis(Analysis):
 
         for unit_id in unit_ids:
             unit=Unit.objects.get(id=unit_id)
-            (motor_anova_results,motor_visibility_pairwise,motor_objectgrasp_pairwise,motor_visibilityobjectgrasp_pairwise,
-                motor_objectgraspvisibility_pairwise,motor_pref)=self.test_unit_motor(results, unit)
+            (motor_anova_results,motor_pairwise)=self.test_unit_motor(results, unit)
+            print(motor_anova_results)
+            print(motor_pairwise)
             (objpres_anova_results,objpres_trialtype_pairwise,objpres_objectgrasp_pairwise,
                 objpres_trialtypeobjectgrasp_pairwise,objpres_objectgrasptrialtype_pairwise, objpres_pref)=self.test_unit_obj_pres(results, unit)
             (obs_grasp_anova_results,obs_grasp_objectgrasp_pairwise)=self.test_unit_obs_grasp(results, unit)
@@ -287,9 +288,9 @@ class VisuomotorClassificationAnalysis(Analysis):
         trial_ids=[]
         visibilities=[]
         objectgrasps=[]
-        rate_diff=[]
+        epochs=[]
+        rates=[]
         condition_ids=[]
-        objectgrasps_rates={}
         for factor_name in ['Grasp Execution: Visibility','Grasp Execution: Object/Grasp']:
             factor=Factor.objects.get(analysis=results.analysis, name=factor_name)
             for level in factor.levels.all():
@@ -335,42 +336,34 @@ class VisuomotorClassificationAnalysis(Analysis):
                         trial_ids.append(trial.id)
                         visibilities.append(visibility)
                         objectgrasps.append(objectgrasp)
-                        rate_diff.append(woi_rate-baseline_rate)
+                        epochs.append('baseline')
+                        rates.append(baseline_rate)
 
-                        if not objectgrasp in objectgrasps_rates:
-                            objectgrasps_rates[objectgrasp]=[]
-                        objectgrasps_rates[objectgrasp].append(woi_rate-baseline_rate)
+                        trial_ids.append(trial.id)
+                        visibilities.append(visibility)
+                        objectgrasps.append(objectgrasp)
+                        epochs.append('grasping')
+                        rates.append(woi_rate)
+
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
             'visibility': pd.Series(visibilities),
             'objectgrasp': pd.Series(objectgrasps),
-            'rate_diff': pd.Series(rate_diff)
+            'epoch': pd.Series(epochs),
+            'rate': pd.Series(rates)
         })
 
         df=df.set_index(['trial'])
 
         r_source = robjects.r['source']
-        r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/two_way_anova.R'))
-        r_two_way_anova = robjects.globalenv['two_way_anova']
-        (anova_results,visibility_pairwise, objectgrasp_pairwise, visibilityobjectgrasp_pairwise,objectgraspvisibility_pairwise)=r_two_way_anova(df,"rate_diff",
-            "visibility","objectgrasp")
-
+        r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/three_way_anova_repeated_measures.R'))
+        r_three_way_anova = robjects.globalenv['three_way_anova_repeated_measures']
+        (anova_results, pairwise)=r_three_way_anova(df,"trial","rate","epoch","objectgrasp","visibility")
         anova_results=pandas2ri.ri2py_dataframe(anova_results)
-        visibility_pairwise=pandas2ri.ri2py_listvector(visibility_pairwise)
-        objectgrasp_pairwise=pandas2ri.ri2py_listvector(objectgrasp_pairwise)
-        visibilityobjectgrasp_pairwise=pandas2ri.ri2py_dataframe(visibilityobjectgrasp_pairwise)
-        objectgraspvisibility_pairwise=pandas2ri.ri2py_dataframe(objectgraspvisibility_pairwise)
+        pairwise=pandas2ri.ri2py_dataframe(pairwise)
 
-        max_rate=0
-        pref_objgrasp=''
-        for objgrasp in objectgrasps_rates:
-            mean_rate=np.mean(objectgrasps_rates[objgrasp])
-            if mean_rate>max_rate:
-                max_rate=mean_rate
-                pref_objgrasp=objgrasp
-
-        return anova_results,visibility_pairwise,objectgrasp_pairwise,visibilityobjectgrasp_pairwise,objectgraspvisibility_pairwise,pref_objgrasp
+        return anova_results,pairwise
 
 
     def test_unit_obj_pres(self, results, unit):

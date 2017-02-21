@@ -1,0 +1,25 @@
+three_way_anova_repeated_measures<-function(data, subject_var, resp_var, factor1, factor2, factor3){
+
+    # Make sure needed packages are installed and loaded
+    if(length(new<-(packages<-c("lsmeans","lme4","afex"))[!(packages %in% installed.packages()[,"Package"])])){
+        install.packages(new[!(new %in% installed.packages()[,"Package"])])
+    }
+    sapply(packages, require, character.only=T)
+    data[,subject_var]=factor(data[,subject_var])
+
+    # Construct ANOVA formula
+    f <- paste(resp_var, "~", factor1, "*", factor2, "*", factor3, "+ Error(",subject_var,")")
+
+    # Run ANOVA and get results
+    anova_results=do.call("aov", list(as.formula(f), data=data))
+
+    f <- paste(resp_var, "~", factor1, "*", factor2, "*", factor3, "+ (1|",subject_var,")")
+    model<-do.call("lmer", list(as.formula(f), data=data))
+
+    f <- paste("pairwise ~", factor1, "*", factor2, "*", factor3)
+    pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+
+    # Return results as a list
+    result <- list("anova"=summary(anova_results), "pairwise"=summary(pairwise$contrasts))
+    return(result)
+}

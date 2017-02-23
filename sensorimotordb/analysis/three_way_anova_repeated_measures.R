@@ -17,9 +17,29 @@ three_way_anova_repeated_measures<-function(data, subject_var, resp_var, factor1
     model<-do.call("lmer", list(as.formula(f), data=data))
 
     f <- paste("pairwise ~", factor1, "*", factor2, "*", factor3)
-    pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+    threeway_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+
+    f <- paste("pairwise ~", factor1, "*", factor2)
+    factor1_factor2_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+
+    f <- paste("pairwise ~", factor1, "*", factor3)
+    factor1_factor3_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+
+    f <- paste("pairwise ~", factor2, "*", factor3)
+    factor2_factor3_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+
+    f <- paste("pairwise ~", factor1)
+    factor1_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+
+    f <- paste("pairwise ~", factor2)
+    factor2_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+
+    f <- paste("pairwise ~", factor3)
+    factor3_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
 
     # Return results as a list
-    result <- list("anova"=summary(anova_results), "pairwise"=summary(pairwise$contrasts))
+    x<-summary(anova_results)
+    #result <- list("anova"=summary(anova_results), "pairwise"=summary(pairwise$contrasts))
+    result <- list("anova_trial"=x$'Error: trial', "anova_within"=x$'Error: Within', "threeway_pairwise"=summary(threeway_pairwise)$contrasts, "factor1_factor2_pairwise"=summary(factor1_factor2_pairwise)$contrasts, "factor1_factor3_pairwise"=summary(factor1_factor3_pairwise)$contrasts, "factor2_factor3_pairwise"=summary(factor2_factor3_pairwise)$contrasts, "factor1_pairwise"=summary(factor1_pairwise)$contrasts, "factor2_pairwise"=summary(factor2_pairwise)$contrasts, "factor3_pairwise"=summary(factor3_pairwise)$contrasts)
     return(result)
 }

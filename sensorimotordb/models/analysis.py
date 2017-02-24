@@ -182,7 +182,7 @@ class VisuomotorClassificationAnalysis(Analysis):
     def check_motor_properties(self, visuomotor_motor_results):
         motor_properties = False
         # If threeway interaction - check that grasp>baseline for at least one objectgrasp/visibility condition
-        if visuomotor_motor_results['anova_within']['Pr(>F)'][3]:
+        if visuomotor_motor_results['anova_within']['Pr(>F)'][3]<0.05:
             for index in visuomotor_motor_results['threeway_pairwise'].index:
                 if visuomotor_motor_results['threeway_pairwise']['p.value'][index] < 0.05:
                     contrast = visuomotor_motor_results['threeway_pairwise']['contrast'][index]
@@ -207,7 +207,7 @@ class VisuomotorClassificationAnalysis(Analysis):
                             motor_properties = True
                             break
         # If epoch x objectgrasp interaction - check that grasp>baseline for at least one object/grasp
-        elif visuomotor_motor_results['anova_within']['Pr(>F)'][1]:
+        elif visuomotor_motor_results['anova_within']['Pr(>F)'][1]<0.05:
             for index in visuomotor_motor_results['epoch_objectgrasp_pairwise'].index:
                 if visuomotor_motor_results['epoch_objectgrasp_pairwise']['p.value'][index] < 0.05:
                     contrast = visuomotor_motor_results['epoch_objectgrasp_pairwise']['contrast'][index]
@@ -230,7 +230,7 @@ class VisuomotorClassificationAnalysis(Analysis):
                             motor_properties = True
                             break
         # If epoch x visibility interaction - checkt that grasp>baseline for at least one visibility condition
-        elif visuomotor_motor_results['anova_within']['Pr(>F)'][2]:
+        elif visuomotor_motor_results['anova_within']['Pr(>F)'][2]<.05:
             for index in visuomotor_motor_results['epoch_visibility_pairwise'].index:
                 if visuomotor_motor_results['epoch_visibility_pairwise']['p.value'][index] < 0.05:
                     contrast = visuomotor_motor_results['epoch_visibility_pairwise']['contrast'][index]
@@ -254,19 +254,28 @@ class VisuomotorClassificationAnalysis(Analysis):
                             break
 
         # If main effect f epoch - check that grasp>baseline
-        elif visuomotor_motor_results['anova_within']['Pr(>F)'][0]:
+        elif visuomotor_motor_results['anova_within']['Pr(>F)'][0]<0.05:
             index = visuomotor_motor_results['epoch_pairwise'].index[0]
             if visuomotor_motor_results['epoch_pairwise']['p.value'][index] < 0.05 and \
                visuomotor_motor_results['epoch_pairwise']['estimate'][index] < 0:
                 motor_properties = True
 
-        return motor_properties
+        grasp_selective = False
+        if motor_properties:
+            # Grasp selective if epoch:objectgrasp:visibility or epoch:objectgrasp or objectgrasp:visibility or objectgrasp
+            if visuomotor_motor_results['anova_within']['Pr(>F)'][3]<0.05 or \
+               visuomotor_motor_results['anova_within']['Pr(>F)'][1]<0.05 or \
+               visuomotor_motor_results['anova_trial']['Pr(>F)'][2]<0.05 or \
+               visuomotor_motor_results['anova_trial']['Pr(>F)'][0]<0.05:
+                grasp_selective=True
+
+        return motor_properties, grasp_selective
 
 
     def check_objpres_properties(self, objpres_results):
         objpres_properties = False
         # If threeway interaction - check that grasp>baseline for at least one objectgrasp/visibility condition
-        if objpres_results['anova_within']['Pr(>F)'][3]:
+        if objpres_results['anova_within']['Pr(>F)'][3]<0.05:
             for index in objpres_results['threeway_pairwise'].index:
                 if objpres_results['threeway_pairwise']['p.value'][index] < 0.05:
                     contrast = objpres_results['threeway_pairwise']['contrast'][index]
@@ -291,7 +300,7 @@ class VisuomotorClassificationAnalysis(Analysis):
                             objpres_properties = True
                             break
         # If epoch x objectgrasp interaction - check that grasp>baseline for at least one object/grasp
-        elif objpres_results['anova_within']['Pr(>F)'][1]:
+        elif objpres_results['anova_within']['Pr(>F)'][1]<0.05:
             for index in objpres_results['epoch_objectgrasp_pairwise'].index:
                 if objpres_results['epoch_objectgrasp_pairwise']['p.value'][index] < 0.05:
                     contrast = objpres_results['epoch_objectgrasp_pairwise']['contrast'][index]
@@ -314,7 +323,7 @@ class VisuomotorClassificationAnalysis(Analysis):
                             objpres_properties = True
                             break
         # If epoch x trialtype interaction - checkt that grasp>baseline for at least one visibility condition
-        elif objpres_results['anova_within']['Pr(>F)'][2]:
+        elif objpres_results['anova_within']['Pr(>F)'][2]<0.05:
             for index in objpres_results['epoch_trialtype_pairwise'].index:
                 if objpres_results['epoch_trialtype_pairwise']['p.value'][index] < 0.05:
                     contrast = objpres_results['epoch_trialtype_pairwise']['contrast'][index]
@@ -338,7 +347,7 @@ class VisuomotorClassificationAnalysis(Analysis):
                             break
 
         # If main effect f epoch - check that grasp>baseline
-        elif objpres_results['anova_within']['Pr(>F)'][0]:
+        elif objpres_results['anova_within']['Pr(>F)'][0]<0.05:
             index = objpres_results['epoch_pairwise'].index[0]
             if objpres_results['epoch_pairwise']['p.value'][index] < 0.05 and\
                objpres_results['epoch_pairwise']['estimate'][index] < 0:
@@ -350,7 +359,7 @@ class VisuomotorClassificationAnalysis(Analysis):
     def check_observation_properties(self, obs_results):
         obs_properties = False
         # If twoway interaction - check that grasp>baseline for at least one objectgrasp condition
-        if obs_results['anova_within']['Pr(>F)'][1]:
+        if obs_results['anova_within']['Pr(>F)'][1]<0.05:
             for index in obs_results['twoway_pairwise'].index:
                 if obs_results['twoway_pairwise']['p.value'][index] < 0.05:
                     contrast = obs_results['twoway_pairwise']['contrast'][index]
@@ -373,13 +382,20 @@ class VisuomotorClassificationAnalysis(Analysis):
                             obs_properties = True
                             break
         # If main effect f epoch - check that grasp>baseline
-        elif obs_results['anova_within']['Pr(>F)'][0]:
+        elif obs_results['anova_within']['Pr(>F)'][0]<0.05:
             index = obs_results['epoch_pairwise'].index[0]
             if obs_results['epoch_pairwise']['p.value'][index] < 0.05 and\
                obs_results['epoch_pairwise']['estimate'][index] < 0:
                 obs_properties = True
 
-        return obs_properties
+        grasp_selective = False
+        if obs_properties:
+            # Grasp selective if epoch:objectgrasp or objectgrasp
+            if obs_results['anova_within']['Pr(>F)'][1]<0.05 or\
+               obs_results['anova_trial']['Pr(>F)'][0]<0.05:
+                grasp_selective=True
+
+        return obs_properties, grasp_selective
 
 
     def run(self, results):
@@ -396,26 +412,22 @@ class VisuomotorClassificationAnalysis(Analysis):
         }
         for label, classification in unit_classifications.iteritems():
             classification.save()
+        unit_classifications['motor - grasp selective']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='motor - grasp selective')
+        unit_classifications['motor - grasp selective'].save()
+        unit_classifications['motor - grasp unselective']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='motor - grasp unselective')
+        unit_classifications['motor - grasp unselective'].save()
         unit_classifications['canonical']=UnitClassification(parent=unit_classifications['visuomotor'],analysis_results=results,label='canonical')
         unit_classifications['canonical'].save()
         unit_classifications['mirror']=UnitClassification(parent=unit_classifications['visuomotor'],analysis_results=results,label='mirror')
         unit_classifications['mirror'].save()
+        unit_classifications['mirror - grasp selective']=UnitClassification(parent=unit_classifications['mirror'],analysis_results=results,label='mirror - grasp unselective')
+        unit_classifications['mirror - grasp selective'].save()
+        unit_classifications['mirror - grasp unselective']=UnitClassification(parent=unit_classifications['mirror'],analysis_results=results,label='mirror - grasp unselective')
+        unit_classifications['mirror - grasp unselective'].save()
         unit_classifications['canonical mirror']=UnitClassification(parent=unit_classifications['visuomotor'],analysis_results=results,label='canonical mirror')
         unit_classifications['canonical mirror'].save()
         unit_classifications['visuomotor other']=UnitClassification(parent=unit_classifications['visuomotor'],analysis_results=results,label='visuomotor other')
         unit_classifications['visuomotor other'].save()
-        #unit_classifications['motor - ringhook']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='ringhook')
-        #unit_classifications['motor - ringhook'].save()
-        #unit_classifications['motor - smallconeside']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='smallconeside')
-        #unit_classifications['motor - smallconeside'].save()
-        #unit_classifications['motor - largeconewhole']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='largeconewhole')
-        #unit_classifications['motor - largeconewhole'].save()
-        #unit_classifications['visual - ringhook']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='ringhook')
-        #unit_classifications['visual - ringhook'].save()
-        #unit_classifications['visual - smallconeside']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='smallconeside')
-        #unit_classifications['visual - smallconeside'].save()
-        #unit_classifications['visual - largeconewhole']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='largeconewhole')
-        #unit_classifications['visual - largeconewhole'].save()
 
         for unit_id in unit_ids:
             unit=Unit.objects.get(id=unit_id)
@@ -464,37 +476,49 @@ class VisuomotorClassificationAnalysis(Analysis):
                 unit=unit)
             unit_results.save()
 
-            motor_properties = self.check_motor_properties(visuomotor_motor_results)
+            (motor_properties,motor_grasp_selective) = self.check_motor_properties(visuomotor_motor_results)
             visuomotor_objpres_properties = self.check_objpres_properties(visuomotor_objpres_results)
 
             observation_objpres_properties = self.check_objpres_properties(obs_objpres_results)
-            observation_properties = self.check_observation_properties(obs_grasp_results)
+            (observation_properties,obs_grasp_selective) = self.check_observation_properties(obs_grasp_results)
 
             visual_properties = visuomotor_objpres_properties or observation_objpres_properties or observation_properties
 
             # If cell has motor and visual properties -> visomotor
             if motor_properties and visual_properties:
-                unit_classifications['visuomotor'].units.add(Unit.objects.get(id=unit_id))
+                unit_classifications['visuomotor'].units.add(unit)
 
                 # If fires for object presentation and action observation -> canonical mirror
                 if visuomotor_objpres_properties and not (observation_objpres_properties or observation_properties):
-                    unit_classifications['canonical'].units.add(Unit.objects.get(id=unit_id))
+                    unit_classifications['canonical'].units.add(unit)
                 # If fires only for object presentation -> canonical
                 elif observation_properties and (visuomotor_objpres_properties or observation_objpres_properties):
-                    unit_classifications['canonical mirror'].units.add(Unit.objects.get(id=unit_id))
+                    unit_classifications['canonical mirror'].units.add(unit)
                 # If fires only during action observation -> mirror
                 elif observation_properties:
-                    unit_classifications['mirror'].units.add(Unit.objects.get(id=unit_id))
+                    unit_classifications['mirror'].units.add(unit)
+                    if obs_grasp_selective:
+                        unit_classifications['mirror - grasp selective'].units.add(unit)
+                    else:
+                        unit_classifications['mirror - grasp unselective'].units.add(unit)
+                else:
+                    unit_classifications['visuomotor other'].units.add(unit)
 
             # If only has motor properties -> motor
             elif motor_properties :
-                unit_classifications['motor'].units.add(Unit.objects.get(id=unit_id))
+                unit_classifications['motor'].units.add(unit)
+
+                if motor_grasp_selective:
+                    unit_classifications['motor - grasp selective'].units.add(unit)
+                else:
+                    unit_classifications['motor - grasp unselective'].units.add(unit)
+
             # If only has visual properties -> visual
             elif visual_properties:
-                unit_classifications['visual'].units.add(Unit.objects.get(id=unit_id))
+                unit_classifications['visual'].units.add(unit)
             # Otherwise other
             else:
-                unit_classifications['other'].units.add(Unit.objects.get(id=unit_id))
+                unit_classifications['other'].units.add(unit)
 
         print('%.4f %% motor cells' % (unit_classifications['motor'].units.count()/float(len(unit_ids))*100.0))
         print('%.4f %% visual cells' % (unit_classifications['visual'].units.count()/float(len(unit_ids))*100.0))
@@ -580,7 +604,7 @@ class VisuomotorClassificationAnalysis(Analysis):
         (anova_results_trial, anova_results_within, threeway_pairwise, epoch_objectgrasp_pairwise,
             epoch_visibility_pairwise, objectgrasp_visibility_pairwise, epoch_pairwise, objectgrasp_pairwise,
             visibility_pairwise)=r_three_way_anova(df,"trial","rate","epoch","objectgrasp","visibility")
-        results={
+        stats_results={
             'anova_trial': pandas2ri.ri2py_dataframe(anova_results_trial[0]),
             'anova_within': pandas2ri.ri2py_dataframe(anova_results_within[0]),
             'threeway_pairwise': pandas2ri.ri2py_dataframe(threeway_pairwise),
@@ -591,7 +615,7 @@ class VisuomotorClassificationAnalysis(Analysis):
             'objectgrasp_pairwise': pandas2ri.ri2py_dataframe(objectgrasp_pairwise),
             'visibility_pairwise': pandas2ri.ri2py_dataframe(visibility_pairwise)
         }
-        return results
+        return stats_results
 
 
     def test_unit_obj_pres(self, results, unit, task):
@@ -672,7 +696,7 @@ class VisuomotorClassificationAnalysis(Analysis):
         (anova_results_trial, anova_results_within, threeway_pairwise, epoch_objectgrasp_pairwise,
              epoch_visibility_pairwise, objectgrasp_visibility_pairwise, epoch_pairwise, objectgrasp_pairwise,
             visibility_pairwise)=r_three_way_anova(df,"trial","rate","epoch","objectgrasp","trial_type")
-        results={
+        stats_results={
             'anova_trial': pandas2ri.ri2py_dataframe(anova_results_trial[0]),
             'anova_within': pandas2ri.ri2py_dataframe(anova_results_within[0]),
             'threeway_pairwise': pandas2ri.ri2py_dataframe(threeway_pairwise),
@@ -683,7 +707,7 @@ class VisuomotorClassificationAnalysis(Analysis):
             'objectgrasp_pairwise': pandas2ri.ri2py_dataframe(objectgrasp_pairwise),
             'trialtype_pairwise': pandas2ri.ri2py_dataframe(visibility_pairwise)
         }
-        return results
+        return stats_results
 
 
     def test_unit_obs_grasp(self, results, unit):
@@ -754,14 +778,14 @@ class VisuomotorClassificationAnalysis(Analysis):
         r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/two_way_anova_repeated_measures.R'))
         r_two_way_anova = robjects.globalenv['two_way_anova_repeated_measures']
         (anova_results_trial, anova_results_within, twoway_pairwise, epoch_pairwise, objectgrasp_pairwise)=r_two_way_anova(df,"trial","rate","epoch","objectgrasp")
-        results={
+        stats_results={
             'anova_trial': pandas2ri.ri2py_dataframe(anova_results_trial[0]),
             'anova_within': pandas2ri.ri2py_dataframe(anova_results_within[0]),
             'twoway_pairwise': pandas2ri.ri2py_dataframe(twoway_pairwise),
             'epoch_pairwise': pandas2ri.ri2py_dataframe(epoch_pairwise),
             'objectgrasp_pairwise': pandas2ri.ri2py_dataframe(objectgrasp_pairwise),
         }
-        return results
+        return stats_results
 
 
 class MirrorTypeClassificationAnalysisResults(AnalysisResults):

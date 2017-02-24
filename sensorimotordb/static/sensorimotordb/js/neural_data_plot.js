@@ -324,10 +324,11 @@ function drawHistogram(id, parent_id, data, trial_events, event_types)
 
         for(var i=0; i<event_types.length; i++)
         {
+            var event_type=event_types[i];
             var times=[];
             for(var j=0; j<trial_events.length; j++)
             {
-                if(trial_events[j].name==event_types[i])
+                if(trial_events[j].name==event_type)
                     times.push(trial_events[j].t);
             }
             if(times.length>0)
@@ -541,10 +542,11 @@ function drawFiringRate(id, parent_id, data, trial_events, event_types)
 
         for(var i=0; i<event_types.length; i++)
         {
+            var event_type=event_types[i];
             var times=[];
             for(var j=0; j<trial_events.length; j++)
             {
-                if(trial_events[j].name==event_types[i])
+                if(trial_events[j].name==event_type)
                     times.push(trial_events[j].t);
             }
             if(times.length>0)

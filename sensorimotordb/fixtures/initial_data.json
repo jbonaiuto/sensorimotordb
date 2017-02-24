@@ -572,39 +572,7 @@
         "pk": 1,
         "fields": {
             "analysis": 1,
-            "name": "Object Presentation - Trial Type"
-        }
-    },
-    {
-        "model": "sensorimotordb.Factor",
-        "pk": 2,
-        "fields": {
-            "analysis": 1,
-            "name": "Object Presentation - Object"
-        }
-    },
-    {
-        "model": "sensorimotordb.Factor",
-        "pk": 3,
-        "fields": {
-            "analysis": 1,
-            "name": "Grasp Execution: Object/Grasp"
-        }
-    },
-    {
-        "model": "sensorimotordb.Factor",
-        "pk": 4,
-        "fields": {
-            "analysis": 1,
-            "name": "Grasp Execution: Visibility"
-        }
-    },
-    {
-        "model": "sensorimotordb.Factor",
-        "pk": 5,
-        "fields": {
-            "analysis": 1,
-            "name": "Grasp Observation: Object/Grasp"
+            "name": "Visuomotor Object Presentation - Trial Type"
         }
     },
     {
@@ -621,6 +589,14 @@
         "fields": {
             "factor": 1,
             "value": "fixation"
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 2,
+        "fields": {
+            "analysis": 1,
+            "name": "Visuomotor Object Presentation - Object"
         }
     },
     {
@@ -645,6 +621,14 @@
         "fields": {
             "factor": 2,
             "value": "largeconewhole"
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 3,
+        "fields": {
+            "analysis": 1,
+            "name": "Visuomotor Grasp Execution: Object/Grasp"
         }
     },
     {
@@ -672,6 +656,14 @@
         }
     },
     {
+        "model": "sensorimotordb.Factor",
+        "pk": 4,
+        "fields": {
+            "analysis": 1,
+            "name": "Visuomotor Grasp Execution: Visibility"
+        }
+    },
+    {
         "model": "sensorimotordb.Level",
         "pk": 11,
         "fields": {
@@ -685,6 +677,14 @@
         "fields": {
             "factor": 4,
             "value": "dark"
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 5,
+        "fields": {
+            "analysis": 1,
+            "name": "Observation: Object/Grasp"
         }
     },
     {
@@ -708,6 +708,62 @@
         "pk": 15,
         "fields": {
             "factor": 5,
+            "value": "largeconewhole"
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 7,
+        "fields": {
+            "analysis": 1,
+            "name": "Observation Object Presentation - Trial Type"
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 18,
+        "fields": {
+            "factor": 7,
+            "value": "grasping"
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 19,
+        "fields": {
+            "factor": 7,
+            "value": "fixation"
+        }
+    },
+    {
+        "model": "sensorimotordb.Factor",
+        "pk": 8,
+        "fields": {
+            "analysis": 1,
+            "name": "Observation Object Presentation - Object"
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 20,
+        "fields": {
+            "factor": 8,
+            "value": "ringhook"
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 21,
+        "fields": {
+            "factor": 8,
+            "value": "smallconeside"
+        }
+    },
+    {
+        "model": "sensorimotordb.Level",
+        "pk": 22,
+        "fields": {
+            "factor": 8,
             "value": "largeconewhole"
         }
     },

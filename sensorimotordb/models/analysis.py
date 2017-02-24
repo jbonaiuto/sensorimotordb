@@ -179,6 +179,209 @@ class VisuomotorClassificationAnalysis(Analysis):
     class Meta:
         app_label='sensorimotordb'
 
+    def check_motor_properties(self, visuomotor_motor_results):
+        motor_properties = False
+        # If threeway interaction - check that grasp>baseline for at least one objectgrasp/visibility condition
+        if visuomotor_motor_results['anova_within']['Pr(>F)'][3]:
+            for index in visuomotor_motor_results['threeway_pairwise'].index:
+                if visuomotor_motor_results['threeway_pairwise']['p.value'][index] < 0.05:
+                    contrast = visuomotor_motor_results['threeway_pairwise']['contrast'][index]
+                    cond_one = contrast.split(' - ')[0]
+                    cond_two = contrast.split(' - ')[1]
+
+                    cond_one_epoch = cond_one.split(',')[0]
+                    cond_one_objgrasp = cond_one.split(',')[1]
+                    cond_one_visibility = cond_one.split(',')[2]
+
+                    cond_two_epoch = cond_two.split(',')[0]
+                    cond_two_objgrasp = cond_two.split(',')[1]
+                    cond_two_visibility = cond_two.split(',')[2]
+
+                    # If comparing same objectgrasp/visibility combination
+                    if cond_one_objgrasp == cond_two_objgrasp and cond_one_visibility == cond_two_visibility:
+                        # If baseline<grasp
+                        if (cond_one_epoch == 'baseline' and cond_two_epoch == 'grasping' and
+                            visuomotor_motor_results['threeway_pairwise']['estimate'][index] < 0) or\
+                           (cond_one_epoch == 'grasping' and cond_two_epoch == 'baseline' and
+                            visuomotor_motor_results['threeway_pairwise']['estimate'][index] > 0):
+                            motor_properties = True
+                            break
+        # If epoch x objectgrasp interaction - check that grasp>baseline for at least one object/grasp
+        elif visuomotor_motor_results['anova_within']['Pr(>F)'][1]:
+            for index in visuomotor_motor_results['epoch_objectgrasp_pairwise'].index:
+                if visuomotor_motor_results['epoch_objectgrasp_pairwise']['p.value'][index] < 0.05:
+                    contrast = visuomotor_motor_results['epoch_objectgrasp_pairwise']['contrast'][index]
+                    cond_one = contrast.split(' - ')[0]
+                    cond_two = contrast.split(' - ')[1]
+
+                    cond_one_epoch = cond_one.split(',')[0]
+                    cond_one_objgrasp = cond_one.split(',')[1]
+
+                    cond_two_epoch = cond_two.split(',')[0]
+                    cond_two_objgrasp = cond_two.split(',')[1]
+
+                    # If comparing same objectgrasp/visibility combination
+                    if cond_one_objgrasp == cond_two_objgrasp:
+                        # If baseline<grasp
+                        if (cond_one_epoch == 'baseline' and cond_two_epoch == 'grasping' and
+                            visuomotor_motor_results['epoch_objectgrasp_pairwise']['estimate'][index] < 0) or\
+                           (cond_one_epoch == 'grasping' and cond_two_epoch == 'baseline' and
+                            visuomotor_motor_results['epoch_objectgrasp_pairwise']['estimate'][index] > 0):
+                            motor_properties = True
+                            break
+        # If epoch x visibility interaction - checkt that grasp>baseline for at least one visibility condition
+        elif visuomotor_motor_results['anova_within']['Pr(>F)'][2]:
+            for index in visuomotor_motor_results['epoch_visibility_pairwise'].index:
+                if visuomotor_motor_results['epoch_visibility_pairwise']['p.value'][index] < 0.05:
+                    contrast = visuomotor_motor_results['epoch_visibility_pairwise']['contrast'][index]
+                    cond_one = contrast.split(' - ')[0]
+                    cond_two = contrast.split(' - ')[1]
+
+                    cond_one_epoch = cond_one.split(',')[0]
+                    cond_one_visibility = cond_one.split(',')[1]
+
+                    cond_two_epoch = cond_two.split(',')[0]
+                    cond_two_visibility = cond_two.split(',')[1]
+
+                    # If comparing same objectgrasp/visibility combination
+                    if cond_one_visibility == cond_two_visibility:
+                        # If baseline<grasp
+                        if (cond_one_epoch == 'baseline' and cond_two_epoch == 'grasping' and
+                            visuomotor_motor_results['epoch_visibility_pairwise']['estimate'][index] < 0) or\
+                           (cond_one_epoch == 'grasping' and cond_two_epoch == 'baseline' and
+                            visuomotor_motor_results['epoch_visibility_pairwise']['estimate'][index] > 0):
+                            motor_properties = True
+                            break
+
+        # If main effect f epoch - check that grasp>baseline
+        elif visuomotor_motor_results['anova_within']['Pr(>F)'][0]:
+            index = visuomotor_motor_results['epoch_pairwise'].index[0]
+            if visuomotor_motor_results['epoch_pairwise']['p.value'][index] < 0.05 and \
+               visuomotor_motor_results['epoch_pairwise']['estimate'][index] < 0:
+                motor_properties = True
+
+        return motor_properties
+
+
+    def check_objpres_properties(self, objpres_results):
+        objpres_properties = False
+        # If threeway interaction - check that grasp>baseline for at least one objectgrasp/visibility condition
+        if objpres_results['anova_within']['Pr(>F)'][3]:
+            for index in objpres_results['threeway_pairwise'].index:
+                if objpres_results['threeway_pairwise']['p.value'][index] < 0.05:
+                    contrast = objpres_results['threeway_pairwise']['contrast'][index]
+                    cond_one = contrast.split(' - ')[0]
+                    cond_two = contrast.split(' - ')[1]
+
+                    cond_one_epoch = cond_one.split(',')[0]
+                    cond_one_objgrasp = cond_one.split(',')[1]
+                    cond_one_trialtype = cond_one.split(',')[2]
+
+                    cond_two_epoch = cond_two.split(',')[0]
+                    cond_two_objgrasp = cond_two.split(',')[1]
+                    cond_two_trialtype = cond_two.split(',')[2]
+
+                    # If comparing same objectgrasp/visibility combination
+                    if cond_one_objgrasp == cond_two_objgrasp and cond_one_trialtype == cond_two_trialtype:
+                        # If baseline<grasp
+                        if (cond_one_epoch == 'baseline' and cond_two_epoch == 'fixation' and
+                            objpres_results['threeway_pairwise']['estimate'][index] < 0) or\
+                           (cond_one_epoch == 'fixation' and cond_two_epoch == 'baseline' and
+                            objpres_results['threeway_pairwise']['estimate'][index] > 0):
+                            objpres_properties = True
+                            break
+        # If epoch x objectgrasp interaction - check that grasp>baseline for at least one object/grasp
+        elif objpres_results['anova_within']['Pr(>F)'][1]:
+            for index in objpres_results['epoch_objectgrasp_pairwise'].index:
+                if objpres_results['epoch_objectgrasp_pairwise']['p.value'][index] < 0.05:
+                    contrast = objpres_results['epoch_objectgrasp_pairwise']['contrast'][index]
+                    cond_one = contrast.split(' - ')[0]
+                    cond_two = contrast.split(' - ')[1]
+
+                    cond_one_epoch = cond_one.split(',')[0]
+                    cond_one_objgrasp = cond_one.split(',')[1]
+
+                    cond_two_epoch = cond_two.split(',')[0]
+                    cond_two_objgrasp = cond_two.split(',')[1]
+
+                    # If comparing same objectgrasp/visibility combination
+                    if cond_one_objgrasp == cond_two_objgrasp:
+                        # If baseline<grasp
+                        if (cond_one_epoch == 'baseline' and cond_two_epoch == 'fixation' and
+                            objpres_results['epoch_objectgrasp_pairwise']['estimate'][index] < 0) or\
+                           (cond_one_epoch == 'fixation' and cond_two_epoch == 'baseline' and
+                            objpres_results['epoch_objectgrasp_pairwise']['estimate'][index] > 0):
+                            objpres_properties = True
+                            break
+        # If epoch x trialtype interaction - checkt that grasp>baseline for at least one visibility condition
+        elif objpres_results['anova_within']['Pr(>F)'][2]:
+            for index in objpres_results['epoch_trialtype_pairwise'].index:
+                if objpres_results['epoch_trialtype_pairwise']['p.value'][index] < 0.05:
+                    contrast = objpres_results['epoch_trialtype_pairwise']['contrast'][index]
+                    cond_one = contrast.split(' - ')[0]
+                    cond_two = contrast.split(' - ')[1]
+
+                    cond_one_epoch = cond_one.split(',')[0]
+                    cond_one_trialtype = cond_one.split(',')[1]
+
+                    cond_two_epoch = cond_two.split(',')[0]
+                    cond_two_trialtype = cond_two.split(',')[1]
+
+                    # If comparing same objectgrasp/visibility combination
+                    if cond_one_trialtype == cond_two_trialtype:
+                        # If baseline<grasp
+                        if (cond_one_epoch == 'baseline' and cond_two_epoch == 'fixation' and
+                            objpres_results['epoch_trialtype_pairwise']['estimate'][index] < 0) or\
+                           (cond_one_epoch == 'fixation' and cond_two_epoch == 'baseline' and
+                            objpres_results['epoch_trialtype_pairwise']['estimate'][index] > 0):
+                            objpres_properties = True
+                            break
+
+        # If main effect f epoch - check that grasp>baseline
+        elif objpres_results['anova_within']['Pr(>F)'][0]:
+            index = objpres_results['epoch_pairwise'].index[0]
+            if objpres_results['epoch_pairwise']['p.value'][index] < 0.05 and\
+               objpres_results['epoch_pairwise']['estimate'][index] < 0:
+                objpres_properties = True
+
+        return objpres_properties
+
+
+    def check_observation_properties(self, obs_results):
+        obs_properties = False
+        # If twoway interaction - check that grasp>baseline for at least one objectgrasp condition
+        if obs_results['anova_within']['Pr(>F)'][1]:
+            for index in obs_results['twoway_pairwise'].index:
+                if obs_results['twoway_pairwise']['p.value'][index] < 0.05:
+                    contrast = obs_results['twoway_pairwise']['contrast'][index]
+                    cond_one = contrast.split(' - ')[0]
+                    cond_two = contrast.split(' - ')[1]
+
+                    cond_one_epoch = cond_one.split(',')[0]
+                    cond_one_objgrasp = cond_one.split(',')[1]
+
+                    cond_two_epoch = cond_two.split(',')[0]
+                    cond_two_objgrasp = cond_two.split(',')[1]
+
+                    # If comparing same objectgrasp/visibility combination
+                    if cond_one_objgrasp == cond_two_objgrasp:
+                        # If baseline<grasp
+                        if (cond_one_epoch == 'baseline' and cond_two_epoch == 'grasping' and
+                            obs_results['twoway_pairwise']['estimate'][index] < 0) or\
+                           (cond_one_epoch == 'grasping' and cond_two_epoch == 'baseline' and
+                            obs_results['twoway_pairwise']['estimate'][index] > 0):
+                            obs_properties = True
+                            break
+        # If main effect f epoch - check that grasp>baseline
+        elif obs_results['anova_within']['Pr(>F)'][0]:
+            index = obs_results['epoch_pairwise'].index[0]
+            if obs_results['epoch_pairwise']['p.value'][index] < 0.05 and\
+               obs_results['epoch_pairwise']['estimate'][index] < 0:
+                obs_properties = True
+
+        return obs_properties
+
+
     def run(self, results):
         unit_ids=np.unique(UnitRecording.objects.filter(trial__condition__experiment=results.experiment).values_list('unit',
             flat=True))
@@ -199,80 +402,96 @@ class VisuomotorClassificationAnalysis(Analysis):
         unit_classifications['mirror'].save()
         unit_classifications['canonical mirror']=UnitClassification(parent=unit_classifications['visuomotor'],analysis_results=results,label='canonical mirror')
         unit_classifications['canonical mirror'].save()
-        unit_classifications['motor - ringhook']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='ringhook')
-        unit_classifications['motor - ringhook'].save()
-        unit_classifications['motor - smallconeside']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='smallconeside')
-        unit_classifications['motor - smallconeside'].save()
-        unit_classifications['motor - largeconewhole']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='largeconewhole')
-        unit_classifications['motor - largeconewhole'].save()
-        unit_classifications['visual - ringhook']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='ringhook')
-        unit_classifications['visual - ringhook'].save()
-        unit_classifications['visual - smallconeside']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='smallconeside')
-        unit_classifications['visual - smallconeside'].save()
-        unit_classifications['visual - largeconewhole']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='largeconewhole')
-        unit_classifications['visual - largeconewhole'].save()
+        unit_classifications['visuomotor other']=UnitClassification(parent=unit_classifications['visuomotor'],analysis_results=results,label='visuomotor other')
+        unit_classifications['visuomotor other'].save()
+        #unit_classifications['motor - ringhook']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='ringhook')
+        #unit_classifications['motor - ringhook'].save()
+        #unit_classifications['motor - smallconeside']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='smallconeside')
+        #unit_classifications['motor - smallconeside'].save()
+        #unit_classifications['motor - largeconewhole']=UnitClassification(parent=unit_classifications['motor'],analysis_results=results,label='largeconewhole')
+        #unit_classifications['motor - largeconewhole'].save()
+        #unit_classifications['visual - ringhook']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='ringhook')
+        #unit_classifications['visual - ringhook'].save()
+        #unit_classifications['visual - smallconeside']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='smallconeside')
+        #unit_classifications['visual - smallconeside'].save()
+        #unit_classifications['visual - largeconewhole']=UnitClassification(parent=unit_classifications['visual'],analysis_results=results,label='largeconewhole')
+        #unit_classifications['visual - largeconewhole'].save()
 
         for unit_id in unit_ids:
             unit=Unit.objects.get(id=unit_id)
-            (motor_anova_results,motor_visibility_pairwise,motor_objectgrasp_pairwise,motor_visibilityobjectgrasp_pairwise,
-                motor_objectgraspvisibility_pairwise,motor_pref)=self.test_unit_motor(results, unit)
-            (objpres_anova_results,objpres_trialtype_pairwise,objpres_objectgrasp_pairwise,
-                objpres_trialtypeobjectgrasp_pairwise,objpres_objectgrasptrialtype_pairwise, objpres_pref)=self.test_unit_obj_pres(results, unit)
-            (obs_grasp_anova_results,obs_grasp_objectgrasp_pairwise)=self.test_unit_obs_grasp(results, unit)
+            visuomotor_motor_results=self.test_unit_motor(results, unit)
+            visuomotor_objpres_results=self.test_unit_obj_pres(results, unit, 'Visuomotor')
+
+            obs_grasp_results=self.test_unit_obs_grasp(results, unit)
+            obs_objpres_results=self.test_unit_obj_pres(results, unit, 'Observation')
 
             unit_results=VisuomotorClassificationUnitAnalysisResults(analysis_results=results,
-                results_text='\n'.join(['<h2>Motor</h2>',str(motor_anova_results),
-                                        '<h2>Object Presentation</h2>',str(objpres_anova_results),
-                                        '<h2>Observation - Object Grasp</h2>',str(obs_grasp_anova_results)]),
+                results_text='\n'.join(['<h2>Motor</h2>',str(visuomotor_motor_results['anova_trial']),str(visuomotor_motor_results['anova_within']),
+                                        '<h2>Visuomotor: Object Presentation</h2>',str(visuomotor_objpres_results['anova_trial']), str(visuomotor_objpres_results['anova_within']),
+                                        '<h2>Observation</h2>',str(obs_grasp_results['anova_trial']), str(obs_grasp_results['anova_within']),
+                                        '<h2>Observation: Object Presentation</h2>',str(obs_objpres_results['anova_trial']), str(obs_objpres_results['anova_within']),
+
+                ]),
                 pairwise_results_text='\n'.join(['<h2>Motor</h2>',
-                                                 str(motor_visibility_pairwise),
-                                                 str(motor_objectgrasp_pairwise),
-                                                 str(motor_visibilityobjectgrasp_pairwise),
-                                                 str(motor_objectgraspvisibility_pairwise),
-                                                 '<h2>Object Presentation</h2>',
-                                                 str(objpres_trialtype_pairwise),
-                                                 str(objpres_objectgrasp_pairwise),
-                                                 str(objpres_trialtypeobjectgrasp_pairwise),
-                                                 str(objpres_objectgrasptrialtype_pairwise),
-                                                 '<h2>Observation - Object Grasp</h2>',
-                                                 str(obs_grasp_objectgrasp_pairwise)]),
+                                                 str(visuomotor_motor_results['threeway_pairwise']),
+                                                 str(visuomotor_motor_results['epoch_objectgrasp_pairwise']),
+                                                 str(visuomotor_motor_results['epoch_visibility_pairwise']),
+                                                 str(visuomotor_motor_results['objectgrasp_visibility_pairwise']),
+                                                 str(visuomotor_motor_results['epoch_pairwise']),
+                                                 str(visuomotor_motor_results['objectgrasp_pairwise']),
+                                                 str(visuomotor_motor_results['visibility_pairwise']),
+                                                 '<h2>Visuomotor: Object Presentation</h2>',
+                                                 str(visuomotor_objpres_results['threeway_pairwise']),
+                                                 str(visuomotor_objpres_results['epoch_objectgrasp_pairwise']),
+                                                 str(visuomotor_objpres_results['epoch_trialtype_pairwise']),
+                                                 str(visuomotor_objpres_results['objectgrasp_trialtype_pairwise']),
+                                                 str(visuomotor_objpres_results['epoch_pairwise']),
+                                                 str(visuomotor_objpres_results['objectgrasp_pairwise']),
+                                                 str(visuomotor_objpres_results['trialtype_pairwise']),
+                                                 '<h2>Observation</h2>',
+                                                 str(obs_grasp_results['twoway_pairwise']),
+                                                 str(obs_grasp_results['epoch_pairwise']),
+                                                 str(obs_grasp_results['objectgrasp_pairwise']),
+                                                 '<h2>Observation: Object Presentation</h2>',
+                                                 str(obs_objpres_results['threeway_pairwise']),
+                                                 str(obs_objpres_results['epoch_objectgrasp_pairwise']),
+                                                 str(obs_objpres_results['epoch_trialtype_pairwise']),
+                                                 str(obs_objpres_results['objectgrasp_trialtype_pairwise']),
+                                                 str(obs_objpres_results['epoch_pairwise']),
+                                                 str(obs_objpres_results['objectgrasp_pairwise']),
+                                                 str(obs_objpres_results['trialtype_pairwise'])
+                ]),
                 unit=unit)
             unit_results.save()
 
+            motor_properties = self.check_motor_properties(visuomotor_motor_results)
+            visuomotor_objpres_properties = self.check_objpres_properties(visuomotor_objpres_results)
 
-            # Visibility not significant (fires during grasping in light and dark)
-            # Significant object/grasp (doesn't fire for all types of grasps)
-            motor_properties=motor_anova_results['Pr(>F)']['visibility']>=0.05 and motor_anova_results['Pr(>F)']['visibility:objectgrasp']>=0.05 and motor_anova_results['Pr(>F)']['objectgrasp']<0.05
+            observation_objpres_properties = self.check_objpres_properties(obs_objpres_results)
+            observation_properties = self.check_observation_properties(obs_grasp_results)
 
-            # Trial type not significant (fires during go and no/go)
-            # Significant object/grasp (doesn't fire for all types of objects)
-            obj_pres=objpres_anova_results['Pr(>F)']['trial_type']>=0.05 and objpres_anova_results['Pr(>F)']['objectgrasp']<0.05
-
-            # Significant object/grasp (doesn't fire during observation of all grasp types)
-            action_obs=obs_grasp_anova_results['Pr(>F)']['objectgrasp']<0.05
+            visual_properties = visuomotor_objpres_properties or observation_objpres_properties or observation_properties
 
             # If cell has motor and visual properties -> visomotor
-            if motor_properties and (obj_pres or action_obs):
+            if motor_properties and visual_properties:
                 unit_classifications['visuomotor'].units.add(Unit.objects.get(id=unit_id))
+
                 # If fires for object presentation and action observation -> canonical mirror
-                if obj_pres and action_obs:
-                    unit_classifications['canonical mirror'].units.add(Unit.objects.get(id=unit_id))
-                # If fires only for object presentation -> canonical
-                elif obj_pres:
+                if visuomotor_objpres_properties and not (observation_objpres_properties or observation_properties):
                     unit_classifications['canonical'].units.add(Unit.objects.get(id=unit_id))
+                # If fires only for object presentation -> canonical
+                elif observation_properties and (visuomotor_objpres_properties or observation_objpres_properties):
+                    unit_classifications['canonical mirror'].units.add(Unit.objects.get(id=unit_id))
                 # If fires only during action observation -> mirror
-                else:
+                elif observation_properties:
                     unit_classifications['mirror'].units.add(Unit.objects.get(id=unit_id))
+
             # If only has motor properties -> motor
             elif motor_properties :
                 unit_classifications['motor'].units.add(Unit.objects.get(id=unit_id))
-                if len(motor_pref):
-                    unit_classifications['motor - %s' % motor_pref].units.add(Unit.objects.get(id=unit_id))
             # If only has visual properties -> visual
-            elif obj_pres or action_obs:
+            elif visual_properties:
                 unit_classifications['visual'].units.add(Unit.objects.get(id=unit_id))
-                if len(objpres_pref):
-                    unit_classifications['visual - %s' % objpres_pref].units.add(Unit.objects.get(id=unit_id))
             # Otherwise other
             else:
                 unit_classifications['other'].units.add(Unit.objects.get(id=unit_id))
@@ -287,10 +506,10 @@ class VisuomotorClassificationAnalysis(Analysis):
         trial_ids=[]
         visibilities=[]
         objectgrasps=[]
-        rate_diff=[]
+        epochs=[]
+        rates=[]
         condition_ids=[]
-        objectgrasps_rates={}
-        for factor_name in ['Grasp Execution: Visibility','Grasp Execution: Object/Grasp']:
+        for factor_name in ['Visuomotor Grasp Execution: Visibility','Visuomotor Grasp Execution: Object/Grasp']:
             factor=Factor.objects.get(analysis=results.analysis, name=factor_name)
             for level in factor.levels.all():
                 conditions=AnalysisResultsLevelMapping.objects.get(level=level,analysis_results=results).conditions.all()
@@ -325,62 +544,64 @@ class VisuomotorClassificationAnalysis(Analysis):
                         grasp_woi_rel_start, grasp_woi_rel_end, results.grasp_woi_rel_end_evt)
 
                     if baseline_rate is not None and woi_rate is not None:
-                        visibility=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Visibility',
+                        visibility=Level.objects.get(factor__analysis=self,factor__name='Visuomotor Grasp Execution: Visibility',
                             analysisresultslevelmapping__conditions=condition,
                             analysisresultslevelmapping__analysis_results=results).value
-                        objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Execution: Object/Grasp',
+                        objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Visuomotor Grasp Execution: Object/Grasp',
                             analysisresultslevelmapping__conditions=condition,
                             analysisresultslevelmapping__analysis_results=results).value
 
                         trial_ids.append(trial.id)
                         visibilities.append(visibility)
                         objectgrasps.append(objectgrasp)
-                        rate_diff.append(woi_rate-baseline_rate)
+                        epochs.append('baseline')
+                        rates.append(baseline_rate)
 
-                        if not objectgrasp in objectgrasps_rates:
-                            objectgrasps_rates[objectgrasp]=[]
-                        objectgrasps_rates[objectgrasp].append(woi_rate-baseline_rate)
+                        trial_ids.append(trial.id)
+                        visibilities.append(visibility)
+                        objectgrasps.append(objectgrasp)
+                        epochs.append('grasping')
+                        rates.append(woi_rate)
+
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
             'visibility': pd.Series(visibilities),
             'objectgrasp': pd.Series(objectgrasps),
-            'rate_diff': pd.Series(rate_diff)
+            'epoch': pd.Series(epochs),
+            'rate': pd.Series(rates)
         })
 
-        df=df.set_index(['trial'])
+        #df=df.set_index(['trial'])
 
         r_source = robjects.r['source']
-        r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/two_way_anova.R'))
-        r_two_way_anova = robjects.globalenv['two_way_anova']
-        (anova_results,visibility_pairwise, objectgrasp_pairwise, visibilityobjectgrasp_pairwise,objectgraspvisibility_pairwise)=r_two_way_anova(df,"rate_diff",
-            "visibility","objectgrasp")
-
-        anova_results=pandas2ri.ri2py_dataframe(anova_results)
-        visibility_pairwise=pandas2ri.ri2py_listvector(visibility_pairwise)
-        objectgrasp_pairwise=pandas2ri.ri2py_listvector(objectgrasp_pairwise)
-        visibilityobjectgrasp_pairwise=pandas2ri.ri2py_dataframe(visibilityobjectgrasp_pairwise)
-        objectgraspvisibility_pairwise=pandas2ri.ri2py_dataframe(objectgraspvisibility_pairwise)
-
-        max_rate=0
-        pref_objgrasp=''
-        for objgrasp in objectgrasps_rates:
-            mean_rate=np.mean(objectgrasps_rates[objgrasp])
-            if mean_rate>max_rate:
-                max_rate=mean_rate
-                pref_objgrasp=objgrasp
-
-        return anova_results,visibility_pairwise,objectgrasp_pairwise,visibilityobjectgrasp_pairwise,objectgraspvisibility_pairwise,pref_objgrasp
+        r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/three_way_anova_repeated_measures.R'))
+        r_three_way_anova = robjects.globalenv['three_way_anova_repeated_measures']
+        (anova_results_trial, anova_results_within, threeway_pairwise, epoch_objectgrasp_pairwise,
+            epoch_visibility_pairwise, objectgrasp_visibility_pairwise, epoch_pairwise, objectgrasp_pairwise,
+            visibility_pairwise)=r_three_way_anova(df,"trial","rate","epoch","objectgrasp","visibility")
+        results={
+            'anova_trial': pandas2ri.ri2py_dataframe(anova_results_trial[0]),
+            'anova_within': pandas2ri.ri2py_dataframe(anova_results_within[0]),
+            'threeway_pairwise': pandas2ri.ri2py_dataframe(threeway_pairwise),
+            'epoch_objectgrasp_pairwise': pandas2ri.ri2py_dataframe(epoch_objectgrasp_pairwise),
+            'epoch_visibility_pairwise': pandas2ri.ri2py_dataframe(epoch_visibility_pairwise),
+            'objectgrasp_visibility_pairwise': pandas2ri.ri2py_dataframe(objectgrasp_visibility_pairwise),
+            'epoch_pairwise': pandas2ri.ri2py_dataframe(epoch_pairwise),
+            'objectgrasp_pairwise': pandas2ri.ri2py_dataframe(objectgrasp_pairwise),
+            'visibility_pairwise': pandas2ri.ri2py_dataframe(visibility_pairwise)
+        }
+        return results
 
 
-    def test_unit_obj_pres(self, results, unit):
+    def test_unit_obj_pres(self, results, unit, task):
         trial_ids=[]
         trial_types=[]
         objectgrasps=[]
-        rate_diff=[]
+        epochs=[]
+        rates=[]
         condition_ids=[]
-        objectgrasps_rates={}
-        for factor_name in ['Object Presentation - Trial Type','Object Presentation - Object']:
+        for factor_name in ['%s Object Presentation - Trial Type' % task, '%s Object Presentation - Object' % task]:
             factor=Factor.objects.get(analysis=results.analysis, name=factor_name)
             for level in factor.levels.all():
                 conditions=AnalysisResultsLevelMapping.objects.get(level=level,analysis_results=results).conditions.all()
@@ -415,60 +636,63 @@ class VisuomotorClassificationAnalysis(Analysis):
                         obj_view_woi_rel_start, obj_view_woi_rel_end, results.obj_view_woi_rel_end_evt)
 
                     if baseline_rate is not None and woi_rate is not None:
-                        trial_type=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Trial Type',
+                        trial_type=Level.objects.get(factor__analysis=self,factor__name='%s Object Presentation - Trial Type' % task,
                             analysisresultslevelmapping__conditions=condition,
                             analysisresultslevelmapping__analysis_results=results).value
-                        objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Object Presentation - Object',
+                        objectgrasp=Level.objects.get(factor__analysis=self,factor__name='%s Object Presentation - Object' % task,
                             analysisresultslevelmapping__conditions=condition,
                             analysisresultslevelmapping__analysis_results=results).value
 
                         trial_ids.append(trial.id)
                         trial_types.append(trial_type)
                         objectgrasps.append(objectgrasp)
-                        rate_diff.append(woi_rate-baseline_rate)
+                        epochs.append('baseline')
+                        rates.append(baseline_rate)
 
-                        if not objectgrasp in objectgrasps_rates:
-                            objectgrasps_rates[objectgrasp]=[]
-                        objectgrasps_rates[objectgrasp].append(woi_rate-baseline_rate)
+                        trial_ids.append(trial.id)
+                        trial_types.append(trial_type)
+                        objectgrasps.append(objectgrasp)
+                        epochs.append('fixation')
+                        rates.append(woi_rate)
+
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
             'trial_type': pd.Series(trial_types),
             'objectgrasp': pd.Series(objectgrasps),
-            'rate_diff': pd.Series(rate_diff)
+            'epoch': pd.Series(epochs),
+            'rate': pd.Series(rates)
         })
 
-        df=df.set_index(['trial'])
+        #df=df.set_index(['trial'])
 
         r_source = robjects.r['source']
-        r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/two_way_anova.R'))
-        r_two_way_anova = robjects.globalenv['two_way_anova']
-        (anova_results,trialtype_pairwise,objectgrasp_pairwise,trialtypeobjectgrasp_pairwise,objectgrasptrialtype_pairwise)=r_two_way_anova(df,"rate_diff",
-            "trial_type","objectgrasp")
-
-        anova_results=pandas2ri.ri2py_dataframe(anova_results)
-        trialtype_pairwise=pandas2ri.ri2py_listvector(trialtype_pairwise)
-        objectgrasp_pairwise=pandas2ri.ri2py_listvector(objectgrasp_pairwise)
-        trialtypeobjectgrasp_pairwise=pandas2ri.ri2py_dataframe(trialtypeobjectgrasp_pairwise)
-        objectgrasptrialtype_pairwise=pandas2ri.ri2py_dataframe(objectgrasptrialtype_pairwise)
-
-        max_rate=0
-        pref_objgrasp=''
-        for objgrasp in objectgrasps_rates:
-            mean_rate=np.mean(objectgrasps_rates[objgrasp])
-            if mean_rate>max_rate:
-                max_rate=mean_rate
-                pref_objgrasp=objgrasp
-
-        return anova_results,trialtype_pairwise,objectgrasp_pairwise,trialtypeobjectgrasp_pairwise,objectgrasptrialtype_pairwise,pref_objgrasp
+        r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/three_way_anova_repeated_measures.R'))
+        r_three_way_anova = robjects.globalenv['three_way_anova_repeated_measures']
+        (anova_results_trial, anova_results_within, threeway_pairwise, epoch_objectgrasp_pairwise,
+             epoch_visibility_pairwise, objectgrasp_visibility_pairwise, epoch_pairwise, objectgrasp_pairwise,
+            visibility_pairwise)=r_three_way_anova(df,"trial","rate","epoch","objectgrasp","trial_type")
+        results={
+            'anova_trial': pandas2ri.ri2py_dataframe(anova_results_trial[0]),
+            'anova_within': pandas2ri.ri2py_dataframe(anova_results_within[0]),
+            'threeway_pairwise': pandas2ri.ri2py_dataframe(threeway_pairwise),
+            'epoch_objectgrasp_pairwise': pandas2ri.ri2py_dataframe(epoch_objectgrasp_pairwise),
+            'epoch_trialtype_pairwise': pandas2ri.ri2py_dataframe(epoch_visibility_pairwise),
+            'objectgrasp_trialtype_pairwise': pandas2ri.ri2py_dataframe(objectgrasp_visibility_pairwise),
+            'epoch_pairwise': pandas2ri.ri2py_dataframe(epoch_pairwise),
+            'objectgrasp_pairwise': pandas2ri.ri2py_dataframe(objectgrasp_pairwise),
+            'trialtype_pairwise': pandas2ri.ri2py_dataframe(visibility_pairwise)
+        }
+        return results
 
 
     def test_unit_obs_grasp(self, results, unit):
         trial_ids=[]
         objectgrasps=[]
-        rate_diff=[]
+        epochs=[]
+        rates=[]
         condition_ids=[]
-        for factor_name in ['Grasp Observation: Object/Grasp']:
+        for factor_name in ['Observation: Object/Grasp']:
             factor=Factor.objects.get(analysis=results.analysis, name=factor_name)
             for level in factor.levels.all():
                 conditions=AnalysisResultsLevelMapping.objects.get(level=level,analysis_results=results).conditions.all()
@@ -503,31 +727,41 @@ class VisuomotorClassificationAnalysis(Analysis):
                         grasp_woi_rel_start, grasp_woi_rel_end, results.grasp_woi_rel_end_evt)
 
                     if baseline_rate is not None and woi_rate is not None:
-                        objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Grasp Observation: Object/Grasp',
+                        objectgrasp=Level.objects.get(factor__analysis=self,factor__name='Observation: Object/Grasp',
                             analysisresultslevelmapping__conditions=condition,
                             analysisresultslevelmapping__analysis_results=results).value
 
                         trial_ids.append(trial.id)
                         objectgrasps.append(objectgrasp)
-                        rate_diff.append(woi_rate-baseline_rate)
+                        epochs.append('baseline')
+                        rates.append(baseline_rate)
+
+                        trial_ids.append(trial.id)
+                        objectgrasps.append(objectgrasp)
+                        epochs.append('grasping')
+                        rates.append(woi_rate)
 
         df= pd.DataFrame({
             'trial': pd.Series(trial_ids),
             'objectgrasp': pd.Series(objectgrasps),
-            'rate_diff': pd.Series(rate_diff)
+            'epoch': pd.Series(epochs),
+            'rate': pd.Series(rates)
         })
 
-        df=df.set_index(['trial'])
+        #df=df.set_index(['trial'])
 
         r_source = robjects.r['source']
-        r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/one_way_anova.R'))
-        r_one_way_anova = robjects.globalenv['one_way_anova']
-        (anova_results,objectgrasp_pairwise)=r_one_way_anova(df,"rate_diff","objectgrasp")
-
-        anova_results=pandas2ri.ri2py_dataframe(anova_results)
-        objectgrasp_pairwise=pandas2ri.ri2py_dataframe(objectgrasp_pairwise)
-
-        return anova_results,objectgrasp_pairwise
+        r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/two_way_anova_repeated_measures.R'))
+        r_two_way_anova = robjects.globalenv['two_way_anova_repeated_measures']
+        (anova_results_trial, anova_results_within, twoway_pairwise, epoch_pairwise, objectgrasp_pairwise)=r_two_way_anova(df,"trial","rate","epoch","objectgrasp")
+        results={
+            'anova_trial': pandas2ri.ri2py_dataframe(anova_results_trial[0]),
+            'anova_within': pandas2ri.ri2py_dataframe(anova_results_within[0]),
+            'twoway_pairwise': pandas2ri.ri2py_dataframe(twoway_pairwise),
+            'epoch_pairwise': pandas2ri.ri2py_dataframe(epoch_pairwise),
+            'objectgrasp_pairwise': pandas2ri.ri2py_dataframe(objectgrasp_pairwise),
+        }
+        return results
 
 
 class MirrorTypeClassificationAnalysisResults(AnalysisResults):

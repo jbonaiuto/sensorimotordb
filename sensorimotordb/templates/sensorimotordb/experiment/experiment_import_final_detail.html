@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>SensoriMotorDB - Experiment Import 2/2</title>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
+<script type="text/javascript">
+    function switchConditionType(idx, value)
+    {
+        if(value=='grasp_performance')
+        {
+            $('.condition-'+idx+'-observation').attr('style','display:none');
+            $('.condition-'+idx+'-performance').attr('style','display:table-row');
+        }
+        else if(value=='grasp_observation')
+        {
+            $('.condition-'+idx+'-observation').attr('style','display:table-row');
+            $('.condition-'+idx+'-performance').attr('style','display:none');
+        }
+        else
+        {
+            $('.condition-'+idx+'-observation').attr('style','display:none');
+            $('.condition-'+idx+'-performance').attr('style','display:none');
+        }
+    }
+</script>
+{% endblock %}
+{% block content %}
+<H2>Import Experiment Data 2/2</H2>
+<form id="experimentForm" method="post" action="" enctype="multipart/form-data">
+    {{ condition_formset.management_form }}
+
+    <table class="tab_panel" style="padding: 2px;" cellspacing="0px">
+        {% for conditionForm in condition_formset %}
+        <tr valign=top class="{% cycle 'even_row' 'odd_row' %}">
+            <td colspan="6">
+                <strong>Condition</strong>
+            </td>
+        </tr>
+        <tr valign=top class="{% cycle 'even_row' 'odd_row' %}">
+            <td>{{ conditionForm.name.label_tag }}*</td>
+            <td>{{ conditionForm.name }}</td>
+            {% if conditionForm.name.errors %}<td class="myerrors">{{ conditionForm.name.errors }}</td>{% endif %}
+            <td>{{ conditionForm.type.label_tag }}*</td>
+            <td>
+                <select id="id_condition-{{ forloop.counter0 }}-type" name="condition-{{ forloop.counter0 }}-type" onchange="switchConditionType({{ forloop.counter0 }}, this.value)">
+                    <option value="" selected="selected"></option>
+                    <option value="grasp_performance">grasp performance</option>
+                    <option value="grasp_observation">grasp observation</option>
+                </select>
+            </td>
+            {% if conditionForm.type.errors %}<td class="myerrors">{{ conditionForm.description.errors }}</td>{% endif %}
+        </tr>
+        <tr valign=top class="{% cycle 'even_row' 'odd_row' %}">
+            <td>{{ conditionForm.description.label_tag }}*</td>
+            <td colspan="3">{{ conditionForm.description }}</td>
+            {% if conditionForm.description.errors %}<td class="myerrors">{{ conditionForm.description.errors }}</td>{% endif %}
+        </tr>
+        <tr valign=top class="{% cycle 'even_row' 'odd_row' %}">
+            <td>{{ conditionForm.object_distance.label_tag }} (cm)*</td>
+            <td>{{ conditionForm.object_distance }}</td>
+            {% if conditionForm.object_distance.errors %}<td class="myerrors">{{ conditionForm.object_distance.errors }}</td>{% endif %}
+            <td>{{ conditionForm.grasp.label_tag }}*</td>
+            <td>{{ conditionForm.grasp }}</td>
+            {% if conditionForm.grasp.errors %}<td class="myerrors">{{ conditionForm.grasp.errors }}</td>{% endif %}
+        </tr>
+        <tr valign=top class="condition-{{ forloop.counter0 }}-performance {% cycle 'even_row' 'odd_row' %}" style="display:none;">
+            <td>{{ conditionForm.hand_visible.label_tag }}*</td>
+            <td>{{ conditionForm.hand_visible }}</td>
+            {% if conditionForm.hand_visible.errors %}<td class="myerrors">{{ conditionForm.hand_visible.errors }}</td>{% endif %}
+            <td>{{ conditionForm.object_visible.label_tag }}*</td>
+            <td>{{ conditionForm.object_visible }}</td>
+            {% if conditionForm.object_visible.errors %}<td class="myerrors">{{ conditionForm.object_visible.errors }}</td>{% endif %}
+        </tr>
+        <tr valign=top class="condition-{{ forloop.counter0 }}-observation {% cycle 'even_row' 'odd_row' %}" style="display:none;">
+            <td>{{ conditionForm.demonstrator_species.label_tag }}*</td>
+            <td>{{ conditionForm.demonstrator_species }}</td>
+            {% if conditionForm.demonstrator_species.errors %}<td class="myerrors">{{ conditionForm.demonstrator_species.errors }}</td>{% endif %}
+            <td>{{ conditionForm.demonstration_type.label_tag }}*</td>
+            <td>{{ conditionForm.demonstration_type }}</td>
+            {% if conditionForm.demonstration_type.errors %}<td class="myerrors">{{ conditionForm.demonstration_type.errors }}</td>{% endif %}
+        </tr>
+        <tr valign=top class="condition-{{ forloop.counter0 }}-observation {% cycle 'even_row' 'odd_row' %}" style="display:none;">
+            <td>{{ conditionForm.viewing_angle.label_tag }}*</td>
+            <td>{{ conditionForm.viewing_angle }}</td>
+            {% if conditionForm.viewing_angle.errors %}<td class="myerrors">{{ conditionForm.viewing_angle.errors }}</td>{% endif %}
+            <td>{{ conditionForm.whole_body_visible.label_tag }}*</td>
+            <td>{{ conditionForm.whole_body_visible }}</td>
+            {% if conditionForm.whole_body_visible.errors %}<td class="myerrors">{{ conditionForm.whole_body_visible.errors }}</td>{% endif %}
+        </tr>
+        <input id="id_condition-{{ forloop.counter0}}-DELETE" name="condition-{{ forloop.counter0}}-DELETE" type="hidden" />
+        {{ conditionForm.id }}
+        {{ conditionForm.experiment }}
+        {{ conditionForm.condition_ptr }}
+        {{ conditionForm.epoch_type }}
+        {{ conditionForm.trial_type }}
+        {{ conditionForm.object }}
+        {% endfor %}
+    </table>
+    <br>
+    {% csrf_token %}
+    {{ form.id }}
+    <input class="btn" type="submit" value="Submit" onmouseover="this.className='btn btnhov'" onmouseout="this.className='btn'"/>&nbsp;
+    <input class="btn" type="button" value="Cancel" onclick="document.location.href='/sensorimotordb/" onmouseover="this.className='btn btnhov'" onmouseout="this.className='btn'"/>
+</form>
+
+{% endblock %}
+

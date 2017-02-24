@@ -1,12 +1,8 @@
 # urls.py
 from django.conf.urls import patterns, include, url
 from tastypie.api import Api
-from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, VisuomotorClassificationAnalysisResource, VisuomotorClassificationAnalysisResultsResource, UnitClassificationResource, AnalysisResource, FactorResource, LevelResource, UnitAnalysisResultsResource, VisuomotorClassificationUnitAnalysisResultsResource, AnalysisResultsResource, \
-    MirrorTypeClassificationUnitAnalysisResultsResource, MirrorTypeClassificationAnalysisResource, \
-    MirrorTypeClassificationAnalysisResultsResource
-from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView, CreateVisuomotorClassificationAnalysisView, DeleteVisuomotorClassificationAnalysisResultsView, DeleteAnalysisResultsView, ImportView, ExperimentImportView, \
-    MirrorTypeClassificationAnalysisResultsDetailView, CreateMirrorTypeClassificationAnalysisView, \
-    DeleteMirrorTypeClassificationAnalysisResultsView
+from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, VisuomotorClassificationAnalysisResource, VisuomotorClassificationAnalysisResultsResource, UnitClassificationResource, AnalysisResource, FactorResource, LevelResource, UnitAnalysisResultsResource, VisuomotorClassificationUnitAnalysisResultsResource, AnalysisResultsResource, MirrorTypeClassificationUnitAnalysisResultsResource, MirrorTypeClassificationAnalysisResource, MirrorTypeClassificationAnalysisResultsResource
+from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView, CreateVisuomotorClassificationAnalysisView, DeleteVisuomotorClassificationAnalysisResultsView, DeleteAnalysisResultsView, MirrorTypeClassificationAnalysisResultsDetailView, CreateMirrorTypeClassificationAnalysisView, DeleteMirrorTypeClassificationAnalysisResultsView
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())
@@ -38,9 +34,7 @@ v1_api.register(MirrorTypeClassificationAnalysisResultsResource())
 urlpatterns = patterns('',
     (r'^api/', include(v1_api.urls)),
     (r'^search/', SearchView.as_view(), {}, 'search_view'),
-    (r'^import/', ImportView.as_view(), {}, 'import_view'),
     (r'^experiment/(?P<pk>\d+)/$', ExperimentDetailView.as_view(), {}, 'experiment_view'),
-    (r'^experiment/(?P<pk>\d+)/import/$', ExperimentImportView.as_view(), {}, 'experiment_import_view'),
     (r'^condition/(?P<pk>\d+)/$', ConditionDetailView.as_view(), {}, 'condition_view'),
     (r'^unit/(?P<pk>\d+)/$', UnitDetailView.as_view(), {}, 'unit_view'),
     (r'^experiment/(?P<pk>\d+)/export_request/$', ExperimentExportRequestView.as_view(), {}, 'experiment_export_request_view'),

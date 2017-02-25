@@ -420,7 +420,7 @@ class VisuomotorClassificationAnalysis(Analysis):
         unit_classifications['canonical'].save()
         unit_classifications['mirror']=UnitClassification(parent=unit_classifications['visuomotor'],analysis_results=results,label='mirror')
         unit_classifications['mirror'].save()
-        unit_classifications['mirror - grasp selective']=UnitClassification(parent=unit_classifications['mirror'],analysis_results=results,label='mirror - grasp unselective')
+        unit_classifications['mirror - grasp selective']=UnitClassification(parent=unit_classifications['mirror'],analysis_results=results,label='mirror - grasp selective')
         unit_classifications['mirror - grasp selective'].save()
         unit_classifications['mirror - grasp unselective']=UnitClassification(parent=unit_classifications['mirror'],analysis_results=results,label='mirror - grasp unselective')
         unit_classifications['mirror - grasp unselective'].save()

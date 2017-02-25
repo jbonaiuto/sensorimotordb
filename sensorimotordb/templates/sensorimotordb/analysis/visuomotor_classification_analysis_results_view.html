@@ -24,6 +24,7 @@ var factor_event_types=new Map();
 var realigned_times=[];
 var results;
 var factor_plots=new Map();
+var total_num_units=0;
 
 $(document).ready(function(){
     // Load analysis results
@@ -75,8 +76,10 @@ function loadedAnalysisResultsData(resp)
                 conditions_to_load.push(condition_id);
         }
     }
-    // PRocess each unit
-    for(var unit_idx=0; unit_idx<resp.unit_analysis_results.length; unit_idx++)
+
+    // Process each unit
+    total_num_units=resp.unit_analysis_results.length;
+    for(var unit_idx=0; unit_idx<total_num_units; unit_idx++)
     {
         // Get classification label
         var unit_results=resp.unit_analysis_results[unit_idx];
@@ -116,7 +119,8 @@ function loadedAnalysisResultsData(resp)
         "All neurons",
         [
             -1,
-            []
+            [],
+            100
         ],
         {}
     ];
@@ -138,10 +142,6 @@ function loadedAnalysisResultsData(resp)
             }
         }
     }
-    function count_function(d)
-    {
-        return d[1][1].length;
-    }
 
     // Create plot
     d3.select(self.frameElement).style("height", "800px");
@@ -159,9 +159,11 @@ function addClassificationToHierarchy(data, classification)
     // If there is no parent for this classification or this node is the parent
     if(classification.parent==null || data[1][0]==parseInt(classification.parent.split('/')[5]))
     {
+        var percentage=classification.units.length/data[1][1].length*100.0;
         // Add units to this node
         if(classification.parent==null)
         {
+            percentage=classification.units.length/total_num_units*100.0;
             for(var unit_idx=0; unit_idx<classification.units.length; unit_idx++)
                 data[1][1].push(classification.units[unit_idx]);
         }
@@ -170,7 +172,8 @@ function addClassificationToHierarchy(data, classification)
             classification.label,
             [
                 classification.id,
-                classification.units
+                classification.units,
+                Math.round(percentage * 100) / 100
             ],
             {}
         ];
@@ -220,7 +223,7 @@ function init_code_hierarchy_plot(element_id, data)
      */
     function label_function(d)
     {
-        return d[2]+": "+d[4][1].length+" neurons";
+        return d[2]+"\n"+d[4][1].length+" neurons\n"+d[4][2]+'%';
     }
 
     /**

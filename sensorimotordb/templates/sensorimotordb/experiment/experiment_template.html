@@ -18,11 +18,18 @@
                     {% endif %}
                 </td>
             </tr>
-            {% if can_delete %}
+            {% if can_edit or can_delete %}
             <tr>
+                {% if can_edit %}
+                <td>
+                    <a href="/sensorimotordb/experiment/<%= id %>/edit/">Edit</a>
+                </td>
+                {% endif %}
+                {% if can_delete %}
                 <td>
                     <a href="#" onclick="deleteExperiment(<%= id %>); return false;">Delete</a>
                 </td>
+                {% endif %}
             </tr>
             {% endif %}
         </table>

@@ -6,7 +6,7 @@ from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionReso
     MirrorTypeClassificationAnalysisResultsResource
 from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView, CreateVisuomotorClassificationAnalysisView, DeleteVisuomotorClassificationAnalysisResultsView, DeleteAnalysisResultsView, ImportView, ExperimentImportView, \
     MirrorTypeClassificationAnalysisResultsDetailView, CreateMirrorTypeClassificationAnalysisView, \
-    DeleteMirrorTypeClassificationAnalysisResultsView, DeleteExperimentView, UpdateExperimentView
+    DeleteMirrorTypeClassificationAnalysisResultsView, DeleteExperimentView, UpdateExperimentView, DeleteConditionView, UpdateConditionView
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())
@@ -42,6 +42,8 @@ urlpatterns = patterns('',
     (r'^experiment/(?P<pk>\d+)/$', ExperimentDetailView.as_view(), {}, 'experiment_view'),
     (r'^experiment/(?P<pk>\d+)/import/$', ExperimentImportView.as_view(), {}, 'experiment_import_view'),
     (r'^condition/(?P<pk>\d+)/$', ConditionDetailView.as_view(), {}, 'condition_view'),
+    (r'^condition/(?P<pk>\d+)/delete/$', DeleteConditionView.as_view(), {}, 'condition_edit'),
+    (r'^condition/(?P<pk>\d+)/edit/$', UpdateConditionView.as_view(), {}, 'condition_edit'),
     (r'^unit/(?P<pk>\d+)/$', UnitDetailView.as_view(), {}, 'unit_view'),
     (r'^experiment/(?P<pk>\d+)/edit/$', UpdateExperimentView.as_view(), {}, 'experiment_edit'),
     (r'^experiment/(?P<pk>\d+)/delete/$', DeleteExperimentView.as_view(), {}, 'experiment_delete'),

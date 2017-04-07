@@ -225,6 +225,27 @@
         }
         dispatch.realigned(realigned_unit_spikes, realigned_unit_trial_events);
     }
+
+    function deleteCondition(id)
+    {
+        if (confirm('Are you sure you want to delete this condition?')) {
+            var data={'id':id, 'csrfmiddlewaretoken': '{{ csrf_token }}'};
+            var args={
+                type:"POST",
+                url:'/sensorimotordb/condition/'+id+'/delete/',
+                data: data,
+                success: doneConditionDelete };
+            $.ajax(args);
+        }
+    }
+
+    function doneConditionDelete(data, status)
+    {
+        if(status=='success')
+        {
+            document.location.href='/sensorimotordb/experiment/{{ object.experiment.id }}';
+        }
+    }
 </script>
 {% endblock %}
 {% block content %}

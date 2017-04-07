@@ -3,7 +3,7 @@ from django import forms
 from django.forms.models import ModelForm
 from registration.forms import RegistrationForm
 from registration.users import UsernameField
-from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis, MirrorTypeClassificationAnalysisResults
+from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis, MirrorTypeClassificationAnalysisResults, GraspObservationCondition, GraspPerformanceCondition
 
 class MirrorTypeClassificationAnalysisResultsForm(ModelForm):
     analysis = forms.ModelChoiceField(Analysis.objects.all(),widget=forms.HiddenInput,required=True)
@@ -50,6 +50,19 @@ class VisuomotorClassificationAnalysisResultsForm(ModelForm):
         model=VisuomotorClassificationAnalysisResults
         exclude=('total_num_units',)
 
+
+class GraspObservationConditionForm(ModelForm):
+
+     class Meta:
+         model = GraspObservationCondition
+         exclude=('experiment','type')
+
+
+class GraspPerformanceConditionForm(ModelForm):
+
+    class Meta:
+        model = GraspPerformanceCondition
+        exclude=('experiment','type')
 
 class ExperimentForm(ModelForm):
 

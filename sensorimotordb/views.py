@@ -14,7 +14,7 @@ import h5py
 import os
 from registration.forms import User
 from tastypie.models import ApiKey
-from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, MirrorTypeClassificationAnalysisResultsForm, ExperimentForm
+from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, MirrorTypeClassificationAnalysisResultsForm, ExperimentForm, GraspObservationConditionForm, GraspPerformanceConditionForm
 from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis, RecordingTrial, UnitRecording, UnitAnalysisResults
 from uscbp import settings
 from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
@@ -59,6 +59,48 @@ class IndexView(LoginRequiredMixin, TemplateView):
     template_name = 'sensorimotordb/index.html'
 
 
+class UpdateConditionView(LoginRequiredMixin, UpdateView):
+    model=Condition
+    permission_required = 'edit'
+
+    def get_object(self, queryset=None):
+        pk = self.kwargs.get(self.pk_url_kwarg, None)
+        if GraspObservationCondition.objects.filter(id=pk).count():
+            self.model=GraspObservationCondition
+            self.template_name = 'sensorimotordb/condition/grasp_observation_condition_edit.html'
+            self.form_class=GraspObservationConditionForm
+        elif GraspPerformanceCondition.objects.filter(id=pk).count():
+            self.model = GraspPerformanceCondition
+            self.template_name = 'sensorimotordb/condition/grasp_performance_condition_edit.html'
+            self.form_class=GraspPerformanceConditionForm
+        return super(UpdateConditionView,self).get_object(queryset=queryset)
+
+    def form_valid(self, form):
+        self.object.last_modified_by=self.request.user
+        self.object.save()
+
+        return redirect('/sensorimotordb/condition/%d/' % self.object.id)
+
+
+class DeleteConditionView(JSONResponseMixin,BaseDetailView):
+    model=Condition
+    def get_context_data(self, **kwargs):
+        context={'msg':u'No POST data sent.' }
+        if self.request.is_ajax():
+            self.object=self.get_object()
+            ConditionVideoEvent.objects.filter(condition=self.object).delete()
+            units_to_delete=Unit.objects.filter(unit_recording__trial__condition=self.object).values_list('id',flat=True)
+            UnitRecording.objects.filter(trial__condition=self.object).delete()
+            Event.objects.filter(trial__condition=self.object).delete()
+            RecordingTrial.objects.filter(condition=self.object).delete()
+            Unit.objects.filter(id__in=units_to_delete).delete()
+
+            self.object.delete()
+            context={'id': self.request.POST['id']}
+
+        return context
+
+
 class ConditionDetailView(LoginRequiredMixin, DetailView):
     model=Condition
     permission_required = 'view'
@@ -81,6 +123,11 @@ class ConditionDetailView(LoginRequiredMixin, DetailView):
             context['video_url_mp4']=''.join(['http://', get_current_site(None).domain, os.path.join('/media/video/',
                 'condition_%d.mp4' % self.object.id)])
             context['video_events']=ConditionVideoEvent.objects.filter(condition=self.object).order_by('time')
+        context['can_delete']=False
+        context['can_edit']=False
+        if self.request.user.is_superuser or self.object.experiment.collator==self.request.user.id:
+            context['can_delete']=True
+            context['can_edit']=True
         return context
 
 

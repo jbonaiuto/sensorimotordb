@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>SensoriMotorDB - Edit Condition: {{ object.name }}</title>
+{% endblock %}
+{% block content %}
+<div class="condition_info">
+    <form id="conditionForm" method="post" action="">
+        {% csrf_token %}
+        <table class="tab_panel">
+            <tr valign=top>
+                <td>{{ form.name.label_tag }}*</td>
+                <td>{{ form.name }}</td>
+                {% if form.name.errors %}<td class="myerrors">{{ form.name.errors }}</td>{% endif %}
+            </tr>
+            <tr valign=top>
+                <td>{{ form.description.label_tag }}*</td>
+                <td>{{ form.description }}</td>
+                {% if form.description.errors %}<td class="myerrors">{{ form.description.errors }}</td>{% endif %}
+            </tr>
+            <tr valign=top>
+                <td>{{ form.object.label_tag }}*</td>
+                <td>{{ form.object }}</td>
+                {% if form.object.errors %}<td class="myerrors">{{ form.object.errors }}</td>{% endif %}
+            </tr>
+            <tr valign=top>
+                <td>{{ form.object_distance.label_tag }}*</td>
+                <td>{{ form.object_distance }}</td>
+                {% if form.object_distance.errors %}<td class="myerrors">{{ form.object_distance.errors }}</td>{% endif %}
+            </tr>
+            <tr valign=top>
+                <td>{{ form.grasp.label_tag }}*</td>
+                <td>{{ form.grasp }}</td>
+                {% if form.grasp.errors %}<td class="myerrors">{{ form.grasp.errors }}</td>{% endif %}
+            </tr>
+            <tr valign=top>
+                <td>{{ form.demonstrator_species.label_tag }}*</td>
+                <td>{{ form.demonstrator_species }}</td>
+                {% if form.demonstrator_species.errors %}<td class="myerrors">{{ form.demonstrator_species.errors }}</td>{% endif %}
+            </tr>
+            <tr valign=top>
+                <td>{{ form.demonstration_type.label_tag }}*</td>
+                <td>{{ form.demonstration_type }}</td>
+                {% if form.demonstration_type.errors %}<td class="myerrors">{{ form.demonstration_type.errors }}</td>{% endif %}
+            </tr>
+            <tr valign=top>
+                <td>{{ form.viewing_angle.label_tag }}*</td>
+                <td>{{ form.viewing_angle }}</td>
+                {% if form.viewing_angle.errors %}<td class="myerrors">{{ form.viewing_angle.errors }}</td>{% endif %}
+            </tr>
+            <tr valign=top>
+                <td>{{ form.whole_body_visible.label_tag }}*</td>
+                <td>{{ form.whole_body_visible }}</td>
+                {% if form.whole_body_visible.errors %}<td class="myerrors">{{ form.whole_body_visible.errors }}</td>{% endif %}
+            </tr>
+        </table>
+        <div id="errors" class="myerrors">
+            {{ form.errors }}
+        </div>
+        <br>
+        <input class="btn" type="submit" value="Submit" onmouseover="this.className='btn btnhov'" onmouseout="this.className='btn'"/>&nbsp;
+        <input class="btn" type="button" value="Cancel" onclick="document.location.href='/sensorimotordb/condition/{{ object.id }}/" onmouseover="this.className='btn btnhov'" onmouseout="this.className='btn'"/>
+    </form>
+</div>
+
+{% endblock %}

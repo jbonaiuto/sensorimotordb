@@ -50,6 +50,14 @@ class VisuomotorClassificationAnalysisResultsForm(ModelForm):
         model=VisuomotorClassificationAnalysisResults
         exclude=('total_num_units',)
 
+
+class ExperimentForm(ModelForm):
+
+    class Meta:
+        model = Experiment
+        exclude=('collator','creation_time','last_modified_time')
+
+
 class ExperimentExportRequestForm(ModelForm):
     requesting_user=forms.ModelChoiceField(User.objects.all(),widget=forms.HiddenInput,required=False)
     rationale = forms.CharField(widget=forms.Textarea(attrs={'cols':'57','rows':'5'}),required=True)

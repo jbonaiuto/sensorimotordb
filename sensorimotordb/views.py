@@ -14,7 +14,7 @@ import h5py
 import os
 from registration.forms import User
 from tastypie.models import ApiKey
-from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, MirrorTypeClassificationAnalysisResultsForm
+from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, MirrorTypeClassificationAnalysisResultsForm, ExperimentForm
 from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis, RecordingTrial, UnitRecording, UnitAnalysisResults
 from uscbp import settings
 from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
@@ -99,9 +99,23 @@ class ExperimentDetailView(LoginRequiredMixin, DetailView):
         if self.request.user.is_superuser or ExperimentExportRequest.objects.filter(experiment__id=self.object.id, requesting_user__id=self.request.user.id, status='approved').exists():
             context['can_export']=True
         context['can_delete']=False
+        context['can_edit']=False
         if self.request.user.is_superuser or self.object.collator==self.request.user.id:
             context['can_delete']=True
+            context['can_edit']=True
         return context
+
+
+class UpdateExperimentView(LoginRequiredMixin, UpdateView):
+    model=Experiment
+    template_name = 'sensorimotordb/experiment/experiment_edit.html'
+    form_class = ExperimentForm
+
+    def form_valid(self, form):
+        self.object.last_modified_by=self.request.user
+        self.object.save()
+
+        return redirect('/sensorimotordb/experiment/%d/' % self.object.id)
 
 
 class AnalysisResultsDetailView(LoginRequiredMixin, DetailView):

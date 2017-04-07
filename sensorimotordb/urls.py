@@ -2,7 +2,7 @@
 from django.conf.urls import patterns, include, url
 from tastypie.api import Api
 from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, VisuomotorClassificationAnalysisResource, VisuomotorClassificationAnalysisResultsResource, UnitClassificationResource, AnalysisResource, FactorResource, LevelResource, UnitAnalysisResultsResource, VisuomotorClassificationUnitAnalysisResultsResource, AnalysisResultsResource, MirrorTypeClassificationUnitAnalysisResultsResource, MirrorTypeClassificationAnalysisResource, MirrorTypeClassificationAnalysisResultsResource
-from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView, CreateVisuomotorClassificationAnalysisView, DeleteVisuomotorClassificationAnalysisResultsView, DeleteAnalysisResultsView, MirrorTypeClassificationAnalysisResultsDetailView, CreateMirrorTypeClassificationAnalysisView, DeleteMirrorTypeClassificationAnalysisResultsView
+from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView, CreateVisuomotorClassificationAnalysisView, DeleteVisuomotorClassificationAnalysisResultsView, DeleteAnalysisResultsView, MirrorTypeClassificationAnalysisResultsDetailView, CreateMirrorTypeClassificationAnalysisView, DeleteMirrorTypeClassificationAnalysisResultsView, DeleteExperimentView
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())
@@ -37,6 +37,7 @@ urlpatterns = patterns('',
     (r'^experiment/(?P<pk>\d+)/$', ExperimentDetailView.as_view(), {}, 'experiment_view'),
     (r'^condition/(?P<pk>\d+)/$', ConditionDetailView.as_view(), {}, 'condition_view'),
     (r'^unit/(?P<pk>\d+)/$', UnitDetailView.as_view(), {}, 'unit_view'),
+    (r'^experiment/(?P<pk>\d+)/delete/$', DeleteExperimentView.as_view(), {}, 'experiment_delete'),
     (r'^experiment/(?P<pk>\d+)/export_request/$', ExperimentExportRequestView.as_view(), {}, 'experiment_export_request_view'),
     (r'^experiment/(?P<pk>\d+)/export_request/deny/(?P<activation_key>\w+)/$', ExperimentExportRequestDenyView.as_view(),
         {}, 'experiment_export_request_deny'),

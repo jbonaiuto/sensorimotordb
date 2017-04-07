@@ -15,7 +15,7 @@ import os
 from registration.forms import User
 from tastypie.models import ApiKey
 from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, MirrorTypeClassificationAnalysisResultsForm
-from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis
+from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis, RecordingTrial, UnitRecording, UnitAnalysisResults
 from uscbp import settings
 from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
 
@@ -98,6 +98,9 @@ class ExperimentDetailView(LoginRequiredMixin, DetailView):
         context['can_export']=False
         if self.request.user.is_superuser or ExperimentExportRequest.objects.filter(experiment__id=self.object.id, requesting_user__id=self.request.user.id, status='approved').exists():
             context['can_export']=True
+        context['can_delete']=False
+        if self.request.user.is_superuser or self.object.collator==self.request.user.id:
+            context['can_delete']=True
         return context
 
 
@@ -138,6 +141,32 @@ class DeleteAnalysisResultsView(JSONResponseMixin,BaseDetailView):
                     level_mapping.delete()
                 results.delete()
                 self.object.delete()
+            context={'id': self.request.POST['id']}
+
+        return context
+
+
+class DeleteExperimentView(JSONResponseMixin,BaseDetailView):
+    model=Experiment
+    def get_context_data(self, **kwargs):
+        context={'msg':u'No POST data sent.' }
+        if self.request.is_ajax():
+            self.object=self.get_object()
+            ConditionVideoEvent.objects.filter(condition__experiment=self.object).delete()
+            units_to_delete=Unit.objects.filter(unit_recording__trial__condition__experiment=self.object).values_list('id',flat=True)
+            UnitRecording.objects.filter(trial__condition__experiment=self.object).delete()
+            Event.objects.filter(trial__condition__experiment=self.object).delete()
+            RecordingTrial.objects.filter(condition__experiment=self.object).delete()
+            Unit.objects.filter(id__in=units_to_delete).delete()
+            Condition.objects.filter(experiment=self.object).delete()
+            ExperimentExportRequest.objects.filter(experiment=self.object).delete()
+
+            UnitAnalysisResults.objects.filter(analysis_results__experiment=self.object).delete()
+            AnalysisResultsLevelMapping.objects.filter(analysis_results__experiment=self.object).delete()
+            UnitClassification.objects.filter(analysis_results__experiment=self.object).delete()
+            AnalysisResults.objects.filter(experiment=self.object).delete()
+
+            self.object.delete()
             context={'id': self.request.POST['id']}
 
         return context

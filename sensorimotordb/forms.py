@@ -51,7 +51,7 @@ class VisuomotorClassificationAnalysisResultsForm(ModelForm):
         exclude=('total_num_units',)
 
 
-class ExperimentForm(ModelForm):
+class ExperimentCreateForm(ModelForm):
     collator = forms.ModelChoiceField(queryset=User.objects.all(),widget=forms.HiddenInput,required=False)
     last_modified_by = forms.ModelChoiceField(queryset=User.objects.all(),widget=forms.HiddenInput,required=False)
     title = forms.CharField(max_length=200, required=True)
@@ -106,6 +106,12 @@ class GraspConditionInlineForm(ConditionInlineForm):
 
 GraspConditionFormSet = lambda *a, **kw: inlineformset_factory(Experiment,GraspCondition,form=GraspConditionInlineForm, fk_name='experiment',
     extra=kw.pop('extra', 0), can_delete=True)(*a, **kw)
+
+class ExperimentForm(ModelForm):
+    class Meta:
+        model = Experiment
+        exclude=('collator','creation_time','last_modified_time')
+
 
 class ExperimentExportRequestForm(ModelForm):
     requesting_user=forms.ModelChoiceField(User.objects.all(),widget=forms.HiddenInput,required=False)

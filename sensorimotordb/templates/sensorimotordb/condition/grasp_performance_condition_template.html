@@ -47,6 +47,23 @@
                 <td><strong>Grasp type</strong></td>
                 <td><%= grasp %></td>
             </tr>
+            {% if can_edit or can_delete %}
+            <tr>
+                {% if can_edit %}
+                <td>
+                    <a href="/sensorimotordb/condition/<%= id %>/edit/">Edit</a>
+                </td>
+                {% endif %}
+                {% if can_delete %}
+                <td>
+                    <a href="#" onclick="deleteCondition(<%= id %>); return false;">Delete</a>
+                </td>
+                {% endif %}
+            </tr>
+            <tr>
+                <td colspan="2">&nbsp;</td>
+            </tr>
+            {% endif %}
             <% if(video_url_mp4.length>0){ %>
                 <tr>
                     <td>&nbsp;</td>

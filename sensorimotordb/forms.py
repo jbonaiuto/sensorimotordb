@@ -3,7 +3,7 @@ from django import forms
 from django.forms.models import ModelForm, inlineformset_factory
 from registration.forms import RegistrationForm
 from registration.users import UsernameField
-from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis, Species, Condition, GraspCondition, GraspObservationCondition, MirrorTypeClassificationAnalysisResults
+from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis, MirrorTypeClassificationAnalysisResults, GraspObservationCondition, GraspPerformanceCondition, Species, Condition, GraspCondition
 
 class MirrorTypeClassificationAnalysisResultsForm(ModelForm):
     analysis = forms.ModelChoiceField(Analysis.objects.all(),widget=forms.HiddenInput,required=True)
@@ -99,10 +99,24 @@ class GraspConditionInlineForm(ConditionInlineForm):
     viewing_angle=forms.DecimalField()
     whole_body_visible = forms.BooleanField(required=False)
 
-
     class Meta:
         model=GraspCondition
         exclude=()
+
+
+class GraspObservationConditionForm(ModelForm):
+
+     class Meta:
+         model = GraspObservationCondition
+         exclude=('experiment','type')
+
+
+class GraspPerformanceConditionForm(ModelForm):
+
+    class Meta:
+        model = GraspPerformanceCondition
+        exclude=('experiment','type')
+
 
 GraspConditionFormSet = lambda *a, **kw: inlineformset_factory(Experiment,GraspCondition,form=GraspConditionInlineForm, fk_name='experiment',
     extra=kw.pop('extra', 0), can_delete=True)(*a, **kw)

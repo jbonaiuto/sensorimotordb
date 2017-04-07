@@ -197,12 +197,10 @@ class DeleteVisuomotorClassificationAnalysisResultsView(JSONResponseMixin,BaseDe
         context={'msg':u'No POST data sent.' }
         if self.request.is_ajax():
             self.object=self.get_object()
-            for classification in UnitClassification.objects.filter(analysis_results=self.object):
-                classification.delete()
-            for unit_results in VisuomotorClassificationUnitAnalysisResults.objects.filter(analysis_results=self.object):
-                unit_results.delete()
-            for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=self.object):
-                level_mapping.delete()
+            UnitAnalysisResults.objects.filter(analysis_results=self.object).delete()
+            UnitClassification.objects.filter(analysis_results=self.object).delete()
+            VisuomotorClassificationUnitAnalysisResults.objects.filter(analysis_results=self.object).delete()
+            AnalysisResultsLevelMapping.objects.filter(analysis_results=self.object).delete()
             self.object.delete()
             context={'id': self.request.POST['id']}
 
@@ -234,12 +232,10 @@ class DeleteMirrorTypeClassificationAnalysisResultsView(JSONResponseMixin,BaseDe
         context={'msg':u'No POST data sent.' }
         if self.request.is_ajax():
             self.object=self.get_object()
-            for classification in UnitClassification.objects.filter(analysis_results=self.object):
-                classification.delete()
-            for unit_results in MirrorTypeClassificationUnitAnalysisResults.objects.filter(analysis_results=self.object):
-                unit_results.delete()
-            for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=self.object):
-                level_mapping.delete()
+            UnitAnalysisResults.objects.filter(analysis_results=self.object).delete()
+            UnitClassification.objects.filter(analysis_results=self.object).delete()
+            MirrorTypeClassificationUnitAnalysisResults.objects.filter(analysis_results=self.object).delete()
+            AnalysisResultsLevelMapping.objects.filter(analysis_results=self.object).delete()
             self.object.delete()
             context={'id': self.request.POST['id']}
 

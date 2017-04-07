@@ -1,4 +1,5 @@
 import json
+import shutil
 from django.db.models import Q
 from h5py import h5
 from wsgiref.util import FileWrapper
@@ -588,6 +589,9 @@ class DeleteExperimentView(JSONResponseMixin,BaseDetailView):
             AnalysisResultsLevelMapping.objects.filter(analysis_results__experiment=self.object).delete()
             UnitClassification.objects.filter(analysis_results__experiment=self.object).delete()
             AnalysisResults.objects.filter(experiment=self.object).delete()
+
+            data_path=os.path.join(settings.MEDIA_ROOT,'experiment_data','%s' % self.object.id)
+            shutil.rmtree(data_path)
 
             self.object.delete()
             context={'id': self.request.POST['id']}

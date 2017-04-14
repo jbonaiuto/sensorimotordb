@@ -811,14 +811,17 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
             {
                 rate=rate_data.get(group_ids[j]);
                 var i = bisectTime(rate, x0, 1);
-                d0 = rate[i - 1];
-                d1 = rate[i];
-                d = x0 - d0.x > d1.x - x0 ? d1 : d0;
-                y_dist=Math.abs(d.y-y0);
-                if(y_dist<min_y_dist)
+                if(i<rate.length)
                 {
-                    min_y_dist=y_dist;
-                    min_y_d=d;
+                    d0 = rate[i - 1];
+                    d1 = rate[i];
+                    d = x0 - d0.x > d1.x - x0 ? d1 : d0;
+                    y_dist=Math.abs(d.y-y0);
+                    if(y_dist<min_y_dist)
+                    {
+                        min_y_dist=y_dist;
+                        min_y_d=d;
+                    }
                 }
             }
         }
@@ -1147,14 +1150,17 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
             {
                 rate=mean_rates.get(group_ids[j]);
                 var i = bisectTime(rate, x0, 1);
-                d0 = rate[i - 1];
-                d1 = rate[i];
-                d = x0 - d0.x > d1.x - x0 ? d1 : d0;
-                y_dist=Math.abs(d.y-y0);
-                if(y_dist<min_y_dist)
+                if(i<rate.length)
                 {
-                    min_y_dist=y_dist;
-                    min_y_d=d;
+                    d0 = rate[i - 1];
+                    d1 = rate[i];
+                    d = x0 - d0.x > d1.x - x0 ? d1 : d0;
+                    y_dist=Math.abs(d.y-y0);
+                    if(y_dist<min_y_dist)
+                    {
+                        min_y_dist=y_dist;
+                        min_y_d=d;
+                    }
                 }
             }
         }

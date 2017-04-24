@@ -207,3 +207,14 @@ function convolute(data, kernel, accessor){
     });
     return convoluted_data;
 }
+
+function normalize_unit_rate(unit_rate, max_rate)
+{
+    var normRate=[];
+    for(var j=0; j<unit_rate.length; j++)
+        normRate.push({
+            x: unit_rate[j].x,
+            y: unit_rate[j].y/max_rate
+        });
+    return normRate;
+}

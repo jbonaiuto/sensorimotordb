@@ -13,7 +13,7 @@ from django.views.generic.detail import SingleObjectMixin, BaseDetailView
 from django.views.generic.edit import ModelFormMixin
 import h5py
 from neo import io
-from haystack.management.commands import rebuild_index
+from haystack.management.commands import update_index, rebuild_index
 import os
 from registration.forms import User
 from tastypie.models import ApiKey
@@ -503,6 +503,11 @@ class UpdateConditionView(LoginRequiredMixin, UpdateView):
         self.object.last_modified_by=self.request.user
         self.object.save()
 
+        try:
+            update_index.Command().handle(interactive=False)
+        except:
+            pass
+
         return redirect('/sensorimotordb/condition/%d/' % self.object.id)
 
 
@@ -520,6 +525,12 @@ class DeleteConditionView(JSONResponseMixin,BaseDetailView):
             Unit.objects.filter(id__in=units_to_delete).delete()
 
             self.object.delete()
+
+            try:
+                rebuild_index.Command().handle(interactive=False)
+            except:
+                pass
+
             context={'id': self.request.POST['id']}
 
         return context
@@ -586,6 +597,10 @@ class UpdateExperimentView(LoginRequiredMixin, UpdateView):
         self.object.last_modified_by=self.request.user
         self.object.save()
 
+        try:
+            update_index.Command().handle(interactive=False)
+        except:
+            pass
         return redirect('/sensorimotordb/experiment/%d/' % self.object.id)
 
 
@@ -655,6 +670,11 @@ class DeleteExperimentView(JSONResponseMixin,BaseDetailView):
             shutil.rmtree(data_path)
 
             self.object.delete()
+
+            try:
+                rebuild_index.Command().handle(interactive=False)
+            except:
+                pass
             context={'id': self.request.POST['id']}
 
         return context

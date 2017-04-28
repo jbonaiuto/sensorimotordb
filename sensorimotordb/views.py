@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
 from django.http import HttpResponse, HttpResponseForbidden
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render_to_response
 from django.views.generic import DetailView, TemplateView, CreateView, UpdateView, View
 from django.views.generic.detail import SingleObjectMixin, BaseDetailView
 from django.views.generic.edit import ModelFormMixin
@@ -15,8 +15,10 @@ from haystack.management.commands import update_index, rebuild_index
 import os
 from registration.forms import User
 from tastypie.models import ApiKey
+from sensorimotordb.api import FullRecordingTrialResource
 from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, MirrorTypeClassificationAnalysisResultsForm, ExperimentForm, GraspObservationConditionForm, GraspPerformanceConditionForm
 from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis, RecordingTrial, UnitRecording, UnitAnalysisResults
+#from sensorimotordb.urls import v1_api
 from uscbp import settings
 from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
 
@@ -581,3 +583,24 @@ class CreateMirrorTypeClassificationAnalysisView(LoginRequiredMixin,CreateView):
         analysis=MirrorTypeClassificationAnalysis.objects.get(id=self.object.analysis.id)
         analysis.run(self.object)
         return redirect('/sensorimotordb/experiment/%d/' % self.object.experiment.id)
+
+
+class ApiProfileView(LoginRequiredMixin, TemplateView):
+    template_name = 'sensorimotordb/api_profile.html'
+    resource_class = None
+
+    def get_context_data(self, **kwargs):
+        context_data=super(ApiProfileView,self).get_context_data(**kwargs)
+
+        resource=self.resource_class()
+        obj_list = resource.wrap_view('dispatch_list')(self.request)
+        response = resource.create_response(self.request, obj_list)
+        context_data['api_response'] = response
+        return context_data
+
+
+class FullRecordingTrialApiProfileView(ApiProfileView):
+    template_name = 'sensorimotordb/api_profile.html'
+    resource_class=FullRecordingTrialResource
+
+

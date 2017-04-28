@@ -2,7 +2,8 @@
 from django.conf.urls import patterns, include, url
 from tastypie.api import Api
 from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, VisuomotorClassificationAnalysisResource, VisuomotorClassificationAnalysisResultsResource, UnitClassificationResource, AnalysisResource, FactorResource, LevelResource, UnitAnalysisResultsResource, VisuomotorClassificationUnitAnalysisResultsResource, AnalysisResultsResource, MirrorTypeClassificationUnitAnalysisResultsResource, MirrorTypeClassificationAnalysisResource, MirrorTypeClassificationAnalysisResultsResource
-from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView, CreateVisuomotorClassificationAnalysisView, DeleteVisuomotorClassificationAnalysisResultsView, DeleteAnalysisResultsView, MirrorTypeClassificationAnalysisResultsDetailView, CreateMirrorTypeClassificationAnalysisView, DeleteMirrorTypeClassificationAnalysisResultsView, DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView
+from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, AnalysisResultsDetailView, VisuomotorClassificationAnalysisResultsDetailView, CreateVisuomotorClassificationAnalysisView, DeleteVisuomotorClassificationAnalysisResultsView, DeleteAnalysisResultsView, MirrorTypeClassificationAnalysisResultsDetailView, CreateMirrorTypeClassificationAnalysisView, DeleteMirrorTypeClassificationAnalysisResultsView, DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, FullRecordingTrialApiProfileView
+from uscbp import settings
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())
@@ -57,3 +58,5 @@ urlpatterns = patterns('',
     (r'^mirror_type_classification_analysis_results/(?P<pk>\d+)/delete/$', DeleteMirrorTypeClassificationAnalysisResultsView.as_view(), {}, 'mirror_type_classification_analysis_results_delete'),
     (r'', IndexView.as_view(), {}, 'index'),
 )
+if settings.DEBUG:
+    urlpatterns = [url(r'^api_profile/full_recording_trial/$', FullRecordingTrialApiProfileView.as_view(), {}, 'full_recording_trial_api_profile'),] + urlpatterns

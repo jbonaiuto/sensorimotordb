@@ -285,24 +285,34 @@ class UnitRecording(models.Model):
 
     def __init__(self, *args, **kwargs):
         super(UnitRecording,self).__init__(*args, **kwargs)
-        spikes=self.spike_times.split(',')
-        spike_times=[]
-        for idx,spike in enumerate(spikes):
-            if len(spike) and float(spike)>=float(self.trial.start_time)-1.0 and float(spike)<float(self.trial.end_time)+1.0:
-                spike_times.append(float(spike))
-        self.spike_times_array=np.array(spike_times)
+        self.spike_times_array=np.array([])
+
+    def get_spike_times_array(self):
+        if len(self.spike_times_array)==0:
+            spikes=self.spike_times.split(',')
+            spike_times=[]
+            trial=self.trial
+            start_time=trial.start_time
+            end_time=trial.end_time
+            for idx,spike in enumerate(spikes):
+                if len(spike) and float(spike)>=float(start_time)-1.0 and float(spike)<float(end_time)+1.0:
+                    spike_times.append(float(spike))
+            self.spike_times_array=np.array(spike_times)
+        return self.spike_times_array
+
 
     def export(self, group):
         group.attrs['unit']=self.unit.id
-        group['spike_times']=self.spike_times_array
+        group['spike_times']=self.get_spike_times_array()
 
     def get_spikes_relative(self, time_zero, window):
-        rel_spike_times=self.spike_times_array-time_zero
+        rel_spike_times=self.get_spike_times_array()-time_zero
         spikes=rel_spike_times[np.where((rel_spike_times>=window[0]) & (rel_spike_times<window[1]))[0]]
         return spikes
 
     def get_spikes_fixed(self, window):
-        spikes=self.spike_times_array[np.where((self.spike_times_array>=window[0]) & (self.spike_times_array<window[1]))[0]]
+        spike_times_array=self.get_spike_times_array()
+        spikes=spike_times_array[np.where((spike_times_array>=window[0]) & (spike_times_array<window[1]))[0]]
         return spikes
 
 

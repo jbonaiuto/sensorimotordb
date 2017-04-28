@@ -281,8 +281,7 @@ class FullRecordingTrialResource(ModelResource):
     condition=fields.ToOneField(BasicConditionResource, 'condition')
     unit_recordings=fields.ToManyField('sensorimotordb.api.UnitRecordingResource', 'unit_recordings', null=False, full=True)
     class Meta:
-        queryset = RecordingTrial.objects.all().select_related('condition').prefetch_related('unit_recordings',
-            'unit_recordings__unit','events').distinct()
+        queryset = RecordingTrial.objects.all().select_related('condition').prefetch_related('unit_recordings__unit','events').distinct()
         resource_name = 'full_recording_trial'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())

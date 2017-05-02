@@ -15,7 +15,7 @@ from haystack.management.commands import update_index, rebuild_index
 import os
 from registration.forms import User
 from tastypie.models import ApiKey
-from sensorimotordb.api import FullRecordingTrialResource
+from sensorimotordb.api import FullRecordingTrialResource, ExperimentResource
 from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, MirrorTypeClassificationAnalysisResultsForm, ExperimentForm, GraspObservationConditionForm, GraspPerformanceConditionForm
 from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis, RecordingTrial, UnitRecording, UnitAnalysisResults
 #from sensorimotordb.urls import v1_api
@@ -600,7 +600,21 @@ class ApiProfileView(LoginRequiredMixin, TemplateView):
 
 
 class FullRecordingTrialApiProfileView(ApiProfileView):
-    template_name = 'sensorimotordb/api_profile.html'
     resource_class=FullRecordingTrialResource
 
 
+class ExperimentApiProfileView(ApiProfileView):
+    resource_class=ExperimentResource
+
+    def get_context_data(self, **kwargs):
+        context_data=super(ApiProfileView,self).get_context_data(**kwargs)
+
+        resource=self.resource_class()
+        obj = resource.wrap_view('dispatch_detail')(self.request,**kwargs)
+        response = resource.create_response(self.request, obj)
+        context_data['api_response'] = response
+        return context_data
+
+
+class ConditionApiProfileView(ApiProfileView):
+    resource_class=FullRecordingTrialResource

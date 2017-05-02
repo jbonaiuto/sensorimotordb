@@ -15,7 +15,7 @@ from haystack.management.commands import update_index, rebuild_index
 import os
 from registration.forms import User
 from tastypie.models import ApiKey
-from sensorimotordb.api import FullRecordingTrialResource, ExperimentResource
+from sensorimotordb.api import FullRecordingTrialResource, ExperimentResource, ConditionResource
 from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, MirrorTypeClassificationAnalysisResultsForm, ExperimentForm, GraspObservationConditionForm, GraspPerformanceConditionForm
 from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis, RecordingTrial, UnitRecording, UnitAnalysisResults
 #from sensorimotordb.urls import v1_api
@@ -617,4 +617,4 @@ class ExperimentApiProfileView(ApiProfileView):
 
 
 class ConditionApiProfileView(ApiProfileView):
-    resource_class=FullRecordingTrialResource
+    resource_class=ConditionResource

@@ -1,0 +1,38 @@
+<script type="text/html" id="classification_type-template">
+    <div id="id_classification_type-<%= idx %>" class="<%= getTRTag(idx) %>">
+        <input id="id_classification_type-<%= idx %>-DELETE" name="classification_type-<%= idx %>-DELETE" type="hidden" />
+        <input id="id_classification_type-<%= idx %>-analysis" name="classification_type-<%= idx %>-analysis" type="hidden" value="{{ object.id }}" />
+        <input id="id_classification_type-<%= idx %>-id" name="classification_type-<%= idx %>-id" type="hidden" value="<%= id %>" />
+        <input id="id_classification_type-<%= idx %>-unit_classification_type_conditions-TOTAL_FORMS" name="classification_type-<%= idx %>-unit_classification_type_conditions-TOTAL_FORMS" type="hidden" value="0" />
+        <input id="id_classification_type-<%= idx %>-unit_classification_type_conditions-INITIAL_FORMS" name="classification_type-<%= idx %>-unit_classification_type_conditions-INITIAL_FORMS" type="hidden" value="0" />
+        <input id="id_classification_type-<%= idx %>-unit_classification_type_conditions-MIN_NUM_FORMS" name="classification_type-<%= idx %>-unit_classification_type_conditions-MIN_NUM_FORMS" type="hidden" value="0" />
+        <input id="id_classification_type-<%= idx %>-unit_classification_type_conditions-MAX_NUM_FORMS" name="classification_type-<%= idx %>-unit_classification_type_conditions-MAX_NUM_FORMS" type="hidden" value="1000" />
+        <table>
+            <tbody id="id_classification_type-<%= idx %>_table">
+                <tr>
+                    <td>
+                        <input type="button" value="Delete" onclick="return deleteClassificationType(<%= idx %>, '<%= id %>');"/>
+                    </td>
+                    <th><strong><label for="id_classification_type-<%= idx %>-label">Label:</label></strong></th>
+                    <td colspan="100"><input id="id_classification_type-<%= idx %>-label" maxlength="1000" name="classification_type-<%= idx %>-label" type="text" value="<%= label %>"/></td>
+                </tr>
+                <tr>
+                    <td>&nbsp;</td>
+                    <td><strong>Conditions</strong> <input type="button" value="Add" onclick="return addClassificationCondition(<%= idx %>,'<%= id %>','',[]);"/></td>
+                    {% for anova in anovas %}
+                        <td style="width: 100px; border:1px solid black" colspan="{{ anova.anova_comparisons.all|length }}"><strong>{{ anova.name }}</strong></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    {% for anova in anovas %}
+                        {% for comparison in anova.anova_comparisons.all.select_subclasses %}
+                            <td style="width: 100px; border:1px solid black">{{ comparison|safe }}</td>
+                        {% endfor %}
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</script>

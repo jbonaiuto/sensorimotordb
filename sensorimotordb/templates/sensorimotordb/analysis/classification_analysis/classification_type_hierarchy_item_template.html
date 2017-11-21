@@ -1,0 +1,22 @@
+<script type="text/html" id="classification_type-template">
+    <div id="id_classification_type_<%= id %>" style="border: 1px solid black">
+        <table>
+            <tr>
+                <td><strong><%= label %></strong></td>
+                <td>&nbsp;</td>
+            </tr>
+
+            <tr>
+                <td><strong>Parent</strong>: <select id="id_classification_type_<%= id %>_parent" name="classification_type_<%= id %>_parent"></select> </td>
+                <td>&nbsp;</td>
+            </tr>
+            <tr>
+                <td>&nbsp;</td>
+                <td>
+                    <div id="id_classification_type_<%= id %>_children">
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</script>

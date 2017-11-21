@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>SensoriMotorDB - Analyses</title>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
+<script>
+
+    function deleteClassificationAnalysis(id)
+    {
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/classification_analysis/"+id+"/delete/",
+            data: data,
+            success: deletedClassificationAnalysis,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+
+    function deletedClassificationAnalysis(resp)
+    {
+        $('#id_classification_analysis-'+resp.id).hide();
+    }
+
+    function addClassificationAnalysis()
+    {
+        document.location.href='/sensorimotordb/classification_analysis/new/';
+    }
+</script>
+{% endblock %}
+{% block content %}
+<h1>Classification Analyses <input type="button" value="New" onclick="addClassificationAnalysis();"></h1>
+<table>
+    <tr>
+        <td>&nbsp;</td>
+        <td><strong>Name</strong></td>
+        <td><strong>Description</strong></td>
+    </tr>
+    {% for analysis in classification_analyses %}
+        <tr id="id_classification_analysis-{{ analysis.id }}">
+            <td>
+                <input type="button" value="Delete" onclick="return deleteClassificationAnalysis({{ analysis.id }});"/>
+            </td>
+            <td>
+                <a href="/sensorimotordb/classification_analysis/{{ analysis.id }}/">{{ analysis.name }}</a>
+            </td>
+            <td>{{ analysis.description }}</td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}

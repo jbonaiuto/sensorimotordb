@@ -1,0 +1,21 @@
+<script type="text/html" id="anova_factor-template">
+    <div id="id_anova-<%= anova_id %>_factor-<%= id %>" class="<%= getTRTag(idx) %>">
+        <table>
+            <tr>
+                <td>&nbsp;</td>
+                <th><strong>Name</strong></th>
+                <td><%= name %></td>
+                <th><strong>Type</strong></th>
+                <td><%= type %></td>
+            </tr>
+            <tr>
+                <td>&nbsp;</td>
+                <td colspan="4">
+                    <h4>Levels</h4>
+                    <div id="id_anova-<%= anova_id %>_factor-<%= id %>_levels" class="<%= getTRTag(idx) %>">
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</script>

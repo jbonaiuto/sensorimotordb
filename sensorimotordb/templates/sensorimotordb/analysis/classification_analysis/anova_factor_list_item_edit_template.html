@@ -1,0 +1,28 @@
+<script type="text/html" id="anova_factor-template">
+    <div id="id_anova_factor-<%= idx %>" class="<%= getTRTag(idx) %>">
+        <input id="id_factor-<%= idx %>-DELETE" name="factor-<%= idx %>-DELETE" type="hidden" />
+        <input id="id_factor-<%= idx %>-anova" name="factor-<%= idx %>-anova" type="hidden" value="<%= anova_id %>"/>
+        <input id="id_factor-<%= idx %>-id" name="factor-<%= idx %>-id" type="hidden" />
+        <table>
+            <tr>
+                <td><input type="button" value="Remove" onclick="return removeFactor(<%= idx %>);"/></td>
+                <th><strong><label for="id_factor-<%= idx %>-name">Name:</label></strong></th>
+                <td><input id="id_factor-<%= idx %>-name" maxlength="1000" name="factor-<%= idx %>-name" type="text" /></td>
+                <th><strong><label for="id_factor-<%= idx %>-type">Type:</label></strong></th>
+                <td><select id="id_factor-<%= idx %>-type" name="factor-<%= idx %>-type"><option value="time window">time window</option><option value="condition">condition</option></select></td>
+            </tr>
+            <tr>
+                <td>&nbsp;</td>
+                <td colspan="4">
+                    <h3>Levels <input type="button" onclick="return addFactorLevel(<%= idx %>);" value="Add"/></h3>
+                    <input id="id_factor-<%= idx %>-anova_factor_levels-TOTAL_FORMS" name="factor-<%= idx %>-anova_factor_levels-TOTAL_FORMS" type="hidden" value="0" />
+                    <input id="id_factor-<%= idx %>-anova_factor_levels-INITIAL_FORMS" name="factor-<%= idx %>-anova_factor_levels-INITIAL_FORMS" type="hidden" value="0" />
+                    <input id="id_factor-<%= idx %>-anova_factor_levels-MIN_NUM_FORMS" name="factor-<%= idx %>-anova_factor_levels-MIN_NUM_FORMS" type="hidden" value="0" />
+                    <input id="id_factor-<%= idx %>-anova_factor_levels-MAX_NUM_FORMS" name="factor-<%= idx %>-anova_factor_levels-MAX_NUM_FORMS" type="hidden" value="1000" />
+                    <div id="id_factor-<%= idx %>_levels" class="<%= getTRTag(idx) %>">
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</script>

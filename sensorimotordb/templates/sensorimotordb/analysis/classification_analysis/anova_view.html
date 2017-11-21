@@ -1,0 +1,13 @@
+{% extends "base_popup.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>{% block title %}{% endblock %}</title>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
+<script type="text/javascript">
+    window.opener.loadAnova({{ object.id}});
+    window.close();
+</script>
+{% endblock %}
+{% block content %}
+{% endblock %}
+	

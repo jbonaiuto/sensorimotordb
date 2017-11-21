@@ -1,0 +1,11 @@
+<script type="text/html" id="classification_condition-template">
+    <tr>
+        <td>&nbsp;</td>
+        {% for comparison in anova_comparisons %}
+        <td>
+            <% if(comparisons.indexOf({{ comparison.id }})>-1){ %>x<% } %>
+        </td>
+        {% endfor %}
+
+    </tr>
+</script>

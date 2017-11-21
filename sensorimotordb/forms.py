@@ -3,52 +3,80 @@ from django import forms
 from django.forms.models import ModelForm, inlineformset_factory
 from registration.forms import RegistrationForm
 from registration.users import UsernameField
-from sensorimotordb.models import ExperimentExportRequest, Experiment, VisuomotorClassificationAnalysisResults, Analysis, MirrorTypeClassificationAnalysisResults, GraspObservationCondition, GraspPerformanceCondition, Species, Condition, GraspCondition
+from sensorimotordb.models import ExperimentExportRequest, Experiment, Analysis, GraspObservationCondition, \
+    GraspPerformanceCondition, ClassificationAnalysis, ANOVA, ANOVAFactor, ANOVAFactorLevel, UnitClassificationType, \
+    UnitClassificationCondition, ANOVAComparison, ClassificationAnalysisResults, ClassificationAnalysisSettings, Species, Condition, GraspCondition
+from uscbp.nested_formset import nestedformset_factory
 
-class MirrorTypeClassificationAnalysisResultsForm(ModelForm):
-    analysis = forms.ModelChoiceField(Analysis.objects.all(),widget=forms.HiddenInput,required=True)
-    experiment = forms.ModelChoiceField(Experiment.objects.all(),widget=forms.HiddenInput,required=True)
-    name=forms.CharField(max_length=100, required=True)
-    description=forms.CharField(widget=forms.Textarea(attrs={'cols':'57','rows':'5'}),required=True)
-    baseline_rel_evt=forms.ChoiceField(label='Baseline relative event',required=True)
-    baseline_rel_start=forms.IntegerField(label='Baseline start (ms)',required=False)
-    baseline_rel_end=forms.IntegerField(label='Baseline end (ms)',required=False)
-    baseline_rel_end_evt=forms.ChoiceField(label='Baseline end event',required=False)
-    reach_woi_rel_evt=forms.ChoiceField(label='Reach WOI relative event', required=True)
-    reach_woi_rel_start=forms.IntegerField(label='Reach WOI start (ms)', required=False)
-    reach_woi_rel_end=forms.IntegerField(label='Reach WOI end (ms)', required=False)
-    reach_woi_rel_end_evt=forms.ChoiceField(label='Reach WOI end event', required=False)
-    hold_woi_rel_evt=forms.ChoiceField(label='Hold WOI relative event', required=True)
-    hold_woi_rel_start=forms.IntegerField(label='Hold WOI start (ms)', required=False)
-    hold_woi_rel_end=forms.IntegerField(label='Hold WOI end (ms)', required=False)
-    hold_woi_rel_end_evt=forms.ChoiceField(label='Hold WOI end event', required=False)
+class ClassificationAnalysisBaseForm(ModelForm):
+    id=forms.CharField(max_length=100, required=True, widget=forms.HiddenInput)
 
     class Meta:
-        model=MirrorTypeClassificationAnalysisResults
-        exclude=('total_num_units',)
+        model=ClassificationAnalysis
+        exclude=('name','description')
 
 
-class VisuomotorClassificationAnalysisResultsForm(ModelForm):
-    analysis = forms.ModelChoiceField(Analysis.objects.all(),widget=forms.HiddenInput,required=True)
-    experiment = forms.ModelChoiceField(Experiment.objects.all(),widget=forms.HiddenInput,required=True)
+class ClassificationAnalysisForm(ModelForm):
     name=forms.CharField(max_length=100, required=True)
     description=forms.CharField(widget=forms.Textarea(attrs={'cols':'57','rows':'5'}),required=True)
-    baseline_rel_evt=forms.ChoiceField(label='Baseline relative event',required=True)
-    baseline_rel_start=forms.IntegerField(label='Baseline start (ms)',required=False)
-    baseline_rel_end=forms.IntegerField(label='Baseline end (ms)',required=False)
-    baseline_rel_end_evt=forms.ChoiceField(label='Baseline end event',required=False)
-    obj_view_woi_rel_evt=forms.ChoiceField(label='Object view WOI relative event', required=True)
-    obj_view_woi_rel_start=forms.IntegerField(label='Object view WOI start (ms)', required=False)
-    obj_view_woi_rel_end=forms.IntegerField(label='Object view WOI end (ms)', required=False)
-    obj_view_woi_rel_end_evt=forms.ChoiceField(label='Object view WOI end event', required=False)
-    grasp_woi_rel_evt=forms.ChoiceField(label='Grasp WOI relative event', required=True)
-    grasp_woi_rel_start=forms.IntegerField(label='Grasp WOI start (ms)', required=False)
-    grasp_woi_rel_end=forms.IntegerField(label='Grasp WOI end (ms)', required=False)
-    grasp_woi_rel_end_evt=forms.ChoiceField(label='Grasp WOI end event', required=False)
 
     class Meta:
-        model=VisuomotorClassificationAnalysisResults
-        exclude=('total_num_units',)
+        model=ClassificationAnalysis
+        exclude=()
+
+
+class ClassificationAnalysisResultsForm(ModelForm):
+    analysis=forms.ModelChoiceField(queryset=ClassificationAnalysis.objects.all(),widget=forms.HiddenInput,required=True)
+    analysis_settings=forms.ModelChoiceField(queryset=ClassificationAnalysisSettings.objects.none(),required=False)
+    experiment=forms.ModelChoiceField(queryset=Experiment.objects.all(),widget=forms.HiddenInput,required=True)
+    name=forms.CharField(max_length=100, required=True)
+    description=forms.CharField(widget=forms.Textarea(attrs={'cols':'57','rows':'5'}),required=True)
+
+    class Meta:
+        model=ClassificationAnalysisResults
+        exclude=()
+
+
+class ANOVAForm(ModelForm):
+    analysis=forms.ModelChoiceField(queryset=Analysis.objects.all(),widget=forms.HiddenInput,required=True)
+    name=forms.CharField(max_length=100, required=True)
+    dependent_variable=forms.CharField(max_length=100, required=True)
+
+    class Meta:
+        model=ANOVA
+        exclude=()
+
+
+class ANOVAFactorInlineForm(ModelForm):
+    anova=forms.ModelChoiceField(queryset=ANOVA.objects.all(),widget=forms.HiddenInput,required=True)
+    name=forms.CharField(max_length=100, required=True)
+    type=forms.ChoiceField(choices=ANOVAFactor.ANOVA_FACTOR_TYPES, required=True)
+
+    class Meta:
+        model=ANOVAFactor
+        exclude=()
+
+
+class ANOVAFactorLevelInlineForm(ModelForm):
+    factor=forms.ModelChoiceField(queryset=ANOVAFactor.objects.all(),widget=forms.HiddenInput,required=True)
+    value=forms.CharField(max_length=100, required=True)
+
+    class Meta:
+        model=ANOVAFactorLevel
+        exclude=()
+
+
+ANOVAFactorLevelFormSet = lambda *a, **kw: nestedformset_factory(ANOVA,ANOVAFactor,nested_formset=inlineformset_factory(ANOVAFactor, ANOVAFactorLevel, form=ANOVAFactorLevelInlineForm, fk_name='factor', extra=0, can_delete=True), extra=0)(*a, **kw)
+
+class UnitClassificationConditionInlineForm(ModelForm):
+    id=forms.IntegerField(widget=forms.HiddenInput,required=False)
+    comparisons=forms.ModelMultipleChoiceField(ANOVAComparison.objects.all().select_subclasses(),widget=forms.CheckboxSelectMultiple)
+    classification_type=forms.ModelChoiceField(UnitClassificationType.objects.all(), widget=forms.HiddenInput,required=False)
+    class Meta:
+        model=UnitClassificationCondition
+        exclude=('lft','tree_id','rght','level')
+
+UnitClassificationTypeConditionFormSet = lambda *a, **kw: nestedformset_factory(ClassificationAnalysis,UnitClassificationType,nested_formset=inlineformset_factory(UnitClassificationType, UnitClassificationCondition, form=UnitClassificationConditionInlineForm, fk_name='classification_type', extra=0, can_delete=True), fk_name='analysis', extra=0, fields=['label','analysis'])(*a, **kw)
 
 
 class ExperimentCreateForm(ModelForm):

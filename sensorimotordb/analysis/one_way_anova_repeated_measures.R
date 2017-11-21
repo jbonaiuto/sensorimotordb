@@ -1,18 +1,27 @@
 one_way_anova_repeated_measures<-function(data, subject_var, resp_var, factor1){
 
+    # Make sure needed packages are installed and loaded
+    if(length(new<-(packages<-c("lsmeans","lme4","afex"))[!(packages %in% installed.packages()[,"Package"])])){
+        install.packages(new[!(new %in% installed.packages()[,"Package"])])
+    }
+    sapply(packages, require, character.only=T)
     data[,subject_var]=factor(data[,subject_var])
 
     # Construct ANOVA formula
-    f <- paste(resp_var, "~", factor1,"+Error(",subject_var,")")
+    f <- paste(resp_var, "~", factor1, "+ Error(",subject_var,")")
 
     # Run ANOVA and get results
     anova_results=do.call("aov", list(as.formula(f), data=data))
 
+    f <- paste(resp_var, "~", factor1, "+ (1|",subject_var,")")
+    model<-do.call("lmer", list(as.formula(f), data=data))
 
-    # Get pairwise comparisons
-    factor1_pairwise=pairwise.t.test(x=data[,resp_var], g=data[,factor1], p.adjust.method="bonf", paired=T)
+    f <- paste("pairwise ~", factor1)
+    factor1_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
 
     # Return results as a list
-    result <- list("anova"=summary(anova_results), "factor1_pairwise"=factor1_pairwise$p.value)
+    x<-summary(anova_results)
+    #result <- list("anova"=summary(anova_results), "pairwise"=summary(pairwise$contrasts))
+    result <- list("anova_trial"=x$'Error: trial', "anova_within"=x$'Error: Within', "factor1_pairwise"=summary(factor1_pairwise)$contrasts)
     return(result)
 }

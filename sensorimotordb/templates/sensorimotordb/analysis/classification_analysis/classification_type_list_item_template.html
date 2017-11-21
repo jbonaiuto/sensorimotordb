@@ -1,0 +1,36 @@
+<script type="text/html" id="classification_type-template">
+    <div id="id_classification_type-<%= id %>" class="<%= getTRTag(idx) %>">
+        <table>
+            <tbody id="id_classification_type-<%= id %>_table">
+                <tr>
+                    <td><strong>Label:</strong></td>
+                    <td><%= label %></td>
+                </tr>
+                <% if(children.length==0) { %>
+                    <tr>
+                        <td><strong>Conditions</strong></td>
+                        {% for anova in anovas %}
+                        <td style="width: 100px; border:1px solid black" colspan="{{ anova.anova_comparisons.all|length }}"><strong>{{ anova.name }}</strong></td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        {% for anova in anovas %}
+                            {% for comparison in anova.anova_comparisons.all.select_subclasses %}
+                                <td style="width: 100px; border:1px solid black">{{ comparison|safe }}</td>
+                            {% endfor %}
+                        {% endfor %}
+                    </tr>
+                <% }else{ %>
+                <tr>
+                    <td>&nbsp;</td>
+                    <td>
+                        <div id="id_classification_type_<%= id %>_children">
+                        </div>
+                    </td>
+                </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</script>

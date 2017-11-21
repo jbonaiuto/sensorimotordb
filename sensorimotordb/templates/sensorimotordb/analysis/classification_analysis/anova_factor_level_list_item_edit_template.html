@@ -1,0 +1,14 @@
+<script type="text/html" id="anova_factor_level-template">
+    <div id="id_anova_factor-<%= factor_idx %>_level-<%= idx %>" class="<%= getTRTag(idx) %>">
+        <input id="id_factor-<%= factor_idx %>-anova_factor_levels-<%= idx %>-DELETE" name="factor-<%= factor_idx %>-anova_factor_levels-<%= idx %>-DELETE" type="hidden" />
+        <input id="id_factor-<%= factor_idx %>-anova_factor_levels-<%= idx %>-factor" name="factor-<%= factor_idx %>-anova_factor_levels-<%= idx %>-factor" type="hidden" value="<%= factor_id %>"/>
+        <input id="id_factor-<%= factor_idx %>-anova_factor_levels-<%= idx %>-id" name="factor-<%= factor_idx %>-anova_factor_levels-<%= idx %>-id" type="hidden" value="<%= id %>"/>
+        <table>
+            <tr>
+                <td><input type="button" value="Remove" onclick="return removeFactorLevel(<%= factor_idx %>, <%= idx %>);"/></td>
+                <th><strong><label for="id_factor-<%= factor_idx %>-anova_factor_levels-<%= idx %>-value">Value:</label> </strong></th>
+                <td><input id="id_factor-<%= factor_idx %>-anova_factor_levels-<%= idx %>-value" maxlength="100" name="factor-<%= factor_idx %>-anova_factor_levels-<%= idx %>-value" type="text" /></td>
+            </tr>
+        </table>
+    </div>
+</script>

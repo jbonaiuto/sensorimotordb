@@ -9,7 +9,12 @@ from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
 from tastypie.paginator import Paginator
 from tastypie.utils import trailing_slash
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, VisuomotorClassificationAnalysisResults, UnitClassification, VisuomotorClassificationAnalysis, Analysis, Factor, Level, UnitAnalysisResults, VisuomotorClassificationUnitAnalysisResults, AnalysisResultsLevelMapping, MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, MirrorTypeClassificationAnalysis
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition,\
+    Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, UnitClassification,\
+    Analysis, UnitAnalysisResults, ANOVAFactorLevel, ANOVAFactor, ANOVA, ANOVAEffect, UnitClassificationType,\
+    ClassificationAnalysis, UnitClassificationCondition, ANOVAComparison, ANOVAPairwiseComparison,\
+    ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, \
+    ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, ClassificationAnalysisSettings
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -225,7 +230,7 @@ class BasicEventResource(ModelResource):
 class EventResource(ModelResource):
     trial=fields.ToOneField('sensorimotordb.api.BasicRecordingTrialResource', 'trial', full=True)
     class Meta:
-        queryset = Event.objects.all()
+        queryset = Event.objects.all().prefetch_related('trial__condition__experiment')
         resource_name = 'event'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
@@ -292,9 +297,19 @@ class FullRecordingTrialResource(ModelResource):
         cache = SimpleCache(timeout=10)
 
 
+class UnitClassificationTypeResource(ModelResource):
+    parent=fields.ToOneField('sensorimotordb.api.UnitClassificationTypeResource', 'parent', null=True, full=False)
+    class Meta:
+        queryset=UnitClassificationType.objects.all()
+        resource_name='unit_classification_type'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
 class UnitClassificationResource(ModelResource):
-    parent=fields.ToOneField('sensorimotordb.api.UnitClassificationResource', 'parent', null=True, full=False)
     units=fields.ManyToManyField(UnitResource, 'units', null=False, full=True)
+    type=fields.ToOneField('sensorimotordb.api.UnitClassificationTypeResource', 'type', null=False, full=True)
     class Meta:
         queryset=UnitClassification.objects.all().prefetch_related('units')
         resource_name='unit_classification'
@@ -303,27 +318,172 @@ class UnitClassificationResource(ModelResource):
         cache = SimpleCache(timeout=10)
 
 
-class LevelResource(ModelResource):
+class ANOVAOneWayPairwiseComparisonResource(ModelResource):
+    factor=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor', related_name='anova_oneway_pairwise',null=False, full=True)
+    level1=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'level1', related_name='anova_oneway_pairwise_level1',null=False, full=True)
+    level2=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'level2', related_name='anova_oneway_pairwise_level2',null=False, full=True)
+
     class Meta:
-        queryset=Level.objects.all().prefetch_related('conditions')
-        resource_name='level'
+        queryset=ANOVAOneWayPairwiseComparison.objects.all()
+        resource_name='anova_oneway_pairwise_comparison'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
 
 
-class FactorResource(ModelResource):
-    levels=fields.ToManyField(LevelResource, 'levels', related_name='levels',null=False,full=True)
+class ANOVATwoWayPairwiseComparisonResource(ModelResource):
+    factor1=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor1', related_name='anova_twoway_pairwise_factor1',null=False, full=True)
+    factor1_level=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor1_level', related_name='anova_twoway_pairwise_factor1_level',null=False, full=True)
+    factor2=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor2', related_name='anova_twoway_pairwise_factor2',null=False, full=True)
+    factor2_level1=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor2_level1', related_name='anova_twoway_pairwise_factor2_level1',null=False, full=True)
+    factor2_level2=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor2_level2', related_name='anova_twoway_pairwise_factor2_level2',null=False, full=True)
+
     class Meta:
-        queryset=Factor.objects.all().prefetch_related('levels')
-        resource_name='factor'
+        queryset=ANOVATwoWayPairwiseComparison.objects.all()
+        resource_name='anova_twoway_pairwise_comparison'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
+
+
+class ANOVAThreeWayPairwiseComparisonResource(ModelResource):
+    factor1=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor1', related_name='anova_twoway_pairwise_factor1',null=False, full=True)
+    factor1_level=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor1_level', related_name='anova_twoway_pairwise_factor1_level',null=False, full=True)
+    factor2=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor2', related_name='anova_twoway_pairwise_factor2',null=False, full=True)
+    factor2_level=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor2_level', related_name='anova_twoway_pairwise_factor2_level',null=False, full=True)
+    factor3=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor3', related_name='anova_twoway_pairwise_factor2',null=False, full=True)
+    factor3_level1=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor3_level1', related_name='anova_twoway_pairwise_factor3_level1',null=False, full=True)
+    factor3_level2=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor3_level2', related_name='anova_twoway_pairwise_factor3_level2',null=False, full=True)
+
+    class Meta:
+        queryset=ANOVAThreeWayPairwiseComparison.objects.all()
+        resource_name='anova_threeway_pairwise_comparison'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
+class ANOVAPairwiseComparisonResource(ModelResource):
+    class Meta:
+        queryset=ANOVAPairwiseComparison.objects.all()
+        resource_name='anova_pairwise_comparison'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+    def dehydrate(self, bundle):
+        if ANOVAOneWayPairwiseComparison.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ANOVAOneWayPairwiseComparisonResource):
+            analysis_res = ANOVAOneWayPairwiseComparisonResource()
+            analysis_bundle = analysis_res.build_bundle(obj=ANOVAOneWayPairwiseComparison.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
+        elif ANOVATwoWayPairwiseComparison.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ANOVATwoWayPairwiseComparisonResource):
+            analysis_res = ANOVATwoWayPairwiseComparisonResource()
+            analysis_bundle = analysis_res.build_bundle(obj=ANOVATwoWayPairwiseComparison.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
+        elif ANOVAThreeWayPairwiseComparison.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ANOVAThreeWayPairwiseComparisonResource):
+            analysis_res = ANOVAThreeWayPairwiseComparisonResource()
+            analysis_bundle = analysis_res.build_bundle(obj=ANOVAThreeWayPairwiseComparison.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
+        return bundle
+
+
+class ANOVAEffectResource(ModelResource):
+    factors=fields.ManyToManyField('sensorimotordb.api.ANOVAFactorResource', 'factors', related_name='factors',null=True,full=True)
+    class Meta:
+        queryset=ANOVAEffect.objects.all()
+        resource_name='anova_effect'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+        filtering={
+            'factors': ALL_WITH_RELATIONS,
+            }
+
+class ANOVAComparisonResource(ModelResource):
+    class Meta:
+        queryset=ANOVAComparison.objects.all()
+        resource_name='anova_comparison'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+    def dehydrate(self, bundle):
+        if ANOVAEffect.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ANOVAEffectResource):
+            analysis_res = ANOVAEffectResource()
+            analysis_bundle = analysis_res.build_bundle(obj=ANOVAEffect.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
+        elif ANOVAPairwiseComparison.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ANOVAPairwiseComparisonResource):
+            analysis_res = ANOVAPairwiseComparisonResource()
+            analysis_bundle = analysis_res.build_bundle(obj=ANOVAPairwiseComparison.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
+
+        return bundle
+
+class UnitClassificationConditionResource(ModelResource):
+    comparisons=fields.ManyToManyField('sensorimotordb.api.ANOVAComparisonResource', 'comparisons', related_name='anova_comparison_conditions',null=True,full=True)
+    class Meta:
+        queryset=UnitClassificationCondition.objects.all().prefetch_related('units')
+        resource_name='unit_classification_condition'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
+class UnitClassificationTypeResource(ModelResource):
+    parent=fields.ToOneField('sensorimotordb.api.UnitClassificationResource', 'parent', null=True, full=False)
+    analysis=fields.ToOneField('sensorimotordb.api.ClassificationAnalysisResource','analysis', null=False, full=False)
+    conditions=fields.ToManyField(UnitClassificationConditionResource,'unit_classification_type_conditions', related_name='unit_classification_type_conditions',null=False,full=True)
+    children=fields.ToManyField('sensorimotordb.api.UnitClassificationTypeResource','children',null=True,full=True)
+
+    class Meta:
+        queryset=UnitClassificationType.objects.all()
+        resource_name='unit_classification_type'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+        filtering={
+            'parent': ALL_WITH_RELATIONS,
+            'analysis': ALL_WITH_RELATIONS,
+            }
+
+class ANOVAFactorLevelResource(ModelResource):
+    class Meta:
+        queryset=ANOVAFactorLevel.objects.all()
+        resource_name='anova_factor_level'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
+class ANOVAFactorResource(ModelResource):
+    levels=fields.ToManyField(ANOVAFactorLevelResource, 'anova_factor_levels', related_name='anova_factor_levels',null=True,full=True)
+    class Meta:
+        queryset=ANOVAFactor.objects.all().prefetch_related('anova_factor_levels')
+        resource_name='anova_factor'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+        filtering={
+            'id': ALL_WITH_RELATIONS,
+        }
+
+
+class ANOVAResource(ModelResource):
+    analysis=fields.ToOneField('sensorimotordb.api.AnalysisResource', 'analysis', related_name='analysis', null=False, full=False)
+    factors=fields.ToManyField(ANOVAFactorResource, 'anova_factors', related_name='anova_factors',null=False,full=True)
+    class Meta:
+        queryset=ANOVA.objects.all().prefetch_related('anova_factors')
+        resource_name='anova'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+        filtering={
+            'analysis': ALL_WITH_RELATIONS,
+            }
 
 
 class AnalysisResource(ModelResource):
-    factors=fields.ToManyField(FactorResource,'factors', related_name='factors',null=False,full=True)
+    #factors=fields.ToManyField(FactorResource,'factors', related_name='factors',null=False,full=True)
     class Meta:
         queryset=Analysis.objects.all().prefetch_related('factors')
         resource_name='analysis'
@@ -332,41 +492,55 @@ class AnalysisResource(ModelResource):
         cache = SimpleCache(timeout=10)
 
     def dehydrate(self, bundle):
-        if VisuomotorClassificationAnalysis.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,VisuomotorClassificationAnalysis):
-            analysis_res = VisuomotorClassificationAnalysisResource()
-            analysis_bundle = analysis_res.build_bundle(obj=VisuomotorClassificationAnalysis.objects.get(id=bundle.obj.id), request=bundle.request)
-            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
-        elif MirrorTypeClassificationAnalysis.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,MirrorTypeClassificationAnalysis):
-            analysis_res = MirrorTypeClassificationAnalysisResource()
-            analysis_bundle = analysis_res.build_bundle(obj=MirrorTypeClassificationAnalysis.objects.get(id=bundle.obj.id), request=bundle.request)
+        if ClassificationAnalysis.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ClassificationAnalysis):
+            analysis_res = ClassificationAnalysisResource()
+            analysis_bundle = analysis_res.build_bundle(obj=ClassificationAnalysis.objects.get(id=bundle.obj.id), request=bundle.request)
             bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
         return bundle
 
 
-class VisuomotorClassificationAnalysisResource(AnalysisResource):
+class ClassificationAnalysisResource(ModelResource):
+    analysis_anovas=fields.ToManyField(ANOVAResource,'analysis_anovas', related_name='analysis_anovas',null=False,full=True)
     class Meta:
-        queryset=VisuomotorClassificationAnalysis.objects.all().prefetch_related('factors')
-        resource_name='visuomotor_classification_analysis'
+        queryset=ClassificationAnalysis.objects.all().prefetch_related('analysis_anovas')
+        resource_name='analysis'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
 
 
-class MirrorTypeClassificationAnalysisResource(AnalysisResource):
-    class Meta:
-        queryset=MirrorTypeClassificationAnalysis.objects.all().prefetch_related('factors')
-        resource_name='mirror_type_classification_analysis'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-
-
-class AnalysisResultsLevelMappingResource(ModelResource):
-    level=fields.ToOneField(LevelResource, 'level')
+class ClassificationAnalysisResultsLevelMappingResource(ModelResource):
+    level=fields.ToOneField(ANOVAFactorLevelResource, 'level')
     conditions=fields.ToManyField(ConditionResource, 'conditions', related_name='conditions')
     class Meta:
-        queryset=AnalysisResultsLevelMapping.objects.all()
-        resource_name='analysis_results_level_mapping'
+        queryset=ClassificationAnalysisResultsLevelMapping.objects.all()
+        resource_name='classification_analysis_results_level_mapping'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
+class AnalysisSettingsResource(ModelResource):
+    class Meta:
+        queryset=AnalysisSettings.objects.all()
+        resource_name='analysis_settings'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+    def dehydrate(self, bundle):
+        if ClassificationAnalysisSettings.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ClassificationAnalysisSettings):
+            results_res = ClassificationAnalysisSettingsResource()
+            results_bundle = results_res.build_bundle(obj=ClassificationAnalysisSettings.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = results_res.full_dehydrate(results_bundle).data
+        return bundle
+
+
+class ClassificationAnalysisSettingsResource(AnalysisSettingsResource):
+    level_mappings=fields.ToManyField(ClassificationAnalysisResultsLevelMappingResource, 'level_mappings', related_name='level_mappings', full=True)
+    class Meta:
+        queryset=ClassificationAnalysisSettings.objects.all()
+        resource_name='classification_analysis_settings'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
@@ -375,8 +549,7 @@ class AnalysisResultsLevelMappingResource(ModelResource):
 class AnalysisResultsResource(ModelResource):
     analysis=fields.ToOneField(AnalysisResource, 'analysis', null=False, full=True)
     experiment=fields.ToOneField(ExperimentResource, 'experiment')
-    unit_analysis_results=fields.ToManyField('sensorimotordb.api.UnitAnalysisResultsResource', 'unit_analysis_results', related_name='unit_analysis_results',full=True)
-    level_mappings=fields.ToManyField("sensorimotordb.api.AnalysisResultsLevelMappingResource", 'level_mappings',full=True)
+    settings=fields.ToOneField(AnalysisSettingsResource, 'analysis_settings', null=False, full=True)
     class Meta:
         queryset=AnalysisResults.objects.all().select_related('analysis','experiment').prefetch_related('unit_analysis_results')
         resource_name='analysis_results'
@@ -389,42 +562,25 @@ class AnalysisResultsResource(ModelResource):
             }
 
     def dehydrate(self, bundle):
-        if VisuomotorClassificationAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,VisuomotorClassificationAnalysisResults):
-            results_res = VisuomotorClassificationAnalysisResultsResource()
-            results_bundle = results_res.build_bundle(obj=VisuomotorClassificationAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
-            bundle.data = results_res.full_dehydrate(results_bundle).data
-        elif MirrorTypeClassificationAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,MirrorTypeClassificationAnalysisResults):
-            results_res = MirrorTypeClassificationAnalysisResultsResource()
-            results_bundle = results_res.build_bundle(obj=MirrorTypeClassificationAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
+        if ClassificationAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ClassificationAnalysisResults):
+            results_res = ClassificationAnalysisResultsResource()
+            results_bundle = results_res.build_bundle(obj=ClassificationAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
             bundle.data = results_res.full_dehydrate(results_bundle).data
         return bundle
 
 
-class VisuomotorClassificationAnalysisResultsResource(AnalysisResultsResource):
+class ClassificationAnalysisResultsResource(AnalysisResultsResource):
+    unit_analysis_results=fields.ToManyField('sensorimotordb.api.UnitAnalysisResultsResource', 'unit_analysis_results', related_name='unit_analysis_results',full=True)
     unit_classifications=fields.ToManyField(UnitClassificationResource,'unit_classifications', full=True)
     class Meta:
-        queryset=VisuomotorClassificationAnalysisResults.objects.all().select_related('analysis','experiment').prefetch_related('unit_analysis_results','unit_classifications')
-        resource_name='visuomotor_classification_analysis_results'
+        queryset=ClassificationAnalysisResults.objects.all().select_related('analysis','experiment').prefetch_related('unit_analysis_results','unit_classifications')
+        resource_name='classification_analysis_results'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         filtering={
             'analysis': ALL_WITH_RELATIONS,
             'experiment': ALL_WITH_RELATIONS,
         }
-        cache = SimpleCache(timeout=10)
-
-
-class MirrorTypeClassificationAnalysisResultsResource(AnalysisResultsResource):
-    unit_classifications=fields.ToManyField(UnitClassificationResource,'unit_classifications', full=True)
-    class Meta:
-        queryset=MirrorTypeClassificationAnalysisResults.objects.all().select_related('analysis','experiment').prefetch_related('unit_analysis_results','unit_classifications')
-        resource_name='mirror_type_classification_analysis_results'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        filtering={
-            'analysis': ALL_WITH_RELATIONS,
-            'experiment': ALL_WITH_RELATIONS,
-            }
         cache = SimpleCache(timeout=10)
 
 
@@ -437,31 +593,3 @@ class UnitAnalysisResultsResource(ModelResource):
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
 
-    def dehydrate(self, bundle):
-        if VisuomotorClassificationUnitAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,VisuomotorClassificationUnitAnalysisResults):
-            results_res = VisuomotorClassificationUnitAnalysisResultsResource()
-            results_bundle = results_res.build_bundle(obj=VisuomotorClassificationUnitAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
-            bundle.data = results_res.full_dehydrate(results_bundle).data
-        elif MirrorTypeClassificationUnitAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,MirrorTypeClassificationUnitAnalysisResults):
-            results_res = MirrorTypeClassificationUnitAnalysisResultsResource()
-            results_bundle = results_res.build_bundle(obj=MirrorTypeClassificationUnitAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
-            bundle.data = results_res.full_dehydrate(results_bundle).data
-        return bundle
-
-
-class VisuomotorClassificationUnitAnalysisResultsResource(UnitAnalysisResultsResource):
-    class Meta:
-        queryset=VisuomotorClassificationUnitAnalysisResults.objects.all().select_related('unit')
-        resource_name='visuomotor_classification_unit_analysis_results'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-
-
-class MirrorTypeClassificationUnitAnalysisResultsResource(UnitAnalysisResultsResource):
-    class Meta:
-        queryset=MirrorTypeClassificationUnitAnalysisResults.objects.all().select_related('unit')
-        resource_name='mirror_type_classification_unit_analysis_results'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)

@@ -431,11 +431,11 @@
         }
     }
 
-    function newAnalysis() {
+    function runAnalysis() {
         var selectBox = document.getElementById("analysis_type");
         var selectedValue = selectBox.options[selectBox.selectedIndex].value;
         if(selectedValue.length>0)
-            document.location.href='/sensorimotordb/'+selectedValue+'_analysis/new/?experiment={{ object.id }}';
+            document.location.href='/sensorimotordb/analysis/'+selectedValue+'/run/?experiment={{ object.id }}';
     }
 
     function deleteAnalysisResults(id) {
@@ -483,11 +483,14 @@
 {% block content %}
     <div class="experiment_info"></div>
     <h2>Analysis Results</h2>
-        <label for="analysis_type">New Analysis</label>
-        <select id="analysis_type" onchange="newAnalysis();">
+        <label for="analysis_type">Run Analysis</label>
+        <select id="analysis_type" onchange="runAnalysis();">
             <option value="" selected></option>
-            <option value="visuomotor_classification">Visuomotor classification</option>
-            <option value="mirror_type_classification">Mirror Type classification</option>
+            <!--<option value="visuomotor_classification">Visuomotor classification</option>
+            <option value="mirror_type_classification">Mirror Type classification</option>-->
+            {% for analysis in analyses %}
+                <option value="{{ analysis.id }}">{{ analysis.name }}</option>
+            {% endfor %}
         </select>
     <div class="analysis_results_list"></div>
 

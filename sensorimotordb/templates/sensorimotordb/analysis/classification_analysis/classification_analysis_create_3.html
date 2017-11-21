@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>SensoriMotorDB - Create Classification Analysis ({{ wizard.steps.step1 }}/{{ wizard.steps.count }})</title>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
+<script type="text/javascript">
+
+
+    $(document).ready(function(){
+        $('<img src="{% static 'sensorimotordb/img/loading.gif' %}"/>');
+        $.ajax(args);
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/api/v1/unit_classification_type/?analysis={{ analysis.id }}&limit=0&format=json",
+            data: data,
+            success: loadedClassificationTypes,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    });
+
+    function loadedClassificationTypes(resp){
+        for(var idx=0; idx<resp.objects.length; idx++)
+        {
+            var type=resp.objects[idx];
+            addClassificationType(''+type.id, type.label, type.conditions);
+        }
+    }
+
+    function addClassificationType(id, label, conditions)
+    {
+        var tmplMarkup = $('#classification_type-template').html();
+        var type_idx=$('#id_classification_types').children().length;
+        var data={
+            idx: type_idx,
+            id: id,
+            label: label
+        };
+        var compiledTmpl = _.template(tmplMarkup, data);
+        $('#id_classification_types').append(compiledTmpl);
+        $('#id_classification_type-TOTAL_FORMS').val(parseInt($('#id_classification_type-TOTAL_FORMS').val())+1);
+        if(id.length>0)
+            $('#id_classification_type-INITIAL_FORMS').val(parseInt($('#id_classification_type-INITIAL_FORMS').val())+1);
+
+        for(var cond_idx=0; cond_idx<conditions.length; cond_idx++)
+        {
+            var condition=conditions[cond_idx];
+            var comparisons=[];
+            for (var cidx=0; cidx<condition.comparisons.length; cidx++)
+                comparisons.push(condition.comparisons[cidx].id);
+            addClassificationCondition(type_idx, ''+id, ''+condition.id, comparisons)
+        }
+    }
+
+    function addClassificationCondition(type_idx, type_id, id, comparisons)
+    {
+        var tmplMarkup = $('#classification_condition-template').html();
+        var idx=$('#id_classification_type-'+type_idx+'_table').children().length-3;
+        var data={
+            idx: idx,
+            type_idx: type_idx,
+            type_id: type_id,
+            id: id,
+            comparisons: comparisons
+        };
+        var compiledTmpl = _.template(tmplMarkup, data);
+        $('#id_classification_type-'+type_idx+'_table').append(compiledTmpl);
+        $('#id_classification_type-'+type_idx+'-unit_classification_type_conditions-TOTAL_FORMS').val(parseInt($('#id_classification_type-'+type_idx+'-unit_classification_type_conditions-TOTAL_FORMS').val())+1);
+        if(id.length>0)
+            $('#id_classification_type-'+type_idx+'-unit_classification_type_conditions-INITIAL_FORMS').val(parseInt($('#id_classification_type-'+type_idx+'-unit_classification_type_conditions-INITIAL_FORMS').val())+1);
+    }
+
+    function deleteClassificationCondition(type_idx, idx, id)
+    {
+        if(id.length>0)
+        {
+            var data = {};
+            var args = {
+                type: "GET",
+                url: "/sensorimotordb/unit_classification_condition/"+parseInt(id)+"/delete/?type_idx="+type_idx+"&idx="+idx,
+                data: data,
+                success: deletedClassificationCondition,
+                error: function(data) {
+                    //alert("Something went wrong!");
+                } };
+            $.ajax(args);
+        }
+        else{
+            deletedClassificationCondition({type_idx: type_idx, idx: idx, id: parseInt(id)});
+        }
+    }
+
+    function deletedClassificationCondition(resp)
+    {
+        $('#id_classification_type-'+resp.type_idx+'-unit_classification_type_conditions-'+resp.idx+'-DELETE').val("1");
+        $('#id_classification_type-'+resp.type_idx+'_condition-'+resp.idx).hide();
+    }
+
+    function deleteClassificationType(idx, id)
+    {
+        if(id.length>0)
+        {
+            var data = {};
+            var args = {
+                type: "GET",
+                url: "/sensorimotordb/unit_classification_type/"+parseInt(id)+"/delete/?idx="+idx,
+                data: data,
+                success: deletedClassificationType,
+                error: function(data) {
+                    //alert("Something went wrong!");
+                } };
+            $.ajax(args);
+        }
+        else{
+            deletedClassificationType({idx: idx, id: parseInt(id)});
+        }
+    }
+
+    function deletedClassificationType(resp)
+    {
+        $('#id_classification_type-'+resp.idx+'-DELETE').val("1");
+        $('#id_classification_type-'+resp.idx).hide();
+    }
+</script>
+{% endblock %}
+{% block content %}
+<h2>New Classification Analysis (Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}): Base-level classification types</h2>
+<form id="analysisForm" method="post" action="" enctype="multipart/form-data">
+    {{ wizard.management_form }}
+    {% csrf_token %}
+    <table>
+        <tr>
+            <td>
+                <strong>Name</strong>
+            </td>
+            <td colspan="3">
+                {{ analysis.name }}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <strong>Description</strong>
+            </td>
+            <td colspan="3">
+                {{ analysis.description }}
+            </td>
+        </tr>
+    </table>
+    <input id="id_step3-id" maxlength="100" name="step3-id" type="hidden" value="{{ analysis.id }}"/>
+    <input id="id_classification_type-TOTAL_FORMS" name="classification_type-TOTAL_FORMS" type="hidden" value="0" />
+    <input id="id_classification_type-INITIAL_FORMS" name="classification_type-INITIAL_FORMS" type="hidden" value="0" />
+    <input id="id_classification_type-MIN_NUM_FORMS" name="classification_type-MIN_NUM_FORMS" type="hidden" value="0" />
+    <input id="id_classification_type-MAX_NUM_FORMS" name="classification_type-MAX_NUM_FORMS" type="hidden" value="1000" />
+    <h2>Classification Types <input type="button" onclick="return addClassificationType('','','',[]);" value="Add"/></h2>
+    <div id="id_classification_types">
+    </div>
+    <input type="submit" value="Next" />
+</form>
+{% with analysis as object %}
+    {% include "sensorimotordb/analysis/classification_analysis/classification_type_list_item_edit_template.html" %}
+{% endwith %}
+{% include "sensorimotordb/analysis/classification_analysis/classification_condition_list_item_edit_template.html" %}
+{% endblock %}

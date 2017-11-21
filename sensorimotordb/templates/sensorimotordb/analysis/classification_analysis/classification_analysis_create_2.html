@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>SensoriMotorDB - Create Classification Analysis ({{ wizard.steps.step1 }}/{{ wizard.steps.count }})</title>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
+<script type="text/javascript">
+
+    $(document).ready(function(){
+        $('<img src="{% static 'sensorimotordb/img/loading.gif' %}"/>');
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/api/v1/anova/?analysis={{ analysis.id }}&limit=0&format=json",
+            data: data,
+            success: loadedAnovas,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    });
+
+    function addAnova()
+    {
+        window.open('/sensorimotordb/anova/new/?analysis={{ analysis.id }}','','width=1200,height=600');
+        return false;
+    }
+
+    function deleteAnova(anova_id)
+    {
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/anova/"+anova_id+"/delete/",
+            data: data,
+            success: deletedAnova,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+
+    function deletedAnova(resp)
+    {
+        $('#id_anova-'+resp.id).hide();
+    }
+
+    function loadAnova(anova_id)
+    {
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/api/v1/anova/"+anova_id+"/?limit=0&format=json",
+            data: data,
+            success: loadedAnova,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+
+    function loadedAnovas(resp){
+        for(var idx=0; idx<resp.objects.length; idx++)
+        {
+            loadedAnova(resp.objects[idx]);
+        }
+    }
+
+    function loadedAnova(resp){
+        var tmplMarkup = $('#anova-template').html();
+        var data={
+            idx: $('#id_anovas').children().length,
+            edit: true,
+            id: resp.id,
+            name: resp.name,
+            dependent_variable: resp.dependent_variable
+        };
+        var compiledTmpl = _.template(tmplMarkup, data);
+        $('#id_anovas').append(compiledTmpl);
+
+        for(var f_idx=0; f_idx<resp.factors.length; f_idx++)
+        {
+            var factor=resp.factors[f_idx];
+            var tmplMarkup = $('#anova_factor-template').html();
+            var data={
+                idx: $('#id_anova-'+resp.id+'_factors').children().length,
+                id: factor.id,
+                anova_id: resp.id,
+                name: factor.name,
+                type: factor.type
+            };
+            var compiledTmpl = _.template(tmplMarkup, data);
+            $('#id_anova-'+resp.id+'_factors').append(compiledTmpl);
+
+            for(var l_idx=0; l_idx<factor.levels.length; l_idx++)
+            {
+                var level=factor.levels[l_idx];
+                var tmplMarkup = $('#anova_factor_level-template').html();
+                var data={
+                    idx: $('#id_anova-'+resp.id+'_factor-'+factor.id+'_levels').children().length,
+                    id: level.id,
+                    factor_id: factor.id,
+                    anova_id: resp.id,
+                    value: level.value
+                };
+                var compiledTmpl = _.template(tmplMarkup, data);
+                $('#id_anova-'+resp.id+'_factor-'+factor.id+'_levels').append(compiledTmpl);
+            }
+        }
+    }
+</script>
+{% endblock %}
+{% block content %}
+<h2>New Classification Analysis (Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}): ANOVA definition</h2>
+<form id="analysisForm" method="post" action="" enctype="multipart/form-data">
+    {{ wizard.management_form }}
+    {% csrf_token %}
+    <table>
+        <tr>
+            <td>
+                <strong>Name</strong>
+            </td>
+            <td colspan="3">
+                {{ analysis.name }}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <strong>Description</strong>
+            </td>
+            <td colspan="3">
+                {{ analysis.description }}
+            </td>
+        </tr>
+    </table>
+    <input id="id_step2-id" maxlength="100" name="step2-id" type="hidden" value="{{ analysis.id }}"/>
+    <h2>ANOVAs <input type="button" onclick="return addAnova();" value="Add"/></h2>
+    <div id="id_anovas">
+    </div>
+    <input type="submit" value="Next" />
+</form>
+{% include "sensorimotordb/analysis/classification_analysis/anova_list_item_template.html" %}
+{% include "sensorimotordb/analysis/classification_analysis/anova_factor_list_item_template.html" %}
+{% include "sensorimotordb/analysis/classification_analysis/anova_factor_level_list_item_template.html" %}
+{% endblock %}

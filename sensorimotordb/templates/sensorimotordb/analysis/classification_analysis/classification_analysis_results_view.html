@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load staticfiles %}
 {% block extrahead %}
-<title>{% block title %}{% endblock %}</title>
+<title>SensoriMotorDB - View Classification Analysis Results: {{ object.name }}</title>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/d3.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
@@ -26,7 +26,20 @@ var results;
 var factor_plots=new Map();
 var total_num_units=0;
 
-{% block ready_function %}{% endblock %}
+$(document).ready(function(){
+    // Load analysis results
+    $('<img src="{% static 'sensorimotordb/img/loading.gif' %}"/>');
+    var data = {};
+    var args = {
+        type: "GET",
+        url: "/sensorimotordb/api/v1/classification_analysis_results/{{ object.id }}/?format=json",
+        data: data,
+        success: loadedAnalysisResultsData,
+        error: function(data) {
+            //alert("Something went wrong!");
+        } };
+    $.ajax(args);
+});
 
 /**
  * Loaded analysis results
@@ -36,7 +49,11 @@ function loadedAnalysisResultsData(resp)
 {
     results=resp;
     classifications=resp.unit_classifications;
-    factors=resp.analysis.factors;
+    for(var anova_idx=0; anova_idx<resp.analysis.analysis_anovas.length; anova_idx++)
+    {
+        for(var factor_idx=0; factor_idx<resp.analysis.analysis_anovas[anova_idx].factors.length; factor_idx++)
+            factors.push(resp.analysis.analysis_anovas[anova_idx].factors[factor_idx]);
+    }
 
     // Fill in analysis info
     $('.analysis_results_info').each(function(index, element){
@@ -50,9 +67,9 @@ function loadedAnalysisResultsData(resp)
     conditions_to_load=[];
 
     // Figure out conditions per level and conditions to load
-    for(var mapping_idx=0; mapping_idx<resp.level_mappings.length; mapping_idx++)
+    for(var mapping_idx=0; mapping_idx<resp.settings.level_mappings.length; mapping_idx++)
     {
-        var mapping=resp.level_mappings[mapping_idx];
+        var mapping=resp.settings.level_mappings[mapping_idx];
         var level_id=parseInt(mapping.level.split('/')[5]);
         level_mappings.set(level_id,[]);
         for(var condition_idx=0; condition_idx<mapping.conditions.length; condition_idx++)
@@ -76,7 +93,7 @@ function loadedAnalysisResultsData(resp)
             {
                 if(resp.unit_classifications[class_idx].units[class_unit_idx].id==unit_results.unit.id)
                 {
-                    unit_results.classification=resp.unit_classifications[class_idx].label;
+                    unit_results.classification=resp.unit_classifications[class_idx].type.label;
                     break
                 }
             }
@@ -144,10 +161,10 @@ function loadedAnalysisResultsData(resp)
 function addClassificationToHierarchy(data, classification)
 {
     // If there is no parent for this classification or this node is the parent
-    if(classification.parent==null || data[1][0]==parseInt(classification.parent.split('/')[5]))
+    if(classification.type.parent==null || data[1][0]==parseInt(classification.type.parent.split('/')[5]))
     {
         var percentage=classification.units.length/data[1][1].length*100.0;
-        if(classification.parent==null)
+        if(classification.type.parent==null)
         {
             percentage=classification.units.length/total_num_units*100.0;
             // Add units to this node
@@ -155,10 +172,10 @@ function addClassificationToHierarchy(data, classification)
                 data[1][1].push(classification.units[unit_idx]);
         }
         // Set node data
-        data[2][classification.label]=[
-            classification.label,
+        data[2][classification.type.label]=[
+            classification.type.label,
             [
-                classification.id,
+                classification.type.id,
                 classification.units,
                 Math.round(percentage * 100) / 100
             ],
@@ -640,36 +657,42 @@ function update_rates()
     for(var factor_idx=0; factor_idx<factors.length; factor_idx++) {
         var factor = factors[factor_idx];
 
-        factor_event_types.set(
-                factor.id, get_factor_all_event_types(factor,
-                        get_factor_event_types(factor)
-                )
-        );
+        if(factor.type=='condition')
+        {
+            factor_event_types.set(
+                    factor.id, get_factor_all_event_types(factor,
+                            get_factor_event_types(factor)
+                    )
+            );
 
-        realigned_factor_level_trial_events.set(factor.id, new Map());
-        realigned_factor_level_mean_rates.set(factor.id, new Map());
+            realigned_factor_level_trial_events.set(factor.id, new Map());
+            realigned_factor_level_mean_rates.set(factor.id, new Map());
 
-        // Create a plot for this factor
-        for (var level_idx = 0; level_idx < factor.levels.length; level_idx++) {
-            var level = factor.levels[level_idx];
-            var level_mapping = level_mappings.get(level.id);
+            // Create a plot for this factor
+            for (var level_idx = 0; level_idx < factor.levels.length; level_idx++) {
+                var level = factor.levels[level_idx];
+                if(level_mappings.has(level.id))
+                {
+                    var level_mapping = level_mappings.get(level.id);
 
-            realigned_factor_level_trial_events.get(factor.id).set(level.id, []);
-            for (var condition_idx = 0; condition_idx < level_mapping.length; condition_idx++) {
-                var condition_id = level_mapping[condition_idx];
-                for (let unit_id of realigned_condition_unit_trial_events.get(condition_id).keys()) {
-                    var unit_evts = realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
-                    var unit_factor_evts=[];
-                    for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
-                        var evt = unit_evts[event_idx];
-                        if (factor_event_types.get(factor.id).indexOf(evt.name) > -1)
-                        {
-                            realigned_factor_level_trial_events.get(factor.id).get(level.id).push(evt);
-                            unit_factor_evts.push(evt);
+                    realigned_factor_level_trial_events.get(factor.id).set(level.id, []);
+                    for (var condition_idx = 0; condition_idx < level_mapping.length; condition_idx++) {
+                        var condition_id = level_mapping[condition_idx];
+                        for (let unit_id of realigned_condition_unit_trial_events.get(condition_id).keys()) {
+                            var unit_evts = realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
+                            var unit_factor_evts=[];
+                            for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
+                                var evt = unit_evts[event_idx];
+                                if (factor_event_types.get(factor.id).indexOf(evt.name) > -1)
+                                {
+                                    realigned_factor_level_trial_events.get(factor.id).get(level.id).push(evt);
+                                    unit_factor_evts.push(evt);
+                                }
+                            }
+                            min_times.push(d3.min(unit_factor_evts, function(d) { return d.t; }));
+                            max_times.push(d3.max(unit_factor_evts, function(d) { return d.t; }));
                         }
                     }
-                    min_times.push(d3.min(unit_factor_evts, function(d) { return d.t; }));
-                    max_times.push(d3.max(unit_factor_evts, function(d) { return d.t; }));
                 }
             }
         }
@@ -710,15 +733,21 @@ function update_rates()
     // For each factor
     for(var factor_idx=0; factor_idx<factors.length; factor_idx++) {
         var factor = factors[factor_idx];
-        var unit_max_rates = get_factor_unit_max_rates(factor);
+        if(factor.type=='condition')
+        {
+            var unit_max_rates = get_factor_unit_max_rates(factor);
 
-        // Create a plot for this factor
-        for (var level_idx = 0; level_idx < factor.levels.length; level_idx++) {
-            var level = factor.levels[level_idx];
-            var level_mapping = level_mappings.get(level.id);
+            // Create a plot for this factor
+            for (var level_idx = 0; level_idx < factor.levels.length; level_idx++) {
+                var level = factor.levels[level_idx];
+                if(level_mappings.has(level.id))
+                {
+                    var level_mapping = level_mappings.get(level.id);
 
-            var level_mean_rate=get_level_mean_rate(level_mapping, unit_max_rates);
-            realigned_factor_level_mean_rates.get(factor.id).set(level.id, level_mean_rate);
+                    var level_mean_rate=get_level_mean_rate(level_mapping, unit_max_rates);
+                    realigned_factor_level_mean_rates.get(factor.id).set(level.id, level_mean_rate);
+                }
+            }
         }
     }
 
@@ -750,17 +779,20 @@ function update_rates()
         var evt_types = [];
         for (var level_idx = 0; level_idx < factor.levels.length; level_idx++) {
             var level = factor.levels[level_idx];
-            var level_mapping = level_mappings.get(level.id);
-            for (var condition_idx = 0; condition_idx < level_mapping.length; condition_idx++) {
-                var condition_id = level_mapping[condition_idx];
-                for (var unit_idx = 0; unit_idx < current_unit_ids.length; unit_idx++) {
-                    var unit_id = current_unit_ids[unit_idx];
-                    if (realigned_condition_unit_trial_events.get(condition_id).has(unit_id)) {
-                        var unit_evts = realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
-                        for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
-                            var evt = unit_evts[event_idx];
-                            if (evt_types.indexOf(evt.name) < 0)
-                                evt_types.push(evt.name);
+            if(level_mappings.has(level.id))
+            {
+                var level_mapping = level_mappings.get(level.id);
+                for (var condition_idx = 0; condition_idx < level_mapping.length; condition_idx++) {
+                    var condition_id = level_mapping[condition_idx];
+                    for (var unit_idx = 0; unit_idx < current_unit_ids.length; unit_idx++) {
+                        var unit_id = current_unit_ids[unit_idx];
+                        if (realigned_condition_unit_trial_events.get(condition_id).has(unit_id)) {
+                            var unit_evts = realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
+                            for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
+                                var evt = unit_evts[event_idx];
+                                if (evt_types.indexOf(evt.name) < 0)
+                                    evt_types.push(evt.name);
+                            }
                         }
                     }
                 }
@@ -776,31 +808,34 @@ function update_rates()
             var all_have = true;
             for (var level_idx = 0; level_idx < factor.levels.length; level_idx++) {
                 var level = factor.levels[level_idx];
-                var level_mapping = level_mappings.get(level.id);
-                var has_evt = false;
-                for (var condition_idx = 0; condition_idx < level_mapping.length; condition_idx++) {
-                    var condition_id = level_mapping[condition_idx];
-                    for (var unit_idx = 0; unit_idx < current_unit_ids.length; unit_idx++) {
-                        var unit_id = current_unit_ids[unit_idx];
-                        if (realigned_condition_unit_trial_events.get(condition_id).has(unit_id)) {
-                            var unit_evts = realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
-                            for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
-                                var evt = unit_evts[event_idx];
-                                if (evt.name == evt_type) {
-                                    has_evt = true;
-                                    break
+                if(level_mappings.has(level.id))
+                {
+                    var level_mapping = level_mappings.get(level.id);
+                    var has_evt = false;
+                    for (var condition_idx = 0; condition_idx < level_mapping.length; condition_idx++) {
+                        var condition_id = level_mapping[condition_idx];
+                        for (var unit_idx = 0; unit_idx < current_unit_ids.length; unit_idx++) {
+                            var unit_id = current_unit_ids[unit_idx];
+                            if (realigned_condition_unit_trial_events.get(condition_id).has(unit_id)) {
+                                var unit_evts = realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
+                                for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
+                                    var evt = unit_evts[event_idx];
+                                    if (evt.name == evt_type) {
+                                        has_evt = true;
+                                        break
+                                    }
                                 }
                             }
+                            if (has_evt)
+                                break
                         }
                         if (has_evt)
                             break
                     }
-                    if (has_evt)
+                    if (!has_evt) {
+                        all_have = false;
                         break
-                }
-                if (!has_evt) {
-                    all_have = false;
-                    break
+                    }
                 }
             }
             if (all_have)
@@ -814,16 +849,19 @@ function update_rates()
         var unit_max_rates = new Map();
         for (var level_idx = 0; level_idx < factor.levels.length; level_idx++) {
             var level = factor.levels[level_idx];
-            var level_mapping = level_mappings.get(level.id);
-            for (var condition_idx = 0; condition_idx < level_mapping.length; condition_idx++) {
-                var condition_id = level_mapping[condition_idx];
-                for (let unit_id of realigned_condition_unit_rates.get(condition_id).keys()) {
-                    if (!unit_max_rates.has(unit_id))
-                        unit_max_rates.set(unit_id, []);
-                    var unit_rate = realigned_condition_unit_rates.get(condition_id).get(unit_id);
-                    unit_max_rates.get(unit_id).push(d3.max(unit_rate, function (d) {
-                        return d.y;
-                    }))
+            if(level_mappings.has(level.id))
+            {
+                var level_mapping = level_mappings.get(level.id);
+                for (var condition_idx = 0; condition_idx < level_mapping.length; condition_idx++) {
+                    var condition_id = level_mapping[condition_idx];
+                    for (let unit_id of realigned_condition_unit_rates.get(condition_id).keys()) {
+                        if (!unit_max_rates.has(unit_id))
+                            unit_max_rates.set(unit_id, []);
+                        var unit_rate = realigned_condition_unit_rates.get(condition_id).get(unit_id);
+                        unit_max_rates.get(unit_id).push(d3.max(unit_rate, function (d) {
+                            return d.y;
+                        }))
+                    }
                 }
             }
         }
@@ -840,23 +878,26 @@ function plotFactors()
     for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
     {
         var factor=factors[factor_idx];
-        var factor_parent_id='analysis_results-'+results.id+'-factor-'+factor.id+'-mean_rate';
-        $('#'+parent_id).append('<div id="'+factor_parent_id+'" style="text-align:center"><h3>'+factor.name+'</h3></div>');
-        var level_ids=[];
-        var level_labels=[];
-
-        // Create a plot for this factor
-        for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
+        if(factor.type=='condition')
         {
-            var level=factor.levels[level_idx];
-            level_labels.push(level.value);
-            level_ids.push(level.id);
-        }
+            var factor_parent_id='analysis_results-'+results.id+'-factor-'+factor.id+'-mean_rate';
+            $('#'+parent_id).append('<div id="'+factor_parent_id+'" style="text-align:center"><h3>'+factor.name+'</h3></div>');
+            var level_ids=[];
+            var level_labels=[];
 
-        var rate_svg=drawMeanFiringRates(factor_parent_id, realigned_factor_level_mean_rates.get(factor.id),
-                realigned_factor_level_trial_events.get(factor.id), factor_event_types.get(factor.id),
-                level_ids, level_labels, 0.5);
-        factor_plots.set(factor.id, rate_svg);
+            // Create a plot for this factor
+            for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
+            {
+                var level=factor.levels[level_idx];
+                level_labels.push(level.value);
+                level_ids.push(level.id);
+            }
+
+            var rate_svg=drawMeanFiringRates(factor_parent_id, realigned_factor_level_mean_rates.get(factor.id),
+                    realigned_factor_level_trial_events.get(factor.id), factor_event_types.get(factor.id),
+                    level_ids, level_labels, 0.5);
+            factor_plots.set(factor.id, rate_svg);
+        }
     }
 }
 
@@ -866,7 +907,8 @@ function update_plot()
     for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
     {
         var factor=factors[factor_idx];
-        factor_plots.get(factor.id).update(realigned_factor_level_mean_rates.get(factor.id), realigned_factor_level_trial_events.get(factor.id));
+        if(factor.type=='condition')
+            factor_plots.get(factor.id).update(realigned_factor_level_mean_rates.get(factor.id), realigned_factor_level_trial_events.get(factor.id));
 
     }
 
@@ -885,7 +927,7 @@ function exportToBODB(analysis_id)
 <div class="analysis_results_info"></div>
 <h2>Unit Analysis Results</h2>
 <div class="unit_analysis_results_list"></div>
-{% include "sensorimotordb/analysis/classification_unit_analysis_results_list_item_template.html" %}
-{% block templates %}{% endblock %}
+{% include "sensorimotordb/analysis/classification_analysis/classification_unit_analysis_results_list_item_template.html" %}
+{% include "sensorimotordb/analysis/classification_analysis/classification_analysis_results_template.html" %}
 {% endblock %}
 	

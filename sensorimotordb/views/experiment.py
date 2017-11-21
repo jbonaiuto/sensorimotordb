@@ -1,69 +1,23 @@
-import json
-import shutil
-from django.db.models import Q
-from h5py import h5
-from wsgiref.util import FileWrapper
-from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect
-from django.views.generic import DetailView, TemplateView, CreateView, UpdateView, View
-from django.views.generic.detail import SingleObjectMixin, BaseDetailView
+from django.views.generic import UpdateView, DetailView, CreateView
+from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import ModelFormMixin
-import h5py
-from neo import io
 from haystack.management.commands import update_index, rebuild_index
 import os
-from registration.forms import User
-from tastypie.models import ApiKey
-from sensorimotordb.forms import ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, UserProfileForm, VisuomotorClassificationAnalysisResultsForm, ExperimentImportForm, GraspConditionFormSet, ExperimentForm, \
-    MirrorTypeClassificationAnalysisResultsForm, ExperimentCreateForm, GraspObservationConditionForm, GraspPerformanceConditionForm
-from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, Unit, Experiment, ExperimentExportRequest, ConditionVideoEvent, AnalysisResults, VisuomotorClassificationAnalysisResults, Factor, VisuomotorClassificationAnalysis, Event, AnalysisResultsLevelMapping, Level, UnitClassification, VisuomotorClassificationUnitAnalysisResults, GraspCondition, Species, BrainRegion, RecordingTrial, UnitRecording, \
-    MirrorTypeClassificationAnalysisResults, MirrorTypeClassificationUnitAnalysisResults, \
-    MirrorTypeClassificationAnalysis, UnitAnalysisResults
+from neo import io
+from sensorimotordb.forms import GraspObservationConditionForm, GraspPerformanceConditionForm, ExperimentForm, \
+    ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, \
+    ExperimentImportForm, GraspConditionFormSet, ExperimentCreateForm
+from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, ConditionVideoEvent, \
+    Unit, UnitRecording, Event, RecordingTrial, Experiment, ExperimentExportRequest, UnitAnalysisResults, \
+    UnitClassification, AnalysisResults, Analysis, GraspCondition, Species, BrainRegion
+from sensorimotordb.views import LoginRequiredMixin, JSONResponseMixin
 from uscbp import settings
-from uscbp.settings import MEDIA_ROOT, PROJECT_PATH
-
-class LoginRequiredMixin(object):
-    redirect_field_name = 'next'
-    login_url = '/accounts/login/'
-
-    def dispatch(self, request, *args, **kwargs):
-        return login_required(redirect_field_name=self.redirect_field_name,
-            login_url=self.login_url)(
-            super(LoginRequiredMixin, self).dispatch
-        )(request, *args, **kwargs)
-
-
-class JSONResponseMixin(object):
-
-    def post(self, request, *args, **kwargs):
-        self.request=request
-        return self.render_to_response(self.get_context_data(**kwargs))
-
-    def render_to_response(self, context):
-        "Returns a JSON response containing 'context' as payload"
-        return self.get_json_response(self.convert_context_to_json(context))
-
-    def get_json_response(self, content, **httpresponse_kwargs):
-        "Construct an `HttpResponse` object."
-        return HttpResponse(content,
-            content_type='application/json',
-            **httpresponse_kwargs)
-
-    def convert_context_to_json(self, context):
-        "Convert the context dictionary into a JSON object"
-        # Note: This is *EXTREMELY* naive; in reality, you'll need
-        # to do much more complex handling to ensure that arbitrary
-        # objects -- such as Django model instances or querysets
-        # -- can be serialized as JSON.
-        return json.dumps(context)
-
-
-class IndexView(LoginRequiredMixin, TemplateView):
-    template_name = 'sensorimotordb/index.html'
-
+from uscbp.settings import PROJECT_PATH
 
 class ExperimentImportView(LoginRequiredMixin, UpdateView):
     model=Experiment
@@ -170,7 +124,7 @@ class ExperimentImportView(LoginRequiredMixin, UpdateView):
             'EVT17': ('mo','movement onset'),
             'EVT23': ('loff','light off'),
             'EVT28': ('mo','movement onset'),
-        }
+            }
         pretrial_padding=0.25
         posttrial_padding=0.25
 
@@ -585,6 +539,7 @@ class ExperimentDetailView(LoginRequiredMixin, DetailView):
         if self.request.user.is_superuser or self.object.collator==self.request.user.id:
             context['can_delete']=True
             context['can_edit']=True
+        context['analyses']=Analysis.objects.all()
         return context
 
 
@@ -604,48 +559,6 @@ class UpdateExperimentView(LoginRequiredMixin, UpdateView):
         return redirect('/sensorimotordb/experiment/%d/' % self.object.id)
 
 
-class AnalysisResultsDetailView(LoginRequiredMixin, DetailView):
-    model=AnalysisResults
-
-    def get(self, request, *args, **kwargs):
-        id=self.kwargs.get('pk', None)
-        if VisuomotorClassificationAnalysisResults.objects.filter(id=id).exists():
-            return redirect('/sensorimotordb/visuomotor_classification_analysis_results/%s/' % id)
-        elif MirrorTypeClassificationAnalysisResults.objects.filter(id=id).exists():
-            return redirect('/sensorimotordb/mirror_type_classification_analysis_results/%s/' % id)
-
-
-class DeleteAnalysisResultsView(JSONResponseMixin,BaseDetailView):
-    model=AnalysisResults
-    def get_context_data(self, **kwargs):
-        context={'msg':u'No POST data sent.' }
-        if self.request.is_ajax():
-            self.object=self.get_object()
-            if VisuomotorClassificationAnalysisResults.objects.filter(id=self.object.id):
-                results=VisuomotorClassificationAnalysisResults.objects.get(id=self.object.id)
-                for classification in UnitClassification.objects.filter(analysis_results=results):
-                    classification.delete()
-                for unit_results in VisuomotorClassificationUnitAnalysisResults.objects.filter(analysis_results=results):
-                    unit_results.delete()
-                for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=results):
-                    level_mapping.delete()
-                results.delete()
-                self.object.delete()
-            elif MirrorTypeClassificationAnalysisResults.objects.filter(id=self.object.id):
-                results=MirrorTypeClassificationAnalysisResults.objects.get(id=self.object.id)
-                for classification in UnitClassification.objects.filter(analysis_results=results):
-                    classification.delete()
-                for unit_results in MirrorTypeClassificationUnitAnalysisResults.objects.filter(analysis_results=results):
-                    unit_results.delete()
-                for level_mapping in AnalysisResultsLevelMapping.objects.filter(analysis_results=results):
-                    level_mapping.delete()
-                results.delete()
-                self.object.delete()
-            context={'id': self.request.POST['id']}
-
-        return context
-
-
 class DeleteExperimentView(JSONResponseMixin,BaseDetailView):
     model=Experiment
     def get_context_data(self, **kwargs):
@@ -662,12 +575,9 @@ class DeleteExperimentView(JSONResponseMixin,BaseDetailView):
             ExperimentExportRequest.objects.filter(experiment=self.object).delete()
 
             UnitAnalysisResults.objects.filter(analysis_results__experiment=self.object).delete()
-            AnalysisResultsLevelMapping.objects.filter(analysis_results__experiment=self.object).delete()
+            #AnalysisResultsLevelMapping.objects.filter(analysis_results__experiment=self.object).delete()
             UnitClassification.objects.filter(analysis_results__experiment=self.object).delete()
             AnalysisResults.objects.filter(experiment=self.object).delete()
-
-            data_path=os.path.join(settings.MEDIA_ROOT,'experiment_data','%s' % self.object.id)
-            shutil.rmtree(data_path)
 
             self.object.delete()
 
@@ -678,80 +588,6 @@ class DeleteExperimentView(JSONResponseMixin,BaseDetailView):
             context={'id': self.request.POST['id']}
 
         return context
-
-
-class VisuomotorClassificationAnalysisResultsDetailView(AnalysisResultsDetailView):
-    model=VisuomotorClassificationAnalysisResults
-    template_name = 'sensorimotordb/analysis/visuomotor_classification_analysis_results_view.html'
-
-    def get(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        context = self.get_context_data(object=self.object)
-        return self.render_to_response(context)
-
-    def get_context_data(self, **kwargs):
-        context = AnalysisResultsDetailView.get_context_data(self, **kwargs)
-        context['factors']=Factor.objects.filter(analysis=self.object.analysis)
-        context['bodb_server']=settings.BODB_SERVER
-        context['api_key']=ApiKey.objects.get(user=self.request.user).key
-        context['username']=self.request.user.username
-        return context
-
-
-class DeleteVisuomotorClassificationAnalysisResultsView(JSONResponseMixin,BaseDetailView):
-    model=VisuomotorClassificationAnalysisResults
-
-    def get_context_data(self, **kwargs):
-        context={'msg':u'No POST data sent.' }
-        if self.request.is_ajax():
-            self.object=self.get_object()
-            UnitAnalysisResults.objects.filter(analysis_results=self.object).delete()
-            UnitClassification.objects.filter(analysis_results=self.object).delete()
-            VisuomotorClassificationUnitAnalysisResults.objects.filter(analysis_results=self.object).delete()
-            AnalysisResultsLevelMapping.objects.filter(analysis_results=self.object).delete()
-            self.object.delete()
-            context={'id': self.request.POST['id']}
-
-        return context
-
-
-class MirrorTypeClassificationAnalysisResultsDetailView(AnalysisResultsDetailView):
-    model=MirrorTypeClassificationAnalysisResults
-    template_name = 'sensorimotordb/analysis/mirror_type_classification_analysis_results_view.html'
-
-    def get(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        context = self.get_context_data(object=self.object)
-        return self.render_to_response(context)
-
-    def get_context_data(self, **kwargs):
-        context = AnalysisResultsDetailView.get_context_data(self, **kwargs)
-        context['factors']=Factor.objects.filter(analysis=self.object.analysis)
-        context['bodb_server']=settings.BODB_SERVER
-        context['api_key']=ApiKey.objects.get(user=self.request.user).key
-        context['username']=self.request.user.username
-        return context
-
-
-class DeleteMirrorTypeClassificationAnalysisResultsView(JSONResponseMixin,BaseDetailView):
-    model=MirrorTypeClassificationAnalysisResults
-
-    def get_context_data(self, **kwargs):
-        context={'msg':u'No POST data sent.' }
-        if self.request.is_ajax():
-            self.object=self.get_object()
-            UnitAnalysisResults.objects.filter(analysis_results=self.object).delete()
-            UnitClassification.objects.filter(analysis_results=self.object).delete()
-            MirrorTypeClassificationUnitAnalysisResults.objects.filter(analysis_results=self.object).delete()
-            AnalysisResultsLevelMapping.objects.filter(analysis_results=self.object).delete()
-            self.object.delete()
-            context={'id': self.request.POST['id']}
-
-        return context
-
-
-class SearchView(LoginRequiredMixin, TemplateView):
-    template_name = 'sensorimotordb/search.html'
 
 
 class ExperimentExportRequestView(LoginRequiredMixin,CreateView):
@@ -780,7 +616,8 @@ class ExperimentExportRequestDenyView(LoginRequiredMixin,UpdateView):
     form_class = ExperimentExportRequestDenyForm
 
     def get_object(self, queryset=None):
-        return ExperimentExportRequest.objects.get(activation_key=self.kwargs.get('activation_key'),experiment__id=self.kwargs.get('pk'))
+        return ExperimentExportRequest.objects.get(activation_key=self.kwargs.get('activation_key'),
+            experiment__id=self.kwargs.get('pk'))
 
     def get_form_kwargs(self):
         """
@@ -813,7 +650,8 @@ class ExperimentExportRequestApproveView(LoginRequiredMixin, UpdateView):
     form_class = ExperimentExportRequestApproveForm
 
     def get_object(self, queryset=None):
-        return ExperimentExportRequest.objects.get(activation_key=self.kwargs.get('activation_key'), experiment__id=self.kwargs.get('pk'))
+        return ExperimentExportRequest.objects.get(activation_key=self.kwargs.get('activation_key'),
+            experiment__id=self.kwargs.get('pk'))
 
     def get_form_kwargs(self):
         """
@@ -854,156 +692,3 @@ class ExperimentExportView(LoginRequiredMixin, DetailView):
             response['Content-Disposition'] = 'attachment; filename=experiment_%d.h5' % self.object.id
             return response
         return HttpResponseForbidden()
-
-
-class UpdateUserProfileView(LoginRequiredMixin,UpdateView):
-    form_class = UserProfileForm
-    model = User
-    template_name = 'registration/user_profile_detail.html'
-    success_url = '/accounts/profile/?msg=saved'
-
-    def get_object(self, queryset=None):
-        return self.request.user
-
-    def get_context_data(self, **kwargs):
-        context = super(UpdateUserProfileView,self).get_context_data(**kwargs)
-        context['msg']=self.request.GET.get('msg',None)
-        context['api_key']=ApiKey.objects.get(user=self.request.user).key
-        return context
-
-    def form_valid(self, form):
-        # update user object
-        user=form.save()
-        if 'password1' in self.request.POST and len(self.request.POST['password1']):
-            user.set_password(self.request.POST['password1'])
-        user.save()
-
-        return redirect(self.success_url)
-
-
-class CreateVisuomotorClassificationAnalysisView(LoginRequiredMixin,CreateView):
-    model = VisuomotorClassificationAnalysisResults
-    form_class = VisuomotorClassificationAnalysisResultsForm
-    template_name = 'sensorimotordb/analysis/visuomotor_classification_analysis_results_create.html'
-
-    def get_context_data(self, **kwargs):
-        context_data=super(CreateVisuomotorClassificationAnalysisView,self).get_context_data(**kwargs)
-        context_data['factors']=Factor.objects.filter(analysis=VisuomotorClassificationAnalysis.objects.filter()[0]).prefetch_related('levels')
-        context_data['conditions']=[]
-        experiment_id=self.request.GET.get('experiment',None)
-        if experiment_id is not None:
-            context_data['conditions']=Condition.objects.filter(experiment__id=experiment_id)
-        return context_data
-
-    def get_form(self, form_class=None):
-        form=super(CreateVisuomotorClassificationAnalysisView,self).get_form(form_class=form_class)
-        experiment_id=self.request.GET.get('experiment',None)
-        if experiment_id is not None:
-            all_evts=Event.objects.filter(trial__condition__experiment__id=experiment_id).values_list('name',flat=True).distinct()
-            form.fields['baseline_rel_evt'].choices=[]
-            form.fields['baseline_rel_end_evt'].choices=[('','')]
-            form.fields['obj_view_woi_rel_evt'].choices=[]
-            form.fields['obj_view_woi_rel_end_evt'].choices=[('','')]
-            for evt in all_evts:
-                form.fields['baseline_rel_evt'].choices.append((evt,evt))
-                form.fields['baseline_rel_end_evt'].choices.append((evt,evt))
-                form.fields['obj_view_woi_rel_evt'].choices.append((evt,evt))
-                form.fields['obj_view_woi_rel_end_evt'].choices.append((evt,evt))
-
-            form.fields['grasp_woi_rel_evt'].choices=[]
-            form.fields['grasp_woi_rel_end_evt'].choices=[('','')]
-            execution_conditions=GraspPerformanceCondition.objects.filter(experiment__id=experiment_id)
-            motor_evts=[]
-            for evt in all_evts:
-                for condition in execution_conditions:
-                    if Event.objects.filter(name=evt, trial__condition=condition).count()>0 and not evt in motor_evts:
-                        motor_evts.append(evt)
-            for evt in motor_evts:
-                form.fields['grasp_woi_rel_evt'].choices.append((evt,evt))
-                form.fields['grasp_woi_rel_end_evt'].choices.append((evt,evt))
-
-        return form
-
-    def get_initial(self):
-        initial_data={'analysis': VisuomotorClassificationAnalysis.objects.filter()[0]}
-        experiment_id=self.request.GET.get('experiment',None)
-        if experiment_id is not None:
-            initial_data['experiment']=experiment_id
-        return initial_data
-
-    def form_valid(self, form):
-        """
-        If the form is valid, save the associated model.
-        """
-        self.object=form.save()
-        for field in self.request.POST:
-            if field.startswith('level_mapping_'):
-                level_id=int(field.split('_')[-1])
-                condition_ids=self.request.POST.getlist(field)
-                mapping=AnalysisResultsLevelMapping(level=Level.objects.get(id=level_id), analysis_results=self.object)
-                mapping.save()
-                for condition_id in condition_ids:
-                    mapping.conditions.add(Condition.objects.get(id=condition_id))
-        analysis=VisuomotorClassificationAnalysis.objects.get(id=self.object.analysis.id)
-        analysis.run(self.object)
-        return redirect('/sensorimotordb/experiment/%d/' % self.object.experiment.id)
-
-
-class CreateMirrorTypeClassificationAnalysisView(LoginRequiredMixin,CreateView):
-    model = MirrorTypeClassificationAnalysisResults
-    form_class = MirrorTypeClassificationAnalysisResultsForm
-    template_name = 'sensorimotordb/analysis/mirror_type_classification_analysis_results_create.html'
-
-    def get_context_data(self, **kwargs):
-        context_data=super(CreateMirrorTypeClassificationAnalysisView,self).get_context_data(**kwargs)
-        context_data['factors']=Factor.objects.filter(analysis=MirrorTypeClassificationAnalysis.objects.filter()[0]).prefetch_related('levels')
-        context_data['conditions']=[]
-        experiment_id=self.request.GET.get('experiment',None)
-        if experiment_id is not None:
-            context_data['conditions']=Condition.objects.filter(experiment__id=experiment_id)
-        return context_data
-
-    def get_form(self, form_class=None):
-        form=super(CreateMirrorTypeClassificationAnalysisView,self).get_form(form_class=form_class)
-        experiment_id=self.request.GET.get('experiment',None)
-        if experiment_id is not None:
-            all_evts=Event.objects.filter(trial__condition__experiment__id=experiment_id).values_list('name',flat=True).distinct()
-            form.fields['baseline_rel_evt'].choices=[]
-            form.fields['baseline_rel_end_evt'].choices=[('','')]
-            form.fields['reach_woi_rel_evt'].choices=[]
-            form.fields['reach_woi_rel_end_evt'].choices=[('','')]
-            form.fields['hold_woi_rel_evt'].choices=[]
-            form.fields['hold_woi_rel_end_evt'].choices=[('','')]
-            for evt in all_evts:
-                form.fields['baseline_rel_evt'].choices.append((evt,evt))
-                form.fields['baseline_rel_end_evt'].choices.append((evt,evt))
-                form.fields['reach_woi_rel_evt'].choices.append((evt,evt))
-                form.fields['reach_woi_rel_end_evt'].choices.append((evt,evt))
-                form.fields['hold_woi_rel_evt'].choices.append((evt,evt))
-                form.fields['hold_woi_rel_end_evt'].choices.append((evt,evt))
-
-        return form
-
-    def get_initial(self):
-        initial_data={'analysis': MirrorTypeClassificationAnalysis.objects.filter()[0]}
-        experiment_id=self.request.GET.get('experiment',None)
-        if experiment_id is not None:
-            initial_data['experiment']=experiment_id
-        return initial_data
-
-    def form_valid(self, form):
-        """
-        If the form is valid, save the associated model.
-        """
-        self.object=form.save()
-        for field in self.request.POST:
-            if field.startswith('level_mapping_'):
-                level_id=int(field.split('_')[-1])
-                condition_ids=self.request.POST.getlist(field)
-                mapping=AnalysisResultsLevelMapping(level=Level.objects.get(id=level_id), analysis_results=self.object)
-                mapping.save()
-                for condition_id in condition_ids:
-                    mapping.conditions.add(Condition.objects.get(id=condition_id))
-        analysis=MirrorTypeClassificationAnalysis.objects.get(id=self.object.analysis.id)
-        analysis.run(self.object)
-        return redirect('/sensorimotordb/experiment/%d/' % self.object.experiment.id)

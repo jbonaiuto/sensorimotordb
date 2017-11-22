@@ -299,12 +299,17 @@ class FullRecordingTrialResource(ModelResource):
 
 class UnitClassificationTypeResource(ModelResource):
     parent=fields.ToOneField('sensorimotordb.api.UnitClassificationTypeResource', 'parent', null=True, full=False)
+    children=fields.ToManyField('sensorimotordb.api.UnitClassificationTypeResource','children',null=True,full=True)
     class Meta:
         queryset=UnitClassificationType.objects.all()
         resource_name='unit_classification_type'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
+        filtering={
+            'parent': ALL_WITH_RELATIONS,
+            'analysis': ALL_WITH_RELATIONS,
+        }
 
 
 class UnitClassificationResource(ModelResource):
@@ -419,6 +424,7 @@ class ANOVAComparisonResource(ModelResource):
 
         return bundle
 
+
 class UnitClassificationConditionResource(ModelResource):
     comparisons=fields.ManyToManyField('sensorimotordb.api.ANOVAComparisonResource', 'comparisons', related_name='anova_comparison_conditions',null=True,full=True)
     class Meta:
@@ -428,23 +434,6 @@ class UnitClassificationConditionResource(ModelResource):
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
 
-
-class UnitClassificationTypeResource(ModelResource):
-    parent=fields.ToOneField('sensorimotordb.api.UnitClassificationResource', 'parent', null=True, full=False)
-    analysis=fields.ToOneField('sensorimotordb.api.ClassificationAnalysisResource','analysis', null=False, full=False)
-    conditions=fields.ToManyField(UnitClassificationConditionResource,'unit_classification_type_conditions', related_name='unit_classification_type_conditions',null=False,full=True)
-    children=fields.ToManyField('sensorimotordb.api.UnitClassificationTypeResource','children',null=True,full=True)
-
-    class Meta:
-        queryset=UnitClassificationType.objects.all()
-        resource_name='unit_classification_type'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-        filtering={
-            'parent': ALL_WITH_RELATIONS,
-            'analysis': ALL_WITH_RELATIONS,
-            }
 
 class ANOVAFactorLevelResource(ModelResource):
     class Meta:
@@ -503,7 +492,7 @@ class ClassificationAnalysisResource(ModelResource):
     analysis_anovas=fields.ToManyField(ANOVAResource,'analysis_anovas', related_name='analysis_anovas',null=False,full=True)
     class Meta:
         queryset=ClassificationAnalysis.objects.all().prefetch_related('analysis_anovas')
-        resource_name='analysis'
+        resource_name='classification_analysis'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)

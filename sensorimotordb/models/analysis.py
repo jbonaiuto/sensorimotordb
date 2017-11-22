@@ -11,7 +11,7 @@ from rpy2.robjects import pandas2ri
 pandas2ri.activate()
 import pandas as pd
 
-
+# Load R functions
 r_source = robjects.r['source']
 r_source(os.path.join(settings.PROJECT_PATH,'../sensorimotordb/analysis/one_way_anova_repeated_measures.R'))
 r_one_way_anova = robjects.globalenv['one_way_anova_repeated_measures']
@@ -65,18 +65,41 @@ class ClassificationAnalysis(Analysis):
                 all_anova_results[anova.id]=anova_results
             unit_results.save()
 
+            classification_types=list(UnitClassificationType.objects.filter(analysis=self, children=None))
+            # Need to order classification types so those with higher order interaction conditions come first
+            classification_order=[]
+            for classification_type in classification_types:
+                order=0
+                for condition in UnitClassificationCondition.objects.filter(classification_type=classification_type):
+                    condition_order=0
+                    for comparison in condition.comparisons.all():
+                        if ANOVAEffect.objects.filter(id=comparison.id).exists():
+                            effect=ANOVAEffect.objects.get(id=comparison.id)
+                            condition_order += effect.factors.count() * 1000
+                        elif ANOVAPairwiseComparison.objects.filter(id=comparison.id).exists():
+                            condition_order += 1
+                    if condition_order>order:
+                        order=condition_order
+                classification_order.append(order)
+            sorted_classification_types=[x for _, x in sorted(zip(classification_order,classification_types), key=lambda pair: pair[0], reverse=True)]
+
+
             classified=False
             # Now classify - for each possible type
-            for classification_type in UnitClassificationType.objects.filter(analysis=self, children=None):
-
+            for classification_type in sorted_classification_types:
                 # Check if any of the conditions are true
-                for condition in UnitClassificationCondition.objects.filter(classification_type=classification_type).order_by('id'):
-                    condition_true=condition.check_condition(all_anova_results)
-                    if condition_true:
-                        print('classified as %s' % classification_type.label)
-                        unit_classifications[classification_type.label].add_hierarchically(unit)
-                        classified=True
-                        break
+                if not UnitClassificationCondition.objects.filter(classification_type=classification_type).order_by('id').exists():
+                    print('classified as %s' % classification_type.label)
+                    unit_classifications[classification_type.label].add_hierarchically(unit)
+                    classified=True
+                else:
+                    for condition in UnitClassificationCondition.objects.filter(classification_type=classification_type).order_by('id'):
+                        condition_true=condition.check_condition(all_anova_results)
+                        if condition_true:
+                            print('classified as %s' % classification_type.label)
+                            unit_classifications[classification_type.label].add_hierarchically(unit)
+                            classified=True
+                            break
                 if classified:
                     break
 

@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.db import connections
 from neo import io, os
 import scipy.io
+from glob import glob
 from django.db.models import Q
 from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, ConditionVideoEvent
 from uscbp import settings
@@ -1175,9 +1176,220 @@ def find_nearest_event_after(event_time, event_array, epoch_start, epoch_end):
                 return time
     return None
 
+def import_social_goal_data(db='default'):
+    monkeys=['betta','houdini']
+
+    collator=User.objects.using(db).filter(is_superuser=True)[0]
+    if User.objects.using(db).filter(username='jbonaiuto').count():
+        collator=User.objects.using(db).get(username='jbonaiuto')
+
+    event_map={
+        'mo1MotorContainer':('oc','object contact'),
+        'mo1MotorHand':('oc','object contact'),
+        'mo1MotorMouth': ('oc','object contact'),
+        'mo1MotorContainer_base': ('mo','movement onset'),
+        'mo1MotorHand_base': ('mo','movement onset'),
+        'mo1MotorMouth_base': ('mo','movement onset'),
+        }
+
+    for monkey in monkeys:
+        exp_title='F5 mirror neuron - Social goals - %s' % monkey
+        exp=Experiment()
+        exp.collator=collator
+        exp.last_modified_by=collator
+        exp.title=exp_title
+        exp.brief_description='Recording of unidentified F5 neurons while monkeys observed or performed object-directed grasps'
+        exp.subject_species=Species.objects.using(db).get(genus_name='Macaca',species_name='mulatta')
+        exp.save(using=db)
+        print('importing experiment %d' % exp.id)
+
+        conditions={}
+        if GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in container').count():
+            conditions['container']=GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in container')[0]
+        else:
+            conditions['container']=GraspPerformanceCondition()
+            conditions['container'].experiment=exp
+            conditions['container'].name='Grasp to place in container'
+            conditions['container'].description='The monkey was seated facing a table (60X60 cm) onto which a metallic ' \
+                                                'cube was placed along the monkey body midline, at 13 cm from monkey\'s ' \
+                                                'hand starting position. The monkey had to reach and grasp the object ' \
+                                                'and then place it in a small container located 10 cm to the left of the ' \
+                                                'grasping location. At the beginning of each trial the monkey had to keep ' \
+                                                'the right hand on a handle attached to the table for at least 1000 ms, ' \
+                                                'after which, a transparent barrier was removed to give the "go" signal ' \
+                                                'and the monkey grasped the object and placed it in the container. A juice ' \
+                                                'reward (and a solid food reward) was delivered after 500-1000 ms, if the ' \
+                                                'monkey correctly executed the trial.'
+            conditions['container'].type='grasp_perform'
+            conditions['container'].object='cube'
+            conditions['container'].object_distance=13
+            conditions['container'].grasp='precision pinch'
+            conditions['container'].hand_visible=True
+            conditions['container'].object_visible=True
+            conditions['container'].save(using=db)
+
+        if GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in mouth').count():
+            conditions['mouth']=GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in mouth')[0]
+        else:
+            conditions['mouth']=GraspPerformanceCondition()
+            conditions['mouth'].experiment=exp
+            conditions['mouth'].name='Grasp to place in mouth'
+            conditions['mouth'].description='The monkey was seated facing a table (60X60 cm) onto which a metallic '\
+                                            'cube was placed along the monkey body midline, at 13 cm from monkey\'s '\
+                                            'hand starting position. The monkey had to reach and grasp the object '\
+                                            'and bring it to its mouth and eat it. At the beginning of each trial the monkey had to keep '\
+                                            'the right hand on a handle attached to the table for at least 1000 ms, '\
+                                            'after which, a transparent barrier was removed to give the "go" signal '\
+                                            'and the monkey grasped the object and placed it in its mouth. A juice '\
+                                            'reward was delivered after 500-1000 ms, if the '\
+                                            'monkey correctly executed the trial.'
+            conditions['mouth'].type='grasp_perform'
+            conditions['mouth'].object='cube'
+            conditions['mouth'].object_distance=13
+            conditions['mouth'].grasp='precision pinch'
+            conditions['mouth'].hand_visible=False
+            conditions['mouth'].object_visible=False
+            conditions['mouth'].save(using=db)
+
+        if GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in experimenter\'s hand').count():
+            conditions['hand']=GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in experimenter\'s hand')[0]
+        else:
+            conditions['hand']=GraspPerformanceCondition()
+            conditions['hand'].experiment=exp
+            conditions['hand'].name='Grasp to place in experimenter\'s hand'
+            conditions['hand'].description='The monkey was seated facing a table (60X60 cm) onto which a metallic '\
+                                           'cube was placed along the monkey body midline, at 13 cm from monkey\'s '\
+                                           'hand starting position. The monkey had to reach and grasp the object '\
+                                           'and then place it in the hand of the experimenter. At the beginning of each trial the monkey had to keep '\
+                                           'the right hand on a handle attached to the table for at least 1000 ms, '\
+                                           'after which, a transparent barrier was removed to give the "go" signal '\
+                                           'and the monkey grasped the object and placed it in the experimenter\'s hand. A juice '\
+                                           'reward (and a solid food reward) was delivered after 500-1000 ms, if the '\
+                                           'monkey correctly executed the trial.'
+            conditions['hand'].type='grasp_perform'
+            conditions['hand'].object='cube'
+            conditions['hand'].object_distance=13
+            conditions['hand'].grasp='precision pinch'
+            conditions['hand'].hand_visible=True
+            conditions['hand'].object_visible=True
+            conditions['hand'].save(using=db)
+
+        nex_files=glob('/home/jbonaiuto/Projects/sensorimotordb/project/data/ferrari/%s*.nex' % monkey)
+        for nex_idx, nex_file in enumerate(nex_files):
+            r=io.NeuroExplorerIO(filename=nex_file)
+            block=r.read(cascade=True, lazy=False)[0]
+            for seg_idx, seg in enumerate(block.segments):
+                print('importing segment %d' % seg_idx)
+
+                events={}
+                for idx,event_array in enumerate(seg.eventarrays):
+                    events[event_array.annotations['channel_name']]=idx
+
+                units=[]
+                for unit_idx,st in enumerate(seg.spiketrains):
+                    print('importing unit %s' % st.name)
+                    unit=Unit()
+                    area='F5'
+                    region=BrainRegion.objects.using(db).filter(Q(Q(name=area) | Q(abbreviation=area)))
+                    unit.area=region[0]
+                    unit.type='UID'
+                    unit.save(using=db)
+                    units.append(unit)
+
+                # Iterate through epochs:
+                for epoch_idx, epocharray in enumerate(seg.epocharrays):
+                    epoch_type=epocharray.annotations['channel_name']
+                    if epoch_type=='AllFile':
+                        trial_start_times=[]
+                        trial_end_times=[]
+
+                        epoch_start=epocharray.times[0]
+                        epoch_end=epoch_start+epocharray.durations[0]
+
+                        # container
+                        for time_idx,time in enumerate(seg.eventarrays[events['mo1MotorContainer_base']].times):
+                            if epoch_start <= time <= epoch_end:
+                                nearest_oc=find_nearest_event_after(time, seg.eventarrays[events['mo1MotorContainer']],
+                                    epoch_start, epoch_end)
+                                if nearest_oc is not None:
+                                    trial_start_times.append(time.rescale('s').magnitude.item(0)-1.0)
+                                    trial_end_times.append(nearest_oc+1.0)
+
+                        # hand
+                        for time in seg.eventarrays[events['mo1MotorHand_base']].times:
+                            if epoch_start <= time <= epoch_end:
+                                nearest_oc=find_nearest_event_after(time, seg.eventarrays[events['mo1MotorHand']],
+                                    epoch_start, epoch_end)
+                                if nearest_oc is not None:
+                                    trial_start_times.append(time.rescale('s').magnitude.item(0)-1.0)
+                                    trial_end_times.append(nearest_oc+1.0)
+
+                        # mouth
+                        for time in seg.eventarrays[events['mo1MotorMouth_base']].times:
+                            if epoch_start <= time <= epoch_end:
+                                nearest_oc=find_nearest_event_after(time, seg.eventarrays[events['mo1MotorMouth']],
+                                    epoch_start, epoch_end)
+                                if nearest_oc is not None:
+                                    trial_start_times.append(time.rescale('s').magnitude.item(0)-1.0)
+                                    trial_end_times.append(nearest_oc+1.0)
+
+                        # iterate through trials
+                        for trial_idx in range(len(trial_start_times)):
+                            # create trial
+                            trial=RecordingTrial()
+                            trial.trial_number=trial_idx+1
+                            trial.start_time=trial_start_times[trial_idx]
+                            trial.end_time=trial_end_times[trial_idx]
+                            trial.save(using=db)
+                            print('importing trial %d, %.3f-%.3f' % (trial_idx,trial.start_time,trial.end_time))
+
+                            for event,evt_idx in events.iteritems():
+                                for evt_time in seg.eventarrays[evt_idx].times:
+                                    if trial.start_time <= evt_time < trial.end_time:
+                                        # create trial events
+                                        new_event=Event(name=event, description='', trial=trial, time=evt_time.rescale('s').magnitude.item(0))
+                                        new_event.save(using=db)
+
+                            condition_name=None
+                            if Event.objects.using(db).filter(name='mo1MotorContainer',trial=trial).count():
+                                condition_name='container'
+                            elif Event.objects.using(db).filter(name='mo1MotorHand',trial=trial).count():
+                                condition_name='hand'
+                            elif Event.objects.using(db).filter(name='mo1MotorMouth',trial=trial).count():
+                                condition_name='mouth'
+
+                            if condition_name is not None:
+                                trial.condition=conditions[condition_name]
+                                trial.save(using=db)
+                                events_to_delete=[]
+                                for event in Event.objects.using(db).filter(trial=trial):
+                                    old_evt_name=event.name
+                                    if old_evt_name in event_map:
+                                        event.name=event_map[old_evt_name][0]
+                                        event.description=event_map[old_evt_name][1]
+                                        event.save(using=db)
+                                    else:
+                                        events_to_delete.append(event.id)
+                                Event.objects.using(db).filter(id__in=events_to_delete).delete()
+                            else:
+                                Event.objects.using(db).filter(trial=trial).delete()
+                                trial.delete(using=db)
+
+                            for unit_idx,st in enumerate(seg.spiketrains):
+                                unit_recording=UnitRecording(unit=units[unit_idx], trial=trial)
+                                spike_times=[]
+                                for spike_time in st.rescale('s').magnitude:
+                                    if trial.start_time <= spike_time < trial.end_time:
+                                        spike_times.append(spike_time)
+                                if len(spike_times)>0:
+                                    unit_recording.spike_times=','.join([str(x) for x in sorted(spike_times)])
+                                unit_recording.save(using=db)
+
+
 if __name__=='__main__':
     django.setup()
-    remove_all()
-    import_kraskov_data('data/kraskov/units4BODB.mat','data/kraskov/')
-    sed=import_bonini_data(['data/bonini/01_PIC_F5_09022012_mot_mirror_mrgSORTED.nex',
-                            'data/bonini/02_Pic_F5_10022012_mot_mirror_mrgSORTED.nex'])
+    #remove_all()
+    #import_kraskov_data('data/kraskov/units4BODB.mat','data/kraskov/')
+    #sed=import_bonini_data(['data/bonini/01_PIC_F5_09022012_mot_mirror_mrgSORTED.nex',
+    #                        'data/bonini/02_Pic_F5_10022012_mot_mirror_mrgSORTED.nex'])
+    import_social_goal_data()

@@ -56,13 +56,16 @@ class ClassificationAnalysis(Analysis):
             unit_results=UnitAnalysisResults(analysis_results=results, unit=unit, results_text='', pairwise_results_text='')
             all_anova_results={}
             for anova in self.analysis_anovas.all():
-                (results_text, pairwise_results_text, anova_results)=anova.run(analysis_settings, results, unit)
-                print('anova %s:' % anova.name)
-                print(results_text)
-                print(pairwise_results_text)
-                unit_results.results_text='%s\n%s' % (unit_results.results_text, results_text)
-                unit_results.pairwise_results_text='%s\n%s' % (unit_results.pairwise_results_text, pairwise_results_text)
-                all_anova_results[anova.id]=anova_results
+                try:
+                    (results_text, pairwise_results_text, anova_results)=anova.run(analysis_settings, results, unit)
+                    print('anova %s:' % anova.name)
+                    print(results_text)
+                    print(pairwise_results_text)
+                    unit_results.results_text='%s\n%s' % (unit_results.results_text, results_text)
+                    unit_results.pairwise_results_text='%s\n%s' % (unit_results.pairwise_results_text, pairwise_results_text)
+                    all_anova_results[anova.id]=anova_results
+                except:
+                    pass
             unit_results.save()
 
             classification_types=list(UnitClassificationType.objects.filter(analysis=self, children=None))
@@ -93,7 +96,20 @@ class ClassificationAnalysis(Analysis):
                     unit_classifications[classification_type.label].add_hierarchically(unit)
                     classified=True
                 else:
-                    for condition in UnitClassificationCondition.objects.filter(classification_type=classification_type).order_by('id'):
+                    classification_conditions=list(UnitClassificationCondition.objects.filter(classification_type=classification_type))
+                    # Need to order classification types so those with higher order interaction conditions come first
+                    classification_condition_order=[]
+                    for classification_condition in classification_conditions:
+                        order=0
+                        for comparison in classification_condition.comparisons.all():
+                            if ANOVAEffect.objects.filter(id=comparison.id).exists():
+                                effect=ANOVAEffect.objects.get(id=comparison.id)
+                                order += effect.factors.count() * 1000
+                            elif ANOVAPairwiseComparison.objects.filter(id=comparison.id).exists():
+                                order += 1
+                        classification_condition_order.append(order)
+                    sorted_classification_conditions=[x for _, x in sorted(zip(classification_condition_order,classification_conditions), key=lambda pair: pair[0], reverse=True)]
+                    for condition in sorted_classification_conditions:
                         condition_true=condition.check_condition(all_anova_results)
                         if condition_true:
                             print('classified as %s' % classification_type.label)
@@ -278,7 +294,7 @@ class ANOVA(models.Model):
             })
 
             #df=df.set_index(['trial'])
-
+            #df.to_csv(path_or_buf='/home/jbonaiuto/test.csv')
             (anova_results_trial, anova_results_within, twoway_pairwise, within_trial_pairwise, between_trial_pairwise)=r_two_way_anova(df,"trial",
                 "rate",within_trial_factor_name,between_trial_factor_name)
 
@@ -420,19 +436,21 @@ class ANOVAEffect(ANOVAComparison):
         return s
 
     def check_results(self, anova_results):
-        if self.factors.count()==1:
-            for idx in range(anova_results[self.anova.id]['anova_within'].axes[0].size):
-                if anova_results[self.anova.id]['anova_within'].axes[0][idx].strip()==self.factors.all()[0].name:
-                    return anova_results[self.anova.id]['anova_within']['Pr(>F)'][idx]<0.05
-            return False
-        elif self.factors.count()==2:
-            for idx in range(anova_results[self.anova.id]['anova_within'].axes[0].size):
-                row_name=anova_results[self.anova.id]['anova_within'].axes[0][idx].strip()
-                if row_name=='%s:%s' % (self.factors.all()[0].name,self.factors.all()[1].name) or row_name=='%s:%s' % (self.factors.all()[1].name,self.factors.all()[0].name):
-                    return anova_results[self.anova.id]['anova_within']['Pr(>F)'][idx]<0.05
-            return False
-        elif self.factors.count()==3:
-            pass
+        if self.anova.id in anova_results:
+            if self.factors.count()==1:
+                for idx in range(anova_results[self.anova.id]['anova_within'].axes[0].size):
+                    if anova_results[self.anova.id]['anova_within'].axes[0][idx].strip()==self.factors.all()[0].name:
+                        return anova_results[self.anova.id]['anova_within']['Pr(>F)'][idx]<0.05
+                return False
+            elif self.factors.count()==2:
+                for idx in range(anova_results[self.anova.id]['anova_within'].axes[0].size):
+                    row_name=anova_results[self.anova.id]['anova_within'].axes[0][idx].strip()
+                    if row_name=='%s:%s' % (self.factors.all()[0].name,self.factors.all()[1].name) or row_name=='%s:%s' % (self.factors.all()[1].name,self.factors.all()[0].name):
+                        return anova_results[self.anova.id]['anova_within']['Pr(>F)'][idx]<0.05
+                return False
+            elif self.factors.count()==3:
+                pass
+        return False
 
     class Meta:
         app_label='sensorimotordb'
@@ -461,17 +479,17 @@ class ANOVAOneWayPairwiseComparison(ANOVAPairwiseComparison):
         return '%s: %s&%s;%s' % (self.factor.name, self.level1.value, self.relationship, self.level2.value)
 
     def check_results(self, anova_results):
-        for row_idx in range(anova_results[self.anova.id]['within_trial_pairwise'].shape[0]):
-            contrast=anova_results[self.anova.id]['within_trial_pairwise'].contrast[row_idx+1]
-            levels=contrast.split(' - ')
-            level_diff=anova_results[self.anova.id]['within_trial_pairwise']['estimate'][row_idx+1]
-            p_val=anova_results[self.anova.id]['within_trial_pairwise']['p.value'][row_idx+1]
-            if levels[0]==self.level1.value and levels[1]==self.level2.value and p_val<0.05:
-                if (level_diff>0 and self.relationship=='gt') or (level_diff<0 and self.relationship=='lt'):
-                    return True
-            elif levels[1]==self.level1.value and levels[0]==self.level2.value and p_val<0.05:
-                if (level_diff<0 and self.relationship=='gt') or (level_diff>0 and self.relationship=='lt'):
-                    return True
+        if self.anova.id in anova_results:
+            for row_idx in range(anova_results[self.anova.id]['within_trial_pairwise'].shape[0]):
+                contrast=anova_results[self.anova.id]['within_trial_pairwise'].contrast[row_idx+1]
+                levels=contrast.split(' - ')
+                level_diff=anova_results[self.anova.id]['within_trial_pairwise']['estimate'][row_idx+1]
+                p_val=anova_results[self.anova.id]['within_trial_pairwise']['p.value'][row_idx+1]
+                if p_val<0.05 and ((levels[0]==self.level1.value and levels[1]==self.level2.value) or (levels[0]==self.level2.value and levels[1]==self.level1.value)):
+                    if levels[0]==self.level2.value and levels[1]==self.level1.value:
+                        level_diff*=-1
+                    if (level_diff>0 and self.relationship=='gt') or (level_diff<0 and self.relationship=='lt'):
+                        return True
         return False
 
 
@@ -490,25 +508,27 @@ class ANOVATwoWayPairwiseComparison(ANOVAPairwiseComparison):
         return '%s=%s, %s: %s&%s;%s' % (self.factor1.name, self.factor1_level.value, self.factor2.name, self.factor2_level1.value, self.relationship, self.factor2_level2.value);
 
     def check_results(self, anova_results):
-        for row_idx in range(anova_results[self.anova.id]['twoway_pairwise'].shape[0]):
-            contrast=anova_results[self.anova.id]['twoway_pairwise'].contrast[row_idx+1]
-            levels=contrast.split(' - ')
-            first_levels=levels[0].split(',')
-            second_levels=levels[1].split(',')
-            level_diff=anova_results[self.anova.id]['twoway_pairwise']['estimate'][row_idx+1]
-            p_val=anova_results[self.anova.id]['twoway_pairwise']['p.value'][row_idx+1]
-            if first_levels[0]==self.factor1_level.value and first_levels[1]==self.factor2_level1.value and second_levels[0]==self.factor1_level.value and second_levels[1]==self.factor2_level2.value and p_val<0.05:
-                if (level_diff>0 and self.relationship=='gt') or (level_diff<0 and self.relationship=='lt'):
-                    return True
-            elif first_levels[0]==self.factor2_level1.value and first_levels[1]==self.factor1_level.value and second_levels[0]==self.factor2_level2.value and second_levels[1]==self.factor1_level.value and p_val<0.05:
-                if (level_diff>0 and self.relationship=='gt') or (level_diff<0 and self.relationship=='lt'):
-                    return True
-            elif first_levels[0]==self.factor1_level.value and second_levels[1]==self.factor2_level1.value and second_levels[0]==self.factor1_level.value and first_levels[1]==self.factor2_level2.value and p_val<0.05:
-                if (level_diff<0 and self.relationship=='gt') or (level_diff>0 and self.relationship=='lt'):
-                    return True
-            elif first_levels[0]==self.factor2_level1.value and second_levels[1]==self.factor1_level.value and second_levels[0]==self.factor2_level2.value and first_levels[1]==self.factor1_level.value and p_val<0.05:
-                if (level_diff<0 and self.relationship=='gt') or (level_diff>0 and self.relationship=='lt'):
-                    return True
+        if self.anova.id in anova_results:
+            for row_idx in range(anova_results[self.anova.id]['twoway_pairwise'].shape[0]):
+                contrast=anova_results[self.anova.id]['twoway_pairwise'].contrast[row_idx+1]
+                levels=contrast.split(' - ')
+                first_levels=levels[0].split(',')
+                second_levels=levels[1].split(',')
+                level_diff=anova_results[self.anova.id]['twoway_pairwise']['estimate'][row_idx+1]
+                p_val=anova_results[self.anova.id]['twoway_pairwise']['p.value'][row_idx+1]
+                if p_val<0.05:
+                    if first_levels[0]==self.factor1_level.value and second_levels[0]==self.factor1_level.value:
+                        if (first_levels[1]==self.factor2_level1.value and second_levels[1]==self.factor2_level2.value) or (first_levels[1]==self.factor2_level2.value and second_levels[1]==self.factor2_level1.value):
+                            if first_levels[1]==self.factor2_level2.value and second_levels[1]==self.factor2_level1.value:
+                                level_diff*=-1
+                            if (level_diff>0 and self.relationship=='gt') or (level_diff<0 and self.relationship=='lt'):
+                                return True
+                    elif first_levels[1]==self.factor1_level.value and second_levels[1]==self.factor1_level.value:
+                        if (first_levels[0]==self.factor2_level1.value and second_levels[0]==self.factor2_level2.value) or (first_levels[0]==self.factor2_level2.value and second_levels[0]==self.factor2_level1.value):
+                            if first_levels[0]==self.factor2_level2.value and second_levels[0]==self.factor2_level1.value:
+                                level_diff*=-1
+                            if (level_diff>0 and self.relationship=='gt') or (level_diff<0 and self.relationship=='lt'):
+                                return True
         return False
 
     class Meta:

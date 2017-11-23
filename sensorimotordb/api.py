@@ -153,7 +153,7 @@ class ExperimentResource(SearchResourceMixin, ModelResource):
 
 class PenetrationResource(ModelResource):
     class Meta:
-        quersyet=Penetration.objects.all()
+        queryset=Penetration.objects.all()
         resource_name = 'penetration'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
@@ -161,8 +161,9 @@ class PenetrationResource(ModelResource):
 
 
 class BasicUnitResource(SearchResourceMixin, ModelResource):
+    penetration=fields=fields.ToOneField(PenetrationResource,'penetration',full=True)
     class Meta:
-        queryset = Unit.objects.all()
+        queryset = Unit.objects.all().select_related('penetration')
         resource_name = 'unit'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())

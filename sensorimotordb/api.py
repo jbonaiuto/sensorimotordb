@@ -300,6 +300,7 @@ class FullRecordingTrialResource(ModelResource):
 class UnitClassificationTypeResource(ModelResource):
     parent=fields.ToOneField('sensorimotordb.api.UnitClassificationTypeResource', 'parent', null=True, full=False)
     children=fields.ToManyField('sensorimotordb.api.UnitClassificationTypeResource','children',null=True,full=True)
+    analysis=fields.ToOneField('sensorimotordb.api.ClassificationAnalysisResource','analysis',null=False,full=False)
     class Meta:
         queryset=UnitClassificationType.objects.all()
         resource_name='unit_classification_type'

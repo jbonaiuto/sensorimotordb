@@ -6,7 +6,7 @@ from neo import io, os
 import scipy.io
 from glob import glob
 from django.db.models import Q
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, ConditionVideoEvent
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, ConditionVideoEvent, Penetration
 from uscbp import settings
 
 def remove_all(db='default'):
@@ -1276,6 +1276,13 @@ def import_social_goal_data(db='default'):
 
         nex_files=glob('/home/jbonaiuto/Projects/sensorimotordb/project/data/ferrari/%s*.nex' % monkey)
         for nex_idx, nex_file in enumerate(nex_files):
+
+            (path,file)=os.path.split(nex_file)
+            (file,ext)=os.path.splitext(file)
+            penetration_label=file.split('_')[1][3:]
+            penetration=Penetration(label=penetration_label)
+            penetration.save()
+
             r=io.NeuroExplorerIO(filename=nex_file)
             block=r.read(cascade=True, lazy=False)[0]
             for seg_idx, seg in enumerate(block.segments):
@@ -1289,6 +1296,8 @@ def import_social_goal_data(db='default'):
                 for unit_idx,st in enumerate(seg.spiketrains):
                     print('importing unit %s' % st.name)
                     unit=Unit()
+                    unit.label=st.name
+                    unit.penetration=penetration
                     area='F5'
                     region=BrainRegion.objects.using(db).filter(Q(Q(name=area) | Q(abbreviation=area)))
                     unit.area=region[0]

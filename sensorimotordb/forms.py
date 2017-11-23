@@ -38,7 +38,7 @@ class ClassificationAnalysisResultsForm(ModelForm):
 
 
 class ANOVAForm(ModelForm):
-    analysis=forms.ModelChoiceField(queryset=Analysis.objects.all(),widget=forms.HiddenInput,required=True)
+    analysis=forms.ModelChoiceField(queryset=ClassificationAnalysis.objects.all(),widget=forms.HiddenInput,required=True)
     name=forms.CharField(max_length=100, required=True)
     dependent_variable=forms.CharField(max_length=100, required=True)
 

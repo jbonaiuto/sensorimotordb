@@ -142,10 +142,10 @@ class Experiment(models.Model):
                 condition=GraspPerformanceCondition.objects.get(id=condition.id)
             condition.export(f_condition)
 
-        f_units=f.create_group('units')
-        for unit in Unit.objects.filter(unitrecording__trial__condition__experiment=self).distinct():
-            f_unit=f_units.create_group(str(unit.id))
-            unit.export(f_unit)
+        f_penetrations=f.create_group('penetrations')
+        for penetration in Penetration.objects.filter(units__unitrecording__trial__condition__experiment=self).distinct():
+            f_penetration=f_penetrations.create_group(str(penetration.id))
+            penetration.export(f_penetration)
 
         f_trials=f.create_group('trials')
         for trial in RecordingTrial.objects.filter(condition__experiment=self).distinct():
@@ -237,15 +237,33 @@ class GraspObservationCondition(GraspCondition):
         group.attrs['whole_body_visible']=self.whole_body_visible
 
 
-class Unit(models.Model):
-    type=models.CharField(max_length=50)
-    area=models.ForeignKey('BrainRegion')
+class Penetration(models.Model):
+    label=models.CharField(max_length=50)
 
     class Meta:
         app_label='sensorimotordb'
 
     def export(self, group):
         group.attrs['id']=self.id
+        group.attrs['label']=np.string_(self.label)
+        f_units=group.create_group('units')
+        for unit in Unit.objects.filter(unitrecording__trial__condition__experiment=self).distinct():
+            f_unit=f_units.create_group(str(unit.id))
+            unit.export(f_unit)
+
+
+class Unit(models.Model):
+    label=models.CharField(max_length=50)
+    type=models.CharField(max_length=50)
+    area=models.ForeignKey('BrainRegion')
+    penetration=models.ForeignKey("Penetration", related_name="units")
+
+    class Meta:
+        app_label='sensorimotordb'
+
+    def export(self, group):
+        group.attrs['id']=self.id
+        group.attrs['label']=np.string_(self.label)
         group.attrs['type']=np.string_(self.type)
         group.attrs['area']=np.string_(self.area.__unicode__())
 

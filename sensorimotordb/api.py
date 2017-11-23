@@ -301,6 +301,7 @@ class UnitClassificationTypeResource(ModelResource):
     parent=fields.ToOneField('sensorimotordb.api.UnitClassificationTypeResource', 'parent', null=True, full=False)
     children=fields.ToManyField('sensorimotordb.api.UnitClassificationTypeResource','children',null=True,full=True)
     analysis=fields.ToOneField('sensorimotordb.api.ClassificationAnalysisResource','analysis',null=False,full=False)
+    conditions=fields.ToManyField('sensorimotordb.api.UnitClassificationConditionResource','unit_classification_type_conditions',null=True,full=True)
     class Meta:
         queryset=UnitClassificationType.objects.all()
         resource_name='unit_classification_type'

@@ -14,7 +14,7 @@ from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial,
     Analysis, UnitAnalysisResults, ANOVAFactorLevel, ANOVAFactor, ANOVA, ANOVAEffect, UnitClassificationType,\
     ClassificationAnalysis, UnitClassificationCondition, ANOVAComparison, ANOVAPairwiseComparison,\
     ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, \
-    ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, ClassificationAnalysisSettings
+    ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, ClassificationAnalysisSettings, Penetration
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -151,6 +151,15 @@ class ExperimentResource(SearchResourceMixin, ModelResource):
         cache = SimpleCache(timeout=10)
 
 
+class PenetrationResource(ModelResource):
+    class Meta:
+        quersyet=Penetration.objects.all()
+        resource_name = 'penetration'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
 class BasicUnitResource(SearchResourceMixin, ModelResource):
     class Meta:
         queryset = Unit.objects.all()
@@ -162,9 +171,10 @@ class BasicUnitResource(SearchResourceMixin, ModelResource):
 
 class UnitResource(BasicUnitResource):
     area = fields.ToOneField(BrainRegionResource, 'area',full=True)
+    penetration=fields=fields.ToOneField(PenetrationResource,'penetration',full=True)
 
     class Meta:
-        queryset = Unit.objects.all().select_related('area')
+        queryset = Unit.objects.all().select_related('area','penetration')
         resource_name = 'unit'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())

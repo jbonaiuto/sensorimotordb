@@ -1,7 +1,7 @@
 # urls.py
 from django.conf.urls import patterns, include, url
 from tastypie.api import Api
-from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, ANOVAResource, ANOVAFactorResource, ANOVAFactorLevelResource, ANOVAEffectResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, ClassificationAnalysisResultsLevelMappingResource
+from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, ANOVAResource, ANOVAFactorResource, ANOVAFactorLevelResource, ANOVAEffectResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, ClassificationAnalysisResultsLevelMappingResource, PenetrationResource
 from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, CreateANOVAView, ANOVADetailView, DeleteANOVAView, ClassificationAnalysisDetailView, DeleteUnitClassificationConditionView, DeleteUnitClassificationTypeView, CreateUnitClassificationTypeView, UpdateUnitClassificationTypeView, CreateClassificationAnalysisWizardView, CLASSIFICATION_ANALYSIS_WIZARD_FORMS, AnalysisListDetailView, DeleteClassificationAnalysisView, RunAnalysisView, RunClassificationAnalysisView, DeleteAnalysisResultsView, AnalysisResultsDetailView, ClassificationAnalysisResultsDetailView
 
 v1_api = Api(api_name='v1')
@@ -27,16 +27,12 @@ v1_api.register(UnitClassificationTypeResource())
 v1_api.register(AnalysisSettingsResource())
 v1_api.register(ClassificationAnalysisSettingsResource())
 v1_api.register(ClassificationAnalysisResultsLevelMappingResource())
-#v1_api.register(FactorResource())
-#v1_api.register(LevelResource())
-#v1_api.register(UnitAnalysisResultsResource())
-#v1_api.register(ClassificationUnitAnalysisResultsResource())
-#v1_api.register(MirrorTypeClassificationUnitAnalysisResultsResource())
 v1_api.register(ANOVAResource())
 v1_api.register(ANOVAFactorResource())
 v1_api.register(ANOVAFactorLevelResource())
 v1_api.register(ANOVAEffectResource())
 v1_api.register(UnitClassificationTypeResource())
+v1_api.register(PenetrationResource())
 
 urlpatterns = patterns('',
     (r'^analysis/$', AnalysisListDetailView.as_view(), {}, 'analysis_list'),

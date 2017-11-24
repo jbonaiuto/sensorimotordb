@@ -14,7 +14,8 @@ from sensorimotordb.views import UnitDetailView, ConditionDetailView, Experiment
     DeleteANOVAView, ClassificationAnalysisDetailView, DeleteUnitClassificationConditionView, DeleteUnitClassificationTypeView, \
     CreateUnitClassificationTypeView, UpdateUnitClassificationTypeView, CreateClassificationAnalysisWizardView, \
     CLASSIFICATION_ANALYSIS_WIZARD_FORMS, AnalysisListDetailView, DeleteClassificationAnalysisView, RunAnalysisView, \
-    RunClassificationAnalysisView, DeleteAnalysisResultsView, AnalysisResultsDetailView, ClassificationAnalysisResultsDetailView, FullRecordingTrialApiProfileView, ExperimentApiProfileView, ConditionApiProfileView
+    RunClassificationAnalysisView, DeleteAnalysisResultsView, AnalysisResultsDetailView, ClassificationAnalysisResultsDetailView, \
+    FullRecordingTrialApiProfileView, ExperimentApiProfileView, ConditionApiProfileView
 from uscbp import settings
 
 v1_api = Api(api_name='v1')
@@ -44,7 +45,6 @@ v1_api.register(ANOVAResource())
 v1_api.register(ANOVAFactorResource())
 v1_api.register(ANOVAFactorLevelResource())
 v1_api.register(ANOVAEffectResource())
-v1_api.register(UnitClassificationTypeResource())
 v1_api.register(PenetrationResource())
 
 urlpatterns = patterns('',

@@ -237,7 +237,7 @@
                 {
                     // Add to list of units
                     unit_ids.push(unit.id);
-                    unit_labels.push('Unit '+unit.id)
+                    unit_labels.push('Penetration '+unit.penetration.label+', Unit '+unit.label)
                     $('.unit_list').each(function(index, element){
                         unit.level=3;
                         unit.idx=unit_ids.length-1;

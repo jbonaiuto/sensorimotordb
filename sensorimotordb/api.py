@@ -172,7 +172,7 @@ class BasicUnitResource(SearchResourceMixin, ModelResource):
 
 class UnitResource(BasicUnitResource):
     area = fields.ToOneField(BrainRegionResource, 'area',full=True)
-    penetration=fields=fields.ToOneField(PenetrationResource,'penetration',full=True)
+    penetration=fields=fields.ToOneField(PenetrationResource,'penetration',full=True, null=False)
 
     class Meta:
         queryset = Unit.objects.all().select_related('area','penetration')

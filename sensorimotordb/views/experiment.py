@@ -2,7 +2,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect
-from django.views.generic import UpdateView, DetailView, CreateView
+from django.views.generic import UpdateView, DetailView, CreateView, TemplateView
 from django.views.generic.detail import BaseDetailView
 from django.views.generic.edit import ModelFormMixin
 from haystack.management.commands import update_index, rebuild_index

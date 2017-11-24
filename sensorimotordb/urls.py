@@ -44,7 +44,6 @@ v1_api.register(ANOVAResource())
 v1_api.register(ANOVAFactorResource())
 v1_api.register(ANOVAFactorLevelResource())
 v1_api.register(ANOVAEffectResource())
-v1_api.register(UnitClassificationTypeResource())
 v1_api.register(PenetrationResource())
 
 urlpatterns = patterns('',

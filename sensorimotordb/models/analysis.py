@@ -295,17 +295,21 @@ class ANOVA(models.Model):
 
             #df=df.set_index(['trial'])
             #df.to_csv(path_or_buf='/home/jbonaiuto/test.csv')
-            (anova_results_trial, anova_results_within, twoway_pairwise, within_trial_pairwise, between_trial_pairwise)=r_two_way_anova(df,"trial",
+            (anova_results_trial, anova_results_within, twoway_pairwise_factor1, twoway_pairwise_factor2, within_trial_pairwise, between_trial_pairwise)=r_two_way_anova(df,"trial",
                 "rate",within_trial_factor_name,between_trial_factor_name)
 
             anova_results={
                 'anova_trial': pandas2ri.ri2py_dataframe(anova_results_trial[0]),
                 'anova_within': pandas2ri.ri2py_dataframe(anova_results_within[0]),
-                'twoway_pairwise': pandas2ri.ri2py_dataframe(twoway_pairwise),
+                'twoway_pairwise_factor1': pandas2ri.ri2py_dataframe(twoway_pairwise_factor1),
+                'twoway_pairwise_factor2': pandas2ri.ri2py_dataframe(twoway_pairwise_factor2),
                 'within_trial_pairwise': pandas2ri.ri2py_dataframe(within_trial_pairwise),
                 'between_trial_pairwise': pandas2ri.ri2py_dataframe(between_trial_pairwise),
                 }
-            pairwise_results_text='\n'.join(['<h2>%s</h2>' % self.name, str(anova_results['twoway_pairwise']), str(anova_results['within_trial_pairwise']), str(anova_results['between_trial_pairwise'])])
+            pairwise_results_text='\n'.join(['<h2>%s</h2>' % self.name, str(anova_results['twoway_pairwise_factor1']),
+                                             str(anova_results['twoway_pairwise_factor2']),
+                                             str(anova_results['within_trial_pairwise']),
+                                             str(anova_results['between_trial_pairwise'])])
 
         elif self.anova_factors.count()==3:
             trial_ids=[]
@@ -509,26 +513,22 @@ class ANOVATwoWayPairwiseComparison(ANOVAPairwiseComparison):
 
     def check_results(self, anova_results):
         if self.anova.id in anova_results:
-            for row_idx in range(anova_results[self.anova.id]['twoway_pairwise'].shape[0]):
-                contrast=anova_results[self.anova.id]['twoway_pairwise'].contrast[row_idx+1]
+            pairwise_results=None
+            if anova_results[self.anova.id]['twoway_pairwise_factor1'].columns[1]==self.factor1.name:
+                pairwise_results=anova_results[self.anova.id]['twoway_pairwise_factor1']
+            elif anova_results[self.anova.id]['twoway_pairwise_factor2'].columns[1]==self.factor1.name:
+                pairwise_results=anova_results[self.anova.id]['twoway_pairwise_factor2']
+            for row_idx in range(pairwise_results.shape[0]):
+                contrast=pairwise_results.contrast[row_idx+1]
                 levels=contrast.split(' - ')
-                first_levels=levels[0].split(',')
-                second_levels=levels[1].split(',')
-                level_diff=anova_results[self.anova.id]['twoway_pairwise']['estimate'][row_idx+1]
-                p_val=anova_results[self.anova.id]['twoway_pairwise']['p.value'][row_idx+1]
-                if p_val<0.05:
-                    if first_levels[0]==self.factor1_level.value and second_levels[0]==self.factor1_level.value:
-                        if (first_levels[1]==self.factor2_level1.value and second_levels[1]==self.factor2_level2.value) or (first_levels[1]==self.factor2_level2.value and second_levels[1]==self.factor2_level1.value):
-                            if first_levels[1]==self.factor2_level2.value and second_levels[1]==self.factor2_level1.value:
-                                level_diff*=-1
-                            if (level_diff>0 and self.relationship=='gt') or (level_diff<0 and self.relationship=='lt'):
-                                return True
-                    elif first_levels[1]==self.factor1_level.value and second_levels[1]==self.factor1_level.value:
-                        if (first_levels[0]==self.factor2_level1.value and second_levels[0]==self.factor2_level2.value) or (first_levels[0]==self.factor2_level2.value and second_levels[0]==self.factor2_level1.value):
-                            if first_levels[0]==self.factor2_level2.value and second_levels[0]==self.factor2_level1.value:
-                                level_diff*=-1
-                            if (level_diff>0 and self.relationship=='gt') or (level_diff<0 and self.relationship=='lt'):
-                                return True
+                level_diff=pairwise_results['estimate'][row_idx+1]
+                p_val=pairwise_results['p.value'][row_idx+1]
+                if p_val<0.05 and pairwise_results[self.factor1.name][row_idx+1]==self.factor1_level.value:
+                    if (levels[0]==self.factor2_level1.value and levels[1]==self.factor2_level2.value) or (levels[0]==self.factor2_level2.value and levels[1]==self.factor2_level1.value):
+                        if levels[0]==self.factor2_level2.value and levels[1]==self.factor2_level1.value:
+                            level_diff*=-1
+                        if (level_diff>0 and self.relationship=='gt') or (level_diff<0 and self.relationship=='lt'):
+                            return True
         return False
 
     class Meta:

@@ -1,8 +1,20 @@
 # urls.py
 from django.conf.urls import patterns, include, url
 from tastypie.api import Api
-from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, ANOVAResource, ANOVAFactorResource, ANOVAFactorLevelResource, ANOVAEffectResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, ClassificationAnalysisResultsLevelMappingResource, PenetrationResource
-from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, CreateANOVAView, ANOVADetailView, DeleteANOVAView, ClassificationAnalysisDetailView, DeleteUnitClassificationConditionView, DeleteUnitClassificationTypeView, CreateUnitClassificationTypeView, UpdateUnitClassificationTypeView, CreateClassificationAnalysisWizardView, CLASSIFICATION_ANALYSIS_WIZARD_FORMS, AnalysisListDetailView, DeleteClassificationAnalysisView, RunAnalysisView, RunClassificationAnalysisView, DeleteAnalysisResultsView, AnalysisResultsDetailView, ClassificationAnalysisResultsDetailView
+from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, \
+    EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, \
+    UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, \
+    UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, ANOVAResource, ANOVAFactorResource, \
+    ANOVAFactorLevelResource, ANOVAEffectResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, \
+    ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, \
+    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource
+from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, \
+    ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, \
+    DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, CreateANOVAView, ANOVADetailView, \
+    DeleteANOVAView, ClassificationAnalysisDetailView, DeleteUnitClassificationConditionView, DeleteUnitClassificationTypeView, \
+    CreateUnitClassificationTypeView, UpdateUnitClassificationTypeView, CreateClassificationAnalysisWizardView, \
+    CLASSIFICATION_ANALYSIS_WIZARD_FORMS, AnalysisListDetailView, DeleteClassificationAnalysisView, RunAnalysisView, \
+    RunClassificationAnalysisView, DeleteAnalysisResultsView, AnalysisResultsDetailView, ClassificationAnalysisResultsDetailView
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())
@@ -31,7 +43,6 @@ v1_api.register(ANOVAResource())
 v1_api.register(ANOVAFactorResource())
 v1_api.register(ANOVAFactorLevelResource())
 v1_api.register(ANOVAEffectResource())
-v1_api.register(UnitClassificationTypeResource())
 v1_api.register(PenetrationResource())
 
 urlpatterns = patterns('',
@@ -58,16 +69,11 @@ urlpatterns = patterns('',
     (r'^experiment/(?P<pk>\d+)/export_request/deny/(?P<activation_key>\w+)/$', ExperimentExportRequestDenyView.as_view(), {}, 'experiment_export_request_deny'),
     (r'^experiment/(?P<pk>\d+)/export_request/approve/(?P<activation_key>\w+)/$', ExperimentExportRequestApproveView.as_view(), {}, 'experiment_export_request_approve'),
     (r'^experiment/(?P<pk>\d+)/export/$', ExperimentExportView.as_view(), {}, 'experiment_export_view'),
-    #(r'^mirror_type_classification_analysis/new/$', CreateMirrorTypeClassificationAnalysisView.as_view(), {}, 'mirror_type_classification_analysis_add'),
-    #(r'^mirror_type_classification_analysis_results/(?P<pk>\d+)/delete/$', DeleteMirrorTypeClassificationAnalysisResultsView.as_view(), {}, 'mirror_type_classification_analysis_results_delete'),
     (r'^search/', SearchView.as_view(), {}, 'search_view'),
     (r'^unit/(?P<pk>\d+)/$', UnitDetailView.as_view(), {}, 'unit_view'),
     (r'^unit_classification_condition/(?P<pk>\d+)/delete/$', DeleteUnitClassificationConditionView.as_view(), {}, 'unit_classification_condition_delete'),
     (r'^unit_classification_type/(?P<pk>\d+)/delete/$', DeleteUnitClassificationTypeView.as_view(), {}, 'unit_classification_type_delete'),
     (r'^unit_classification_type/(?P<pk>\d+)/edit/$', UpdateUnitClassificationTypeView.as_view(), {}, 'unit_classification_type_edit'),
     (r'^unit_classification_type/new/$', CreateUnitClassificationTypeView.as_view(), {}, 'unit_classification_type_add'),
-    #(r'^visuomotor_classification_analysis_results/(?P<pk>\d+)/$', VisuomotorClassificationAnalysisResultsDetailView.as_view(), {}, 'visuomotor_classification_analysis_results_view'),
-    #(r'^visuomotor_classification_analysis/new/$', CreateVisuomotorClassificationAnalysisView.as_view(), {}, 'visuomotor_classification_analysis_add'),
-    #(r'^visuomotor_classification_analysis_results/(?P<pk>\d+)/delete/$', DeleteVisuomotorClassificationAnalysisResultsView.as_view(), {}, 'visuomotor_classification_analysis_results_delete'),
     (r'', IndexView.as_view(), {}, 'index'),
 )

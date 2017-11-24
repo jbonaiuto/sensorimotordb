@@ -5,7 +5,7 @@ from django.views.generic.detail import BaseDetailView
 from formtools.wizard.views import SessionWizardView
 from tastypie.models import ApiKey
 from sensorimotordb.forms import ClassificationAnalysisForm, ClassificationAnalysisBaseForm, UnitClassificationTypeConditionFormSet, ANOVAForm, ANOVAFactorLevelFormSet, ClassificationAnalysisResultsForm
-from sensorimotordb.models import AnalysisResults, ClassificationAnalysis, ANOVA, ANOVAComparison, UnitClassificationType, Analysis, ANOVAFactor, ANOVAEffect, ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, ANOVAFactorLevel, UnitClassificationCondition, Condition, Event, ClassificationAnalysisResultsLevelMapping, ClassificationAnalysisResults, Experiment, ClassificationAnalysisSettings, TimeWindowFactorLevelSettings, UnitClassification, UnitAnalysisResults
+from sensorimotordb.models import AnalysisResults, ClassificationAnalysis, ANOVA, ANOVAComparison, UnitClassificationType, Analysis, ANOVAFactor, ANOVAEffect, ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, ANOVAFactorLevel, UnitClassificationCondition, Condition, Event, ClassificationAnalysisResultsLevelMapping, ClassificationAnalysisResults, Experiment, ClassificationAnalysisSettings, TimeWindowFactorLevelSettings, UnitClassification, UnitAnalysisResults, AnalysisSettings, ANOVAPairwiseComparison
 from sensorimotordb.views import LoginRequiredMixin, JSONResponseMixin
 from uscbp import settings
 
@@ -27,8 +27,20 @@ class DeleteClassificationAnalysisView(JSONResponseMixin,BaseDetailView):
             id=self.object.id
             UnitClassificationCondition.objects.filter(classification_type__analysis=self.object).delete()
             UnitClassificationType.objects.filter(analysis=self.object).delete()
-            ANOVAComparison.objects.filter(anova__analysis=self.object).delete()
+            UnitClassification.objects.filter(analysis_results__analysis=self.object).delete()
+            UnitAnalysisResults.objects.filter(analysis_results__analysis=self.object).delete()
+            AnalysisResults.objects.filter(analysis=self.object).delete()
+            ClassificationAnalysisResults.objects.filter(analysis=self.object).delete()
             ClassificationAnalysisResultsLevelMapping.objects.filter(analysis_settings__analysis=self.object).delete()
+            TimeWindowFactorLevelSettings.objects.filter(analysis_settings__analysis=self.object).delete()
+            ClassificationAnalysisSettings.objects.filter(analysis=self.object).delete()
+            AnalysisSettings.objects.filter(analysis=self.object).delete()
+            ANOVAComparison.objects.filter(anova__analysis=self.object).delete()
+            ANOVAEffect.objects.filter(anova__analysis=self.object).delete()
+            ANOVAPairwiseComparison.objects.filter(anova__analysis=self.object).delete()
+            ANOVAOneWayPairwiseComparison.objects.filter(anova__analysis=self.object).delete()
+            ANOVATwoWayPairwiseComparison.objects.filter(anova__analysis=self.object).delete()
+            ANOVAThreeWayPairwiseComparison.objects.filter(anova__analysis=self.object).delete()
             ANOVAFactorLevel.objects.filter(factor__anova__analysis=self.object).delete()
             ANOVAFactor.objects.filter(anova__analysis=self.object).delete()
             ANOVA.objects.filter(analysis=self.object).delete()
@@ -449,6 +461,8 @@ class DeleteUnitClassificationTypeView(JSONResponseMixin, BaseDetailView):
         if self.request.is_ajax():
             id=self.object.id
             self.object=self.get_object()
+            UnitClassification.objects.filter(type=self.object).delete()
+            UnitClassificationCondition.objecs.filter(classification_type=self.object).delete()
             self.object.delete()
             context={'id': id, 'idx': self.request.GET.get('idx',-1)}
 
@@ -540,10 +554,9 @@ class DeleteAnalysisResultsView(JSONResponseMixin,BaseDetailView):
         if self.request.is_ajax():
             self.object=self.get_object()
             if ClassificationAnalysisResults.objects.filter(id=self.object.id):
-                UnitAnalysisResults.objects.filter(analysis_results=self.object).delete()
                 UnitClassification.objects.filter(analysis_results=self.object).delete()
-                ClassificationAnalysisResults.objects.get(id=self.object.id).delete()
-                self.object.delete()
+                UnitAnalysisResults.objects.filter(analysis_results=self.object.delete())
+                ClassificationAnalysisResults.objects.filter(id=self.object.id).delete()
             context={'id': self.request.POST['id']}
 
         return context

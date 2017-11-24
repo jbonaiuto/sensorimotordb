@@ -135,7 +135,7 @@
                     units.set(unit.id, unit);
                     unit_trials.set(unit.id,[]);
                     unit_trial_events.set(unit.id,[]);
-                    unit_labels.push('Unit '+unit.id);
+                    unit_labels.push('Penetration '+unit.penetration.label+', Unit '+unit.label);
                     $('.unit_list').each(function(index, element){
                         unit.level=3;
                         unit.idx=i;

@@ -1177,7 +1177,7 @@ def find_nearest_event_after(event_time, event_array, epoch_start, epoch_end):
 
 if __name__=='__main__':
     django.setup()
-    remove_all()
+    #remove_all()
     import_kraskov_data('data/kraskov/units4BODB.mat','data/kraskov/')
     sed=import_bonini_data(['data/bonini/01_PIC_F5_09022012_mot_mirror_mrgSORTED.nex',
                             'data/bonini/02_Pic_F5_10022012_mot_mirror_mrgSORTED.nex'])

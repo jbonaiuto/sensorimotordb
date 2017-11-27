@@ -13,4 +13,4 @@ def test_analysis(experiment_id, analysis_id, analysis_settings_id):
 
 if __name__=='__main__':
     django.setup()
-    test_analysis(108,55,15)
+    test_analysis(120,69,32)

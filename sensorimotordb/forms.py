@@ -25,6 +25,14 @@ class ClassificationAnalysisForm(ModelForm):
         exclude=()
 
 
+class ClassificationAnalysisStep2Form(ModelForm):
+    id=forms.CharField(max_length=100, required=True, widget=forms.HiddenInput)
+    multiple_comparison_correction=forms.ChoiceField(choices=ClassificationAnalysis.MULT_COMP_CORRECTION_CHOICES, required=False)
+
+    class Meta:
+        model=ClassificationAnalysis
+        exclude=('name','description')
+
 class ClassificationAnalysisResultsForm(ModelForm):
     analysis=forms.ModelChoiceField(queryset=ClassificationAnalysis.objects.all(),widget=forms.HiddenInput,required=True)
     analysis_settings=forms.ModelChoiceField(queryset=ClassificationAnalysisSettings.objects.none(),required=False)

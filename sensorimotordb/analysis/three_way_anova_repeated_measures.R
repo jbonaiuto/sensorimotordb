@@ -1,4 +1,4 @@
-three_way_anova_repeated_measures<-function(data, subject_var, resp_var, factor1, factor2, factor3){
+three_way_anova_repeated_measures<-function(data, subject_var, resp_var, factor1, factor2, factor3, mult_comp_corr){
 
     # Make sure needed packages are installed and loaded
     if(length(new<-(packages<-c("lsmeans","lme4","afex"))[!(packages %in% installed.packages()[,"Package"])])){
@@ -17,25 +17,25 @@ three_way_anova_repeated_measures<-function(data, subject_var, resp_var, factor1
     model<-do.call("lmer", list(as.formula(f), data=data))
 
     f <- paste("pairwise ~", factor1, "*", factor2, "*", factor3)
-    threeway_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+    threeway_pairwise<-do.call("lsmeans", list(model, as.formula(f), adjust=mult_comp_corr))
 
     f <- paste("pairwise ~", factor1, "*", factor2)
-    factor1_factor2_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+    factor1_factor2_pairwise<-do.call("lsmeans", list(model, as.formula(f), adjust=mult_comp_corr))
 
     f <- paste("pairwise ~", factor1, "*", factor3)
-    factor1_factor3_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+    factor1_factor3_pairwise<-do.call("lsmeans", list(model, as.formula(f), adjust=mult_comp_corr))
 
     f <- paste("pairwise ~", factor2, "*", factor3)
-    factor2_factor3_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+    factor2_factor3_pairwise<-do.call("lsmeans", list(model, as.formula(f), adjust=mult_comp_corr))
 
     f <- paste("pairwise ~", factor1)
-    factor1_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+    factor1_pairwise<-do.call("lsmeans", list(model, as.formula(f), adjust=mult_comp_corr))
 
     f <- paste("pairwise ~", factor2)
-    factor2_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+    factor2_pairwise<-do.call("lsmeans", list(model, as.formula(f), adjust=mult_comp_corr))
 
     f <- paste("pairwise ~", factor3)
-    factor3_pairwise<-do.call("lsmeans", list(model, as.formula(f)))
+    factor3_pairwise<-do.call("lsmeans", list(model, as.formula(f), adjust=mult_comp_corr))
 
     # Return results as a list
     x<-summary(anova_results)

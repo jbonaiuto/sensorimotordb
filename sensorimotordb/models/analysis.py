@@ -34,6 +34,17 @@ class Analysis(models.Model):
 
 
 class ClassificationAnalysis(Analysis):
+    MULT_COMP_CORRECTION_CHOICES = (
+        ('tukey', 'tukey'),
+        ('scheffe', 'scheffe'),
+        ('sidak', 'sidak'),
+        ('bonferroni', 'bonferroni'),
+        ('dunnettx', 'dunnettx'),
+        ('mvt', 'mvt'),
+        ('none', 'none'),
+        )
+
+    multiple_comparison_correction=models.CharField(max_length=100, choices=MULT_COMP_CORRECTION_CHOICES, null=True, blank=True)
 
     class Meta:
         app_label='sensorimotordb'
@@ -57,7 +68,7 @@ class ClassificationAnalysis(Analysis):
             all_anova_results={}
             for anova in self.analysis_anovas.all():
                 try:
-                    (results_text, pairwise_results_text, anova_results)=anova.run(analysis_settings, results, unit)
+                    (results_text, pairwise_results_text, anova_results)=anova.run(analysis_settings, results, unit, self.multiple_comparison_correction)
                     print('anova %s:' % anova.name)
                     print(results_text)
                     print(pairwise_results_text)
@@ -191,7 +202,7 @@ class ANOVA(models.Model):
     class Meta:
         app_label='sensorimotordb'
 
-    def run(self, analysis_settings, results, unit):
+    def run(self, analysis_settings, results, unit, multiple_comparison_correction):
         anova_results={}
         pairwise_results_text=''
         if self.anova_factors.count()==1:
@@ -231,7 +242,7 @@ class ANOVA(models.Model):
                 })
             #df.to_csv(path_or_buf='/home/jbonaiuto/%s.csv' % trial_type)
             (anova_results_trial, anova_results_within, within_trial_pairwise)=r_one_way_anova(df,"trial","rates",
-                within_trial_factor_name)
+                within_trial_factor_name, multiple_comparison_correction)
 
             anova_results={
                 'anova_trial': pandas2ri.ri2py_dataframe(anova_results_trial[0]),
@@ -296,7 +307,7 @@ class ANOVA(models.Model):
             #df=df.set_index(['trial'])
             #df.to_csv(path_or_buf='/home/jbonaiuto/test.csv')
             (anova_results_trial, anova_results_within, twoway_pairwise_factor1, twoway_pairwise_factor2, within_trial_pairwise, between_trial_pairwise)=r_two_way_anova(df,"trial",
-                "rate",within_trial_factor_name,between_trial_factor_name)
+                "rate",within_trial_factor_name,between_trial_factor_name, multiple_comparison_correction)
 
             anova_results={
                 'anova_trial': pandas2ri.ri2py_dataframe(anova_results_trial[0]),
@@ -371,7 +382,7 @@ class ANOVA(models.Model):
              within_trial_between_trial2_pairwise, between_trial1_between_trial2_pairwise, within_trial_pairwise,
              between_trial1_pairwise, between_trial2_pairwise)=r_three_way_anova(df,"trial",
                 "rate",within_trial_factor_name,between_trial_factors[0].name.replace(' ','_'),
-                between_trial_factors[1].name.replace(' ','_'))
+                between_trial_factors[1].name.replace(' ','_'), multiple_comparison_correction)
 
             anova_results={
                 'anova_trial': pandas2ri.ri2py_dataframe(anova_results_trial[0]),

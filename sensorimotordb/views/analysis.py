@@ -4,7 +4,7 @@ from django.views.generic import DetailView, CreateView, TemplateView
 from django.views.generic.detail import BaseDetailView
 from formtools.wizard.views import SessionWizardView
 from tastypie.models import ApiKey
-from sensorimotordb.forms import ClassificationAnalysisForm, ClassificationAnalysisBaseForm, UnitClassificationTypeConditionFormSet, ANOVAForm, ANOVAFactorLevelFormSet, ClassificationAnalysisResultsForm
+from sensorimotordb.forms import ClassificationAnalysisForm, ClassificationAnalysisBaseForm, UnitClassificationTypeConditionFormSet, ANOVAForm, ANOVAFactorLevelFormSet, ClassificationAnalysisResultsForm, ClassificationAnalysisStep2Form
 from sensorimotordb.models import AnalysisResults, ClassificationAnalysis, ANOVA, ANOVAComparison, UnitClassificationType, Analysis, ANOVAFactor, ANOVAEffect, ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, ANOVAFactorLevel, UnitClassificationCondition, Condition, Event, ClassificationAnalysisResultsLevelMapping, ClassificationAnalysisResults, Experiment, ClassificationAnalysisSettings, TimeWindowFactorLevelSettings, UnitClassification, UnitAnalysisResults, AnalysisSettings, ANOVAPairwiseComparison
 from sensorimotordb.views import LoginRequiredMixin, JSONResponseMixin
 from uscbp import settings
@@ -65,7 +65,7 @@ class ClassificationAnalysisDetailView(LoginRequiredMixin, DetailView):
 
 
 CLASSIFICATION_ANALYSIS_WIZARD_FORMS = [("step1", ClassificationAnalysisForm),
-                                        ("step2", ClassificationAnalysisBaseForm),
+                                        ("step2", ClassificationAnalysisStep2Form),
                                         ("step3", ClassificationAnalysisBaseForm),
                                         ("step4", ClassificationAnalysisBaseForm)
 ]
@@ -108,6 +108,8 @@ class CreateClassificationAnalysisWizardView(LoginRequiredMixin, SessionWizardVi
                     for comparison in ANOVAComparison.objects.filter(anova=anova).select_subclasses().order_by('id'):
                         context['anova_comparisons'].append(comparison)
                 step2_data=self.request.POST
+                context['analysis'].multiple_comparison_correction=step2_data['step2-multiple_comparison_correction']
+                context['analysis'].save()
                 step2_data['analysis_id']=analysis.id
                 self.storage.set_step_data('step2', step2_data)
                 print(self.storage.get_step_data('step2'))
@@ -169,91 +171,6 @@ class CreateClassificationAnalysisWizardView(LoginRequiredMixin, SessionWizardVi
         return redirect('/sensorimotordb/classification_analysis/%d/' % analysis)
 
 
-#class CreateClassificationAnalysisView(LoginRequiredMixin,CreateView):
-#    model = ClassificationAnalysis
-#    form_class = ClassificationAnalysisForm
-#    template_name = 'sensorimotordb/analysis/classification_analysis_create.html'
-#
-#    def get_context_data(self, **kwargs):
-#        context_data=super(CreateClassificationAnalysisView,self).get_context_data(**kwargs)
-#        return context_data
-#
-#    def form_valid(self, form):
-#        """
-#        If the form is valid, save the associated model.
-#        """
-#        self.object=form.save()
-#        return redirect('/sensorimotordb/classification_analysis/%d/edit/' % self.object.id)
-#
-#
-#class UpdateClassificationAnalysisView(LoginRequiredMixin,UpdateView):
-#    model=ClassificationAnalysis
-#    template_name = 'sensorimotordb/analysis/classification_analysis_edit.html'
-#    form_class = ClassificationAnalysisForm
-#
-#    def form_valid(self, form):
-#        self.object=form.save()
-#
-#        return redirect('/sensorimotordb/classification_analysis/%d/edit2/' % self.object.id)
-#
-#
-#class Update2ClassificationAnalysisView(LoginRequiredMixin,UpdateView):
-#    model=ClassificationAnalysis
-#    template_name = 'sensorimotordb/analysis/classification_analysis_edit2.html'
-#    form_class = ClassificationAnalysisForm
-#
-#    def get_context_data(self, **kwargs):
-#        context_data=super(Update2ClassificationAnalysisView,self).get_context_data(**kwargs)
-#        context_data['classification_type_formset']=UnitClassificationTypeConditionFormSet(self.request.POST or None, instance=self.object,
-#            queryset=UnitClassificationType.objects.filter(analysis=self.object), prefix='classification_type')
-#        context_data['anovas']=ANOVA.objects.filter(analysis=self.object).order_by('id')
-#        context_data['anova_comparisons']=[]
-#        for anova in context_data['anovas']:
-#            for comparison in ANOVAComparison.objects.filter(anova=anova).select_subclasses().order_by('id'):
-#                context_data['anova_comparisons'].append(comparison)
-#
-#        return context_data
-#
-#    def form_valid(self, form):
-#
-#        context=self.get_context_data()
-#        classification_type_formset = context['classification_type_formset']
-#
-#        if classification_type_formset.is_valid():
-#            self.object=form.save()
-#            for classification_type_form in classification_type_formset.forms:
-#                if not classification_type_form.cleaned_data.get('DELETE', False):
-#                    classification_type=classification_type_form.save(commit=False)
-#                    classification_type.analysis=self.object
-#                    classification_type.save()
-#                    for condition_form in classification_type_form.nested.forms:
-#                        if not condition_form.cleaned_data.get('DELETE', False):
-#                            condition=condition_form.save(commit=False)
-#                            condition.classification_type=classification_type
-#                            condition.save()
-#                            condition_form.save_m2m()
-#
-#        else:
-#            return self.form_invalid(form)
-#
-#        return redirect('/sensorimotordb/classification_analysis/%d/edit3/' % self.object.id)
-#
-#
-#class Update3ClassificationAnalysisView(LoginRequiredMixin,UpdateView):
-#    model=ClassificationAnalysis
-#    template_name = 'sensorimotordb/analysis/classification_analysis_edit3.html'
-#    form_class = ClassificationAnalysisForm
-#
-#    def get_context_data(self, **kwargs):
-#        context_data=super(Update3ClassificationAnalysisView,self).get_context_data(**kwargs)
-#        context_data['classification_types']=UnitClassificationType.objects.filter(analysis=self.object)
-#
-#        return context_data
-#
-#    def form_valid(self, form):
-#        context=self.get_context_data()
-#        self.object=form.save()
-#        return redirect('/sensorimotordb/classification_analysis/%d/' % self.object.id)
 
 
 class CreateANOVAView(LoginRequiredMixin,CreateView):

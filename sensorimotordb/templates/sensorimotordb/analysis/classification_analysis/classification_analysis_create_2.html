@@ -132,6 +132,14 @@
                 {{ analysis.description }}
             </td>
         </tr>
+        <tr>
+            <td>
+                <strong>Multiple comparison correction</strong>
+            </td>
+            <td colspan="3">
+                {{ wizard.form.multiple_comparison_correction }}
+            </td>
+        </tr>
     </table>
     <input id="id_step2-id" maxlength="100" name="step2-id" type="hidden" value="{{ analysis.id }}"/>
     <h2>ANOVAs <input type="button" onclick="return addAnova();" value="Add"/></h2>

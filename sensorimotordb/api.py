@@ -513,7 +513,7 @@ class ClassificationAnalysisResource(ModelResource):
 
 class ClassificationAnalysisResultsLevelMappingResource(ModelResource):
     level=fields.ToOneField(ANOVAFactorLevelResource, 'level')
-    conditions=fields.ToManyField(ConditionResource, 'conditions', related_name='conditions')
+    conditions=fields.ToManyField(BasicConditionResource, 'conditions', related_name='conditions', full=True)
     class Meta:
         queryset=ClassificationAnalysisResultsLevelMapping.objects.all()
         resource_name='classification_analysis_results_level_mapping'

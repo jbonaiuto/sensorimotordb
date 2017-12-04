@@ -10,6 +10,8 @@
 <script>
 
 var classifications=[];
+
+// Unit IDs for the currently selected classification
 var current_unit_ids=[];
 var factors=[];
 
@@ -19,14 +21,16 @@ var level_mappings=new Map();
 var timewindow_settings=new Map();
 
 // Mapping from condition ID to unit ID to trial spikes
-var condition_unit_trial_spikes=new Map();
+var unit_condition_trial_spikes=new Map();
 // Mapping from condition ID to unit ID to trial events
-var condition_unit_trial_events=new Map();
+var unit_condition_trial_events=new Map();
+// Realigned spikes for each condition - map of unit recordings
+var realigned_unit_condition_spikes=new Map();
 
 // Mapping from condition ID to unit ID to realigned and baseline-corrected firing rates
-var realigned_condition_unit_rates=new Map();
+var realigned_unit_condition_rates=new Map();
 // Mapping from condition ID to unit ID to realigned trial events
-var realigned_condition_unit_trial_events=new Map();
+var realigned_unit_condition_trial_events=new Map();
 
 // Mapping from factor ID to level ID to ?
 var realigned_factor_level_mean_rates=new Map();
@@ -36,7 +40,16 @@ var realigned_factor_level_trial_events=new Map();
 var factor_event_types=new Map();
 var realigned_times=[];
 var results;
+
 var factor_plots=new Map();
+var unit_plots=new Map();
+
+// List of conditions to load
+var condition_ids=[];
+var condition_names=[];
+
+var event_types=['start'];
+
 var total_num_units=0;
 
 $(document).ready(function(){
@@ -89,9 +102,6 @@ function loadedAnalysisResultsData(resp)
         $(this).append(compiledTmpl);
     });
 
-    // List of conditions to load
-    var conditions_to_load=[];
-
     // Figure out conditions per level and conditions to load
     for(var mapping_idx=0; mapping_idx<resp.settings.level_mappings.length; mapping_idx++)
     {
@@ -100,10 +110,13 @@ function loadedAnalysisResultsData(resp)
         level_mappings.set(level_id,[]);
         for(var condition_idx=0; condition_idx<mapping.conditions.length; condition_idx++)
         {
-            var condition_id=parseInt(mapping.conditions[condition_idx].split('/')[5]);
-            level_mappings.get(level_id).push(condition_id);
-            if(conditions_to_load.indexOf(condition_id)<0)
-                conditions_to_load.push(condition_id);
+            var condition=mapping.conditions[condition_idx];
+            level_mappings.get(level_id).push(condition.id);
+            if(condition_ids.indexOf(condition.id)<0)
+            {
+                condition_ids.push(condition.id);
+                condition_names.push(condition.name)
+            }
         }
     }
 
@@ -135,6 +148,11 @@ function loadedAnalysisResultsData(resp)
                 }
             }
         }
+
+        unit_condition_trial_spikes.set(unit_results.unit.id, new Map());
+        unit_condition_trial_events.set(unit_results.unit.id, new Map());
+        realigned_unit_condition_rates.set(unit_results.unit.id, new Map());
+        realigned_unit_condition_trial_events.set(unit_results.unit.id, new Map());        
 
         // Fill in unit results info
         unit_results.results_text=unit_results.results_text.replace(/\n/g,'<br>');
@@ -194,24 +212,13 @@ function loadedAnalysisResultsData(resp)
     $('#analysis_results-'+results.id+'-mean_rate').append('<img src="/static/sensorimotordb/img/loading.gif">');
 
     // If conditions have not been loaded yet
-    if(conditions_to_load.length>0)
+    if(condition_ids.length>0)
     {
-        // Initialize condition data structures
-        for(var condition_idx=0; condition_idx<conditions_to_load.length; condition_idx++)
-        {
-            var condition_id=conditions_to_load[condition_idx];
-            // Initialize map of condition-unit recordings
-            condition_unit_trial_spikes.set(condition_id, new Map());
-            condition_unit_trial_events.set(condition_id, new Map());
-            realigned_condition_unit_rates.set(condition_id, new Map());
-            realigned_condition_unit_trial_events.set(condition_id, new Map());
-        }
-
         // Load recording trials for conditions
         var data = {};
         var args = {
             type: "GET",
-            url: "/sensorimotordb/api/v1/full_recording_trial/?condition__in="+conditions_to_load.join(',')+"&limit=0&format=json",
+            url: "/sensorimotordb/api/v1/full_recording_trial/?condition__in="+condition_ids.join(',')+"&limit=0&format=json",
             data: data,
             success: loadedRecordingTrialData,
             error: function(data) {
@@ -542,6 +549,8 @@ function loadUnitRates(units)
     {
         var unit_id=units[unit_idx].id;
         current_unit_ids.push(unit_id);
+        // Set rate to loading
+        $('#unit-'+unit_id+'-plots').empty();
     }
 
     // Show and hide right unit statistics
@@ -555,6 +564,7 @@ function loadUnitRates(units)
             if(units[unit_idx].id==results.unit_analysis_results[unit_results_idx].unit.id)
             {
                 $('#unit_analysis_results-'+id).show();
+                $('#unit-'+unit_id+'-plots').append('<img src="/static/sensorimotordb/img/loading.gif">');
                 found=true;
                 break
             }
@@ -595,10 +605,10 @@ function loadedRecordingTrialData(resp)
             var unit=unit_recording.unit;
 
             // If this is the first instance of this unit in this condition
-            if(!condition_unit_trial_spikes.get(condition_id).has(unit.id))
+            if(!unit_condition_trial_spikes.get(unit.id).has(condition_id))
             {
-                condition_unit_trial_events.get(condition_id).set(unit.id, []);
-                condition_unit_trial_spikes.get(condition_id).set(unit.id, []);
+                unit_condition_trial_events.get(unit.id).set(condition_id, []);
+                unit_condition_trial_spikes.get(unit.id).set(condition_id, []);
             }
 
             // Add trial start event
@@ -608,7 +618,7 @@ function loadedRecordingTrialData(resp)
                 name: 'start',
                 description: 'trial start'
             };
-            condition_unit_trial_events.get(condition_id).get(unit.id).push(start_event);
+            unit_condition_trial_events.get(unit.id).get(condition_id).push(start_event);
             
             // Add each event in trial
             for(var l=0; l<recording_trial.events.length; l++)
@@ -620,7 +630,9 @@ function loadedRecordingTrialData(resp)
                     name: evt.name,
                     description: evt.description
                 };
-                condition_unit_trial_events.get(condition_id).get(unit.id).push(current_event);
+                if(event_types.indexOf(current_event.name)<0)
+                    event_types.push(current_event.name);
+                unit_condition_trial_events.get(unit.id).get(condition_id).push(current_event);
             }
 
             // Add unit spikes
@@ -633,7 +645,7 @@ function loadedRecordingTrialData(resp)
                         x: parseFloat(spike_times[l]),
                         y: trial_number
                     };
-                    condition_unit_trial_spikes.get(condition_id).get(unit.id).push(spk);
+                    unit_condition_trial_spikes.get(unit.id).get(condition_id).push(spk);
                 }
             }
         }
@@ -677,31 +689,29 @@ function update_firing_rates()
     /**
      * Realign spikes and events
      */
-    // Realigned spikes for each condition - map of unit recordings
-    var realigned_condition_unit_spikes=new Map();
     // Min/max trial times
     var min_times=[];
     var max_times=[];
     var min_baseline_times=[];
     var max_baseline_times=[];
-    for(let condition_id of condition_unit_trial_spikes.keys())
+    for(let unit_id of unit_condition_trial_spikes.keys())
     {
         // realigned spikes for each condition
-        realigned_condition_unit_spikes.set(condition_id,new Map());
+        realigned_unit_condition_spikes.set(unit_id,new Map());
 
         // For each unit in this condition
-        for(let unit_id of condition_unit_trial_spikes.get(condition_id).keys())
+        for(let condition_id of unit_condition_trial_spikes.get(unit_id).keys())
         {
-            var unit_trial_spikes=condition_unit_trial_spikes.get(condition_id).get(unit_id);
-            var unit_trial_events=condition_unit_trial_events.get(condition_id).get(unit_id);
+            var unit_trial_spikes=unit_condition_trial_spikes.get(unit_id).get(condition_id);
+            var unit_trial_events=unit_condition_trial_events.get(unit_id).get(condition_id);
 
             // Realign spikes to align event
             var realigned_unit_trial_spikes=realign_spikes(unit_trial_spikes, unit_trial_events, align_event);
-            realigned_condition_unit_spikes.get(condition_id).set(unit_id,realigned_unit_trial_spikes);
+            realigned_unit_condition_spikes.get(unit_id).set(condition_id,realigned_unit_trial_spikes);
 
             // Realign trial events to align event
             var realigned_unit_trial_events=realign_events(unit_trial_events, align_event);
-            realigned_condition_unit_trial_events.get(condition_id).set(unit_id, realigned_unit_trial_events);
+            realigned_unit_condition_trial_events.get(unit_id).set(condition_id, realigned_unit_trial_events);
 
             // Add min/max event times to min/max times array
             min_times.push(d3.min(realigned_unit_trial_events, function(d) { return d.t; }));
@@ -747,12 +757,12 @@ function update_firing_rates()
     /**
      *  Compute spike density (baseline-corrected) for each unit
      */
-    for(let condition_id of realigned_condition_unit_spikes.keys())
+    for(let unit_id of realigned_unit_condition_spikes.keys())
     {
-        for(let unit_id of realigned_condition_unit_spikes.get(condition_id).keys())
+        for(let condition_id of realigned_unit_condition_spikes.get(unit_id).keys())
         {
             // Get the start and end of the baseline in each trial
-            var unit_evts = realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
+            var unit_evts = realigned_unit_condition_trial_events.get(unit_id).get(condition_id);
             var trial_baseline_start={};
             var trial_baseline_end={};
             if(typeof baseline_setting != 'undefined')
@@ -773,7 +783,7 @@ function update_firing_rates()
             }
 
             // Get the unit's spikes in each trial, within the start and end time, and baseline spikes
-            var unit_spikes=realigned_condition_unit_spikes.get(condition_id).get(unit_id);
+            var unit_spikes=realigned_unit_condition_spikes.get(unit_id).get(condition_id);
             var within_cutoff_spikes=[];
             var baseline_spikes=[];
             for(var idx=0; idx<unit_spikes.length; idx++)
@@ -811,7 +821,7 @@ function update_firing_rates()
                         y: spike_density[idx].y-mean_baseline_spike_density};
             }
             var rate=smooth_spike_density(spike_density, bin_width, kernel_width);
-            realigned_condition_unit_rates.get(condition_id).set(unit_id,rate);
+            realigned_unit_condition_rates.get(unit_id).set(condition_id,rate);
         }
     }
 
@@ -832,9 +842,6 @@ function update_firing_rates()
             realigned_factor_level_trial_events.set(factor.id, new Map());
             realigned_factor_level_mean_rates.set(factor.id, new Map());
 
-            // TODO :?
-            //var unit_max_rates = get_factor_unit_max_rates(factor);
-
             // Mapping from unit ID to level ID to condition ID to firing rate
             var unit_level_condition_rates=new Map();
 
@@ -854,11 +861,10 @@ function update_firing_rates()
                     for (let condition_id of level_mapping)
                     {
                         // For each unit
-                        //for (let unit_id of realigned_condition_unit_trial_events.get(condition_id).keys())
                         for (let unit_id of current_unit_ids)
                         {
                             // Get this unit's events in this condition
-                            var unit_evts = realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
+                            var unit_evts = realigned_unit_condition_trial_events.get(unit_id).get(condition_id);
 
                             // For each unit event
                             for (let evt of unit_evts)
@@ -876,7 +882,7 @@ function update_firing_rates()
                                 unit_level_condition_rates.set(unit_id, new Map());
                             if(!unit_level_condition_rates.get(unit_id).has(level.id))
                                 unit_level_condition_rates.get(unit_id).set(level.id, new Map());
-                            unit_level_condition_rates.get(unit_id).get(level.id).set(condition_id, realigned_condition_unit_rates.get(condition_id).get(unit_id));
+                            unit_level_condition_rates.get(unit_id).get(level.id).set(condition_id, realigned_unit_condition_rates.get(unit_id).get(condition_id));
                         }
                     }
                 }
@@ -933,8 +939,8 @@ function update_firing_rates()
                     var condition_id = level_mapping[condition_idx];
                     for (var unit_idx = 0; unit_idx < current_unit_ids.length; unit_idx++) {
                         var unit_id = current_unit_ids[unit_idx];
-                        if (realigned_condition_unit_trial_events.get(condition_id).has(unit_id)) {
-                            var unit_evts = realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
+                        if (realigned_unit_condition_trial_events.get(unit_id).has(condition_id)) {
+                            var unit_evts = realigned_unit_condition_trial_events.get(unit_id).get(condition_id);
                             for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
                                 var evt = unit_evts[event_idx];
                                 if (evt_types.indexOf(evt.name) < 0)
@@ -963,8 +969,8 @@ function update_firing_rates()
                         var condition_id = level_mapping[condition_idx];
                         for (var unit_idx = 0; unit_idx < current_unit_ids.length; unit_idx++) {
                             var unit_id = current_unit_ids[unit_idx];
-                            if (realigned_condition_unit_trial_events.get(condition_id).has(unit_id)) {
-                                var unit_evts = realigned_condition_unit_trial_events.get(condition_id).get(unit_id);
+                            if (realigned_unit_condition_trial_events.get(unit_id).has(condition_id)) {
+                                var unit_evts = realigned_unit_condition_trial_events.get(unit_id).get(condition_id);
                                 for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
                                     var evt = unit_evts[event_idx];
                                     if (evt.name == evt_type) {
@@ -1022,6 +1028,17 @@ function plotFactors()
             factor_plots.set(factor.id, rate_svg);
         }
     }
+    unit_plots=new Map();
+    for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
+    {
+        var unit_id=current_unit_ids[unit_idx];
+        $('#unit-'+unit_id+'-plots').empty();
+        $('#unit-'+unit_id+'-plots_legend').empty();
+        var rate_svg=drawPopulationFiringRate('unit-'+unit_id+'-plots', 'unit-'+unit_id+'-plots_legend',
+                realigned_unit_condition_spikes.get(unit_id), realigned_unit_condition_trial_events.get(unit_id),
+                event_types, condition_ids, condition_names, 0.5);
+        unit_plots.set(unit_id, rate_svg);
+    }
 }
 
 function update_plot()
@@ -1034,7 +1051,11 @@ function update_plot()
             factor_plots.get(factor.id).update(realigned_factor_level_mean_rates.get(factor.id), realigned_factor_level_trial_events.get(factor.id));
 
     }
-
+    for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
+    {
+        var unit_id=current_unit_ids[unit_idx];
+        unit_plots.get(unit_id).update(realigned_unit_condition_spikes.get(unit_id), realigned_unit_condition_trial_events.get(unit_id));
+    }
 }
 
 function exportToBODB(analysis_id)

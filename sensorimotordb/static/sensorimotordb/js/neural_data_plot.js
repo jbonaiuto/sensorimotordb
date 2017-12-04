@@ -927,7 +927,7 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trials, group_tria
     return rate_svg;
 }
 
-function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, event_types, group_ids, group_names, scale_factor)
+function drawMeanNormalizedFiringRates(parent_id, group_mean_rates, group_trial_events, event_types, group_ids, group_names, scale_factor)
 {
     var margin = {top: 30, right: 20, bottom: 40, left: 50}
         , width = scale_factor*(960 - margin.left - margin.right)
@@ -941,6 +941,7 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
 
     var min_times=[];
     var max_times=[];
+    var min_rates=[];
     var max_rates=[];
     var mean_rates=group_mean_rates;
     for(var i=0; i<group_ids.length; i++)
@@ -951,6 +952,7 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
             var rate=mean_rates.get(group_id);
             min_times.push(d3.min(rate, function(d){ return d.x; }));
             max_times.push(d3.max(rate, function(d){ return d.x; }))
+            min_rates.push(d3.min(rate, function(d){ return d.y- d.stderr }))
             max_rates.push(d3.max(rate, function(d){ return d.y+ d.stderr }))
         }
     }
@@ -959,6 +961,7 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
     var max_time=d3.max(max_times);
     //var max_time=d3.min(max_times);
     //var max_rate=d3.max(max_rates);
+    var min_rate=d3.min(min_rates);
     var max_rate=d3.max(max_rates);
 
     var xScale = d3.scale.linear()
@@ -980,7 +983,7 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         .x(function(d) { return xScale(d.x); })
         .y(function(d) { return yScale(d.y); });
 
-    yScale.domain([0, max_rate +.1*max_rate]);
+    yScale.domain([min_rate-0.1*Math.abs(min_rate), max_rate +.1*Math.abs(max_rate)]);
 
     rate_svg.append("g")
         .attr("class", "x axis")
@@ -1173,6 +1176,7 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         kernelwidth = parseInt(d3.select("#kernelwidth").node().value);
         var min_times=[];
         var max_times=[];
+        var min_rates=[];
         var max_rates=[];
         var mean_rates=realigned_mean_rates;
         for(var i=0; i<group_ids.length; i++)
@@ -1187,6 +1191,8 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
                 max_times.push(group_max_time);
                 var group_max_rate=d3.max(rate, function(d){ return d.y+d.stderr });
                 max_rates.push(group_max_rate);
+                var group_min_rate=d3.min(rate, function(d){ return d.y-d.stderr });
+                min_rates.push(group_min_rate);
             }
         }
         var min_time=d3.min(min_times);
@@ -1194,9 +1200,10 @@ function drawMeanFiringRates(parent_id, group_mean_rates, group_trial_events, ev
         var max_time=d3.max(max_times);
         //var max_time=d3.min(max_times);
         //var max_rate=d3.max(max_rates);
+        var min_rate=d3.min(min_rates);
         var max_rate=d3.max(max_rates);
 
-        yScale.domain([0, max_rate +.1*max_rate]);
+        yScale.domain([min_rate -.1*Math.abs(min_rate), max_rate +.1*Math.abs(max_rate)]);
         yAxis.scale(yScale);
         xScale.domain([min_time, max_time]);
         xAxis.scale(xScale);

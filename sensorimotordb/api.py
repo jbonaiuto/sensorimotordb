@@ -14,7 +14,7 @@ from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial,
     Analysis, UnitAnalysisResults, ANOVAFactorLevel, ANOVAFactor, ANOVA, ANOVAEffect, UnitClassificationType,\
     ClassificationAnalysis, UnitClassificationCondition, ANOVAComparison, ANOVAPairwiseComparison,\
     ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, \
-    ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, ClassificationAnalysisSettings, Penetration
+    ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -522,6 +522,16 @@ class ClassificationAnalysisResultsLevelMappingResource(ModelResource):
         cache = SimpleCache(timeout=10)
 
 
+class TimeWindowFactorLevelSettingsResource(ModelResource):
+    level=fields.ToOneField(ANOVAFactorLevelResource, 'level')
+    class Meta:
+        queryset=TimeWindowFactorLevelSettings.objects.all()
+        resource_name='classification_analysis_results_level_mapping'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
 class AnalysisSettingsResource(ModelResource):
     class Meta:
         queryset=AnalysisSettings.objects.all()
@@ -540,6 +550,7 @@ class AnalysisSettingsResource(ModelResource):
 
 class ClassificationAnalysisSettingsResource(AnalysisSettingsResource):
     level_mappings=fields.ToManyField(ClassificationAnalysisResultsLevelMappingResource, 'level_mappings', related_name='level_mappings', full=True)
+    time_window_factor_level_settings = fields.ToManyField(TimeWindowFactorLevelSettingsResource, 'time_window_factor_level_settings', related_name='time_window_factor_level_settings', full=True)
     class Meta:
         queryset=ClassificationAnalysisSettings.objects.all()
         resource_name='classification_analysis_settings'

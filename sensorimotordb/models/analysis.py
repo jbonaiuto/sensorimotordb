@@ -145,7 +145,7 @@ class ClassificationAnalysisSettings(AnalysisSettings):
 
 
 class TimeWindowFactorLevelSettings(models.Model):
-    analysis_settings = models.ForeignKey('ClassificationAnalysisSettings')
+    analysis_settings = models.ForeignKey('ClassificationAnalysisSettings', related_name='time_window_factor_level_settings')
     level=models.ForeignKey('ANOVAFactorLevel')
     rel_evt=models.CharField(max_length=1000, blank=False)
     rel_start=models.IntegerField(blank=True, null=True)
@@ -305,7 +305,8 @@ class ANOVA(models.Model):
             })
 
             #df=df.set_index(['trial'])
-            #df.to_csv(path_or_buf='/home/jbonaiuto/test.csv')
+            #experiment_id=results.experiment.id
+            #df.to_csv(path_or_buf='/home/jbonaiuto/experiment_%d.penetration_%s_unit_%s.csv' % (experiment_id, unit.penetration.label, unit.label))
             (anova_results_trial, anova_results_within, twoway_pairwise_factor1, twoway_pairwise_factor2, within_trial_pairwise, between_trial_pairwise)=r_two_way_anova(df,"trial",
                 "rate",within_trial_factor_name,between_trial_factor_name, multiple_comparison_correction)
 

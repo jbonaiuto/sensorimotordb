@@ -9,49 +9,62 @@
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_plot.js' %}"></script>
 <script>
 
-var classifications=[];
+// Analysis results JSON object
+var results;
 
 // Unit IDs for the currently selected classification
 var current_unit_ids=[];
+
+// List of all factors from all ANOVAs
 var factors=[];
 
-// Mapping from factor level IDs to conditions
-var level_mappings=new Map();
-// Mapping from level ID to time window factor level settings
-var timewindow_settings=new Map();
+// Map from conditions to condition names
+var conditions=new Map();
 
-// Mapping from condition ID to unit ID to trial spikes
-var unit_condition_trial_spikes=new Map();
-// Mapping from condition ID to unit ID to trial events
-var unit_condition_trial_events=new Map();
-// Realigned spikes for each condition - map of unit recordings
-var realigned_unit_condition_spikes=new Map();
+// Original spike and event data,grouped by unit, then condition
+var orig_unit_condition_data={
+    // Mapping from unit ID to condition ID to trial spikes
+    'spikes': new Map(),
+    // Mapping from unit ID to condition ID to trial events
+    'events': new Map()
+};
 
-// Mapping from condition ID to unit ID to realigned and baseline-corrected firing rates
-var realigned_unit_condition_rates=new Map();
-// Mapping from condition ID to unit ID to realigned trial events
-var realigned_unit_condition_trial_events=new Map();
+// Realigned spike, rate, and event data, grouped by unit then condition
+var realigned_unit_condition_data={
+    // Mapping from unit ID to condition ID to realigned trial spikes
+    'spikes': new Map(),
+    // Mapping from unit ID to condition ID to realigned and baseline-corrected firing rates
+    'rates': new Map(),
+    // Mapping from unit ID to condition ID to realigned trial events
+    'events': new Map()
+};
 
-// Mapping from factor ID to level ID to ?
-var realigned_factor_level_mean_rates=new Map();
-// Mapping from factor ID to level ID to ?
-var realigned_factor_level_trial_events=new Map();
+// Rate and event data grouped by factor, then level
+var factor_level_data={
+    // Mapping from factor ID to level ID to mean, normalized, baseline corrected, and realigned rates
+    'mean_rates': new Map(),
+    // Mapping from factor ID to level ID to events
+    'events': new Map(),
+    // Mapping from factor ID to list of event types
+    'event_types': new Map(),
+    // Mapping from level IDs to conditions
+    'level_mappings': new Map(),
+    // Mapping from level ID to time window factor level settings
+    'timewindow_settings': new Map()
+};
 
-var factor_event_types=new Map();
-var realigned_times=[];
-var results;
+// Factor and unit plots
+var plots={
+    'factor': new Map(),
+    'unit': new Map()
+};
 
-var factor_plots=new Map();
-var unit_plots=new Map();
-
-// List of conditions to load
-var condition_ids=[];
-var condition_names=[];
-
+// List of all event types
 var event_types=['start'];
 
-var total_num_units=0;
-
+/**
+ * Load analysis results data
+ */
 $(document).ready(function(){
     // Load analysis results
     $('<img src="{% static 'sensorimotordb/img/loading.gif' %}"/>');
@@ -74,20 +87,17 @@ $(document).ready(function(){
 function loadedAnalysisResultsData(resp)
 {
     results=resp;
-    classifications=resp.unit_classifications;
     // Mapping from level IDs to epoch names
     results.epochs={};
-    for(var anova_idx=0; anova_idx<resp.analysis.analysis_anovas.length; anova_idx++)
+    for(let anova of results.analysis.analysis_anovas)
     {
-        for(var factor_idx=0; factor_idx<resp.analysis.analysis_anovas[anova_idx].factors.length; factor_idx++)
+        for(let factor of anova.factors)
         {
-            var factor=resp.analysis.analysis_anovas[anova_idx].factors[factor_idx];
             factors.push(factor);
             if(factor.type=='time window')
             {
-                for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
+                for(let level of factor.levels)
                 {
-                    var level=factor.levels[level_idx];
                     results.epochs[level.id]=level.value;
                 }
             }
@@ -103,56 +113,51 @@ function loadedAnalysisResultsData(resp)
     });
 
     // Figure out conditions per level and conditions to load
-    for(var mapping_idx=0; mapping_idx<resp.settings.level_mappings.length; mapping_idx++)
+    for(let mapping of results.settings.level_mappings)
     {
-        var mapping=resp.settings.level_mappings[mapping_idx];
         var level_id=parseInt(mapping.level.split('/')[5]);
-        level_mappings.set(level_id,[]);
-        for(var condition_idx=0; condition_idx<mapping.conditions.length; condition_idx++)
+        factor_level_data.level_mappings.set(level_id,[]);
+        for(let condition of mapping.conditions)
         {
-            var condition=mapping.conditions[condition_idx];
-            level_mappings.get(level_id).push(condition.id);
-            if(condition_ids.indexOf(condition.id)<0)
+            factor_level_data.level_mappings.get(level_id).push(condition.id);
+            if(!conditions.has(condition.id))
             {
-                condition_ids.push(condition.id);
-                condition_names.push(condition.name)
+                conditions.set(condition.id, condition.name);
             }
         }
     }
 
     // Get time window factor level settings
-    for(var idx=0; idx<resp.settings.time_window_factor_level_settings.length; idx++)
+    for(let time_window_settings of results.settings.time_window_factor_level_settings)
     {
-        var settings=resp.settings.time_window_factor_level_settings[idx];
-        var level_id=parseInt(settings.level.split('/')[5]);
-        timewindow_settings.set(level_id,settings);
+        var level_id=parseInt(time_window_settings.level.split('/')[5]);
+        factor_level_data.timewindow_settings.set(level_id,time_window_settings);
     }
 
-    // Process each unit
-    total_num_units=resp.unit_analysis_results.length;
     // List of current units
     current_unit_ids=[];
-    for(var unit_idx=0; unit_idx<total_num_units; unit_idx++)
+    for(var unit_idx=0; unit_idx<results.unit_analysis_results.length; unit_idx++)
     {
+        var unit_results=results.unit_analysis_results[unit_idx];
         // Get classification label
-        var unit_results=resp.unit_analysis_results[unit_idx];
         current_unit_ids.push(unit_results.unit.id);
-        for(var class_idx=0; class_idx<resp.unit_classifications.length; class_idx++)
+        for(let classification of results.unit_classifications)
         {
-            for(var class_unit_idx=0; class_unit_idx<resp.unit_classifications[class_idx].units.length; class_unit_idx++)
+            for(let unit_classification of classification.units)
             {
-                if(resp.unit_classifications[class_idx].units[class_unit_idx].id==unit_results.unit.id)
+                if(unit_classification.id==unit_results.unit.id)
                 {
-                    unit_results.classification=resp.unit_classifications[class_idx].type.label;
+                    unit_results.classification=unit_classification.type.label;
                     break
                 }
             }
         }
 
-        unit_condition_trial_spikes.set(unit_results.unit.id, new Map());
-        unit_condition_trial_events.set(unit_results.unit.id, new Map());
-        realigned_unit_condition_rates.set(unit_results.unit.id, new Map());
-        realigned_unit_condition_trial_events.set(unit_results.unit.id, new Map());        
+        orig_unit_condition_data.spikes.set(unit_results.unit.id, new Map());
+        orig_unit_condition_data.events.set(unit_results.unit.id, new Map());
+        realigned_unit_condition_data.spikes.set(unit_results.unit.id, new Map());
+        realigned_unit_condition_data.rates.set(unit_results.unit.id, new Map());
+        realigned_unit_condition_data.events.set(unit_results.unit.id, new Map());
 
         // Fill in unit results info
         unit_results.results_text=unit_results.results_text.replace(/\n/g,'<br>');
@@ -187,15 +192,15 @@ function loadedAnalysisResultsData(resp)
     // Add nodes to structure
     var classifications_added=[];
     // Until all classifications have been added
-    while(classifications_added.length<resp.unit_classifications.length)
+    while(classifications_added.length<results.unit_classifications.length)
     {
         // Iterate through classifications
-        for(var idx=0; idx<resp.unit_classifications.length; idx++)
+        for(var idx=0; idx<results.unit_classifications.length; idx++)
         {
             /// If not already added
             if(classifications_added.indexOf(idx)<0)
             {
-                var classification=resp.unit_classifications[idx];
+                var classification=results.unit_classifications[idx];
                 // If successfully added (won't be if parent not already added), add to structure
                 if(addClassificationToHierarchy(data, classification))
                     classifications_added.push(idx);
@@ -205,20 +210,20 @@ function loadedAnalysisResultsData(resp)
 
     // Create hierarchical plot
     d3.select(self.frameElement).style("height", "800px");
-    init_code_hierarchy_plot("analysis_results-"+resp.id+"-pie", data);
+    init_code_hierarchy_plot("analysis_results-"+results.id+"-pie", data);
 
     // Set rate to loading
     $('#analysis_results-'+results.id+'-mean_rate').empty();
     $('#analysis_results-'+results.id+'-mean_rate').append('<img src="/static/sensorimotordb/img/loading.gif">');
 
     // If conditions have not been loaded yet
-    if(condition_ids.length>0)
+    if(conditions.size>0)
     {
         // Load recording trials for conditions
         var data = {};
         var args = {
             type: "GET",
-            url: "/sensorimotordb/api/v1/full_recording_trial/?condition__in="+condition_ids.join(',')+"&limit=0&format=json",
+            url: "/sensorimotordb/api/v1/full_recording_trial/?condition__in="+Array.from(conditions.keys()).join(',')+"&limit=0&format=json",
             data: data,
             success: loadedRecordingTrialData,
             error: function(data) {
@@ -248,7 +253,7 @@ function addClassificationToHierarchy(data, classification)
         var percentage=classification.units.length/data[1][1].length*100.0;
         if(classification.type.parent==null)
         {
-            percentage=classification.units.length/total_num_units*100.0;
+            percentage=classification.units.length/results.unit_analysis_results.length*100.0;
             // Add units to this node
             for(var unit_idx=0; unit_idx<classification.units.length; unit_idx++)
                 data[1][1].push(classification.units[unit_idx]);
@@ -545,32 +550,29 @@ function loadUnitRates(units)
 {
     // Update list of current units
     current_unit_ids=[];
-    for(var unit_idx=0; unit_idx<units.length; unit_idx++)
+    for(let unit of units)
     {
-        var unit_id=units[unit_idx].id;
-        current_unit_ids.push(unit_id);
+        current_unit_ids.push(unit.id);
         // Set rate to loading
-        $('#unit-'+unit_id+'-plots').empty();
+        $('#unit-'+unit.id+'-plots').empty();
     }
 
     // Show and hide right unit statistics
-    for(var unit_results_idx=0; unit_results_idx<results.unit_analysis_results.length; unit_results_idx++)
+    for(let unit_results of results.unit_analysis_results)
     {
-        var id=results.unit_analysis_results[unit_results_idx].id;
         var found=false;
-        for(var unit_idx=0; unit_idx<units.length; unit_idx++)
+        for(let unit of units)
         {
-            var unit_id=units[unit_idx].id;
-            if(units[unit_idx].id==results.unit_analysis_results[unit_results_idx].unit.id)
+            if(unit.id==unit_results.unit.id)
             {
-                $('#unit_analysis_results-'+id).show();
-                $('#unit-'+unit_id+'-plots').append('<img src="/static/sensorimotordb/img/loading.gif">');
+                $('#unit_analysis_results-'+unit_results.id).show();
+                $('#unit-'+unit.id+'-plots').append('<img src="/static/sensorimotordb/img/loading.gif">');
                 found=true;
                 break
             }
         }
         if(!found)
-            $('#unit_analysis_results-'+id).hide();
+            $('#unit_analysis_results-'+unit_results.id).hide();
     }
 
     // Set rate to loading
@@ -589,9 +591,8 @@ function loadUnitRates(units)
 function loadedRecordingTrialData(resp)
 {
     // For each recording trial
-    for(var j=0; j<resp.objects.length; j++)
+    for(let recording_trial of resp.objects)
     {
-        var recording_trial=resp.objects[j];
         var trial_number=recording_trial.trial_number;
         var start_time=parseFloat(recording_trial.start_time);
 
@@ -599,16 +600,15 @@ function loadedRecordingTrialData(resp)
         var condition_id=parseInt(recording_trial.condition.split('/')[5]);
 
         // Iterate through unit recordings
-        for(var k=0; k<recording_trial.unit_recordings.length; k++)
+        for(let unit_recording of recording_trial.unit_recordings)
         {
-            var unit_recording=recording_trial.unit_recordings[k];
             var unit=unit_recording.unit;
 
             // If this is the first instance of this unit in this condition
-            if(!unit_condition_trial_spikes.get(unit.id).has(condition_id))
+            if(!orig_unit_condition_data.spikes.get(unit.id).has(condition_id))
             {
-                unit_condition_trial_events.get(unit.id).set(condition_id, []);
-                unit_condition_trial_spikes.get(unit.id).set(condition_id, []);
+                orig_unit_condition_data.spikes.get(unit.id).set(condition_id, []);
+                orig_unit_condition_data.events.get(unit.id).set(condition_id, []);
             }
 
             // Add trial start event
@@ -618,12 +618,11 @@ function loadedRecordingTrialData(resp)
                 name: 'start',
                 description: 'trial start'
             };
-            unit_condition_trial_events.get(unit.id).get(condition_id).push(start_event);
+            orig_unit_condition_data.events.get(unit.id).get(condition_id).push(start_event);
             
             // Add each event in trial
-            for(var l=0; l<recording_trial.events.length; l++)
+            for(let evt of recording_trial.events)
             {
-                var evt=recording_trial.events[l];
                 var current_event={
                     t: parseFloat(evt.time),
                     trial: trial_number,
@@ -632,7 +631,7 @@ function loadedRecordingTrialData(resp)
                 };
                 if(event_types.indexOf(current_event.name)<0)
                     event_types.push(current_event.name);
-                unit_condition_trial_events.get(unit.id).get(condition_id).push(current_event);
+                orig_unit_condition_data.events.get(unit.id).get(condition_id).push(current_event);
             }
 
             // Add unit spikes
@@ -645,7 +644,7 @@ function loadedRecordingTrialData(resp)
                         x: parseFloat(spike_times[l]),
                         y: trial_number
                     };
-                    unit_condition_trial_spikes.get(unit.id).get(condition_id).push(spk);
+                    orig_unit_condition_data.spikes.get(unit.id).get(condition_id).push(spk);
                 }
             }
         }
@@ -683,8 +682,10 @@ function update_firing_rates()
     var align_event = d3.select("#align_event").node().value;
     var bin_width = parseInt(d3.select("#binwidth").node().value);
     var kernel_width = parseInt(d3.select("#kernelwidth").node().value);
+    // ID of level for epoch to use as baseline
     var baseline_epoch = parseInt(d3.select("#baseline").node().value);
-    var baseline_setting=timewindow_settings.get(baseline_epoch);
+    // Get baseline settings for this level
+    var baseline_setting=factor_level_data.timewindow_settings.get(baseline_epoch);
 
     /**
      * Realign spikes and events
@@ -694,24 +695,26 @@ function update_firing_rates()
     var max_times=[];
     var min_baseline_times=[];
     var max_baseline_times=[];
-    for(let unit_id of unit_condition_trial_spikes.keys())
+    for(let unit_id of current_unit_ids)
     {
         // realigned spikes for each condition
-        realigned_unit_condition_spikes.set(unit_id,new Map());
+        realigned_unit_condition_data.spikes.set(unit_id, new Map());
+        realigned_unit_condition_data.rates.set(unit_id, new Map());
+        realigned_unit_condition_data.events.set(unit_id, new Map());
 
         // For each unit in this condition
-        for(let condition_id of unit_condition_trial_spikes.get(unit_id).keys())
+        for(let condition_id of conditions.keys())
         {
-            var unit_trial_spikes=unit_condition_trial_spikes.get(unit_id).get(condition_id);
-            var unit_trial_events=unit_condition_trial_events.get(unit_id).get(condition_id);
+            var unit_trial_spikes=orig_unit_condition_data.spikes.get(unit_id).get(condition_id);
+            var unit_trial_events=orig_unit_condition_data.events.get(unit_id).get(condition_id);
 
             // Realign spikes to align event
-            var realigned_unit_trial_spikes=realign_spikes(unit_trial_spikes, unit_trial_events, align_event);
-            realigned_unit_condition_spikes.get(unit_id).set(condition_id,realigned_unit_trial_spikes);
+            realigned_unit_condition_data.spikes.get(unit_id).set(condition_id,
+                    realign_spikes(unit_trial_spikes, unit_trial_events, align_event));
 
             // Realign trial events to align event
             var realigned_unit_trial_events=realign_events(unit_trial_events, align_event);
-            realigned_unit_condition_trial_events.get(unit_id).set(condition_id, realigned_unit_trial_events);
+            realigned_unit_condition_data.events.get(unit_id).set(condition_id, realigned_unit_trial_events);
 
             // Add min/max event times to min/max times array
             min_times.push(d3.min(realigned_unit_trial_events, function(d) { return d.t; }));
@@ -746,7 +749,7 @@ function update_firing_rates()
     var max_time=d3.mean(max_times)+100;
     var xScale = d3.scale.linear().domain([min_time, max_time]);
     var bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width);
-    realigned_times=d3.range(xScale.domain()[0], xScale.domain()[1], bin_width);
+    var realigned_times=d3.range(xScale.domain()[0], xScale.domain()[1], bin_width);
 
     // Compute realigned baseline time bins - common set of bins from min to max baseline time
     var min_baseline_time=d3.mean(min_baseline_times);
@@ -757,18 +760,18 @@ function update_firing_rates()
     /**
      *  Compute spike density (baseline-corrected) for each unit
      */
-    for(let unit_id of realigned_unit_condition_spikes.keys())
+    for(let unit_id of current_unit_ids)
     {
-        for(let condition_id of realigned_unit_condition_spikes.get(unit_id).keys())
+        for(let condition_id of conditions.keys())
         {
             // Get the start and end of the baseline in each trial
-            var unit_evts = realigned_unit_condition_trial_events.get(unit_id).get(condition_id);
+            var unit_evts = realigned_unit_condition_data.events.get(unit_id).get(condition_id);
             var trial_baseline_start={};
             var trial_baseline_end={};
             if(typeof baseline_setting != 'undefined')
             {
-                for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
-                    var evt = unit_evts[event_idx];
+                for (let evt of unit_evts)
+                {
                     if(evt.name==baseline_setting.rel_evt)
                     {
                         trial_baseline_start[evt.trial]=evt.t+baseline_setting.rel_start;
@@ -783,12 +786,11 @@ function update_firing_rates()
             }
 
             // Get the unit's spikes in each trial, within the start and end time, and baseline spikes
-            var unit_spikes=realigned_unit_condition_spikes.get(unit_id).get(condition_id);
+            var unit_spikes=realigned_unit_condition_data.spikes.get(unit_id).get(condition_id);
             var within_cutoff_spikes=[];
             var baseline_spikes=[];
-            for(var idx=0; idx<unit_spikes.length; idx++)
+            for(let spk of unit_spikes)
             {
-                var spk=unit_spikes[idx];
                 if(spk.x>=min_time && spk.x<=max_time)
                 {
                     within_cutoff_spikes.push({
@@ -821,7 +823,7 @@ function update_firing_rates()
                         y: spike_density[idx].y-mean_baseline_spike_density};
             }
             var rate=smooth_spike_density(spike_density, bin_width, kernel_width);
-            realigned_unit_condition_rates.get(unit_id).set(condition_id,rate);
+            realigned_unit_condition_data.rates.get(unit_id).set(condition_id,rate);
         }
     }
 
@@ -836,11 +838,11 @@ function update_firing_rates()
         {
             //TODO: ?
             // Set types of events for this factor
-            factor_event_types.set(factor.id, get_factor_all_event_types(factor, get_factor_event_types(factor)));
+            factor_level_data.event_types.set(factor.id, get_factor_all_event_types(factor, get_factor_event_types(factor)));
 
             // Reset factor trial events and mean firing rates
-            realigned_factor_level_trial_events.set(factor.id, new Map());
-            realigned_factor_level_mean_rates.set(factor.id, new Map());
+            factor_level_data.events.set(factor.id, new Map());
+            factor_level_data.mean_rates.set(factor.id, new Map());
 
             // Mapping from unit ID to level ID to condition ID to firing rate
             var unit_level_condition_rates=new Map();
@@ -849,12 +851,12 @@ function update_firing_rates()
             for (let level of factor.levels)
             {
                 // If there is a mapping from this level to a set of conditions
-                if(level_mappings.has(level.id))
+                if(factor_level_data.level_mappings.has(level.id))
                 {
-                    var level_mapping = level_mappings.get(level.id);
+                    var level_mapping = factor_level_data.level_mappings.get(level.id);
 
                     // Initialize list of trial events for this level
-                    realigned_factor_level_trial_events.get(factor.id).set(level.id, []);
+                    factor_level_data.events.get(factor.id).set(level.id, []);
 
 
                     // For each condition mapped to this level
@@ -864,16 +866,16 @@ function update_firing_rates()
                         for (let unit_id of current_unit_ids)
                         {
                             // Get this unit's events in this condition
-                            var unit_evts = realigned_unit_condition_trial_events.get(unit_id).get(condition_id);
+                            var unit_evts = realigned_unit_condition_data.events.get(unit_id).get(condition_id);
 
                             // For each unit event
                             for (let evt of unit_evts)
                             {
                                 // If this factor includes this type of event (TODO:?)
-                                if (factor_event_types.get(factor.id).indexOf(evt.name) > -1)
+                                if (factor_level_data.event_types.get(factor.id).indexOf(evt.name) > -1)
                                 {
                                     // Add to list of factor/level events
-                                    realigned_factor_level_trial_events.get(factor.id).get(level.id).push(evt);
+                                    factor_level_data.events.get(factor.id).get(level.id).push(evt);
                                 }
                             }
 
@@ -882,7 +884,7 @@ function update_firing_rates()
                                 unit_level_condition_rates.set(unit_id, new Map());
                             if(!unit_level_condition_rates.get(unit_id).has(level.id))
                                 unit_level_condition_rates.get(unit_id).set(level.id, new Map());
-                            unit_level_condition_rates.get(unit_id).get(level.id).set(condition_id, realigned_unit_condition_rates.get(unit_id).get(condition_id));
+                            unit_level_condition_rates.get(unit_id).get(level.id).set(condition_id, realigned_unit_condition_data.rates.get(unit_id).get(condition_id));
                         }
                     }
                 }
@@ -891,7 +893,7 @@ function update_firing_rates()
             // Mapping from unit ID to level ID to mean firing rate over conditions within the level
             var unit_level_mean_rates=new Map();
             var level_unit_norm_rates=new Map();
-            for(let unit_id of unit_level_condition_rates.keys())
+            for(let unit_id of current_unit_ids)
             {
                 unit_level_mean_rates.set(unit_id, new Map());
                 var unit_level_peak_rates=[];
@@ -923,26 +925,33 @@ function update_firing_rates()
             for(let level_id of level_unit_norm_rates.keys())
             {
                 var level_mean_rate=mean_firing_rate(level_unit_norm_rates.get(level_id), realigned_times);
-                realigned_factor_level_mean_rates.get(factor.id).set(level_id, level_mean_rate);
+                factor_level_data.mean_rates.get(factor.id).set(level_id, level_mean_rate);
             }
         }
     }
 
-    function get_factor_event_types(factor) {
+    /**
+     * Get list of all event types for given factor - all event types in all levels, all units
+     * @param factor
+     * @return {Array}
+     */
+    function get_factor_event_types(factor)
+    {
         var evt_types = [];
-        for (var level_idx = 0; level_idx < factor.levels.length; level_idx++) {
-            var level = factor.levels[level_idx];
-            if(level_mappings.has(level.id))
+        for (let level of factor.levels)
+        {
+            if(factor_level_data.level_mappings.has(level.id))
             {
-                var level_mapping = level_mappings.get(level.id);
-                for (var condition_idx = 0; condition_idx < level_mapping.length; condition_idx++) {
-                    var condition_id = level_mapping[condition_idx];
-                    for (var unit_idx = 0; unit_idx < current_unit_ids.length; unit_idx++) {
-                        var unit_id = current_unit_ids[unit_idx];
-                        if (realigned_unit_condition_trial_events.get(unit_id).has(condition_id)) {
-                            var unit_evts = realigned_unit_condition_trial_events.get(unit_id).get(condition_id);
-                            for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
-                                var evt = unit_evts[event_idx];
+                var level_mapping = factor_level_data.level_mappings.get(level.id);
+                for (let condition_id of level_mapping)
+                {
+                    for (let unit_id of current_unit_ids)
+                    {
+                        if (realigned_unit_condition_data.events.get(unit_id).has(condition_id))
+                        {
+                            var unit_evts = realigned_unit_condition_data.events.get(unit_id).get(condition_id);
+                            for (let evt of unit_evts)
+                            {
                                 if (evt_types.indexOf(evt.name) < 0)
                                     evt_types.push(evt.name);
                             }
@@ -954,25 +963,27 @@ function update_firing_rates()
         return evt_types;
     }
 
-    function get_factor_all_event_types(factor, evt_types) {
+    function get_factor_all_event_types(factor, evt_types)
+    {
         var all_evt_types = [];
-        for (var evt_type_idx = 0; evt_type_idx < evt_types.length; evt_type_idx++) {
-            var evt_type = evt_types[evt_type_idx];
+        for (let evt_type of evt_types)
+        {
             var all_have = true;
-            for (var level_idx = 0; level_idx < factor.levels.length; level_idx++) {
-                var level = factor.levels[level_idx];
-                if(level_mappings.has(level.id))
+            for (let level of factor.levels)
+            {
+                if(factor_level_data.level_mappings.has(level.id))
                 {
-                    var level_mapping = level_mappings.get(level.id);
+                    var level_mapping = factor_level_data.level_mappings.get(level.id);
                     var has_evt = false;
-                    for (var condition_idx = 0; condition_idx < level_mapping.length; condition_idx++) {
-                        var condition_id = level_mapping[condition_idx];
-                        for (var unit_idx = 0; unit_idx < current_unit_ids.length; unit_idx++) {
-                            var unit_id = current_unit_ids[unit_idx];
-                            if (realigned_unit_condition_trial_events.get(unit_id).has(condition_id)) {
-                                var unit_evts = realigned_unit_condition_trial_events.get(unit_id).get(condition_id);
-                                for (var event_idx = 0; event_idx < unit_evts.length; event_idx++) {
-                                    var evt = unit_evts[event_idx];
+                    for (let condition_id of level_mapping)
+                    {
+                        for (let unit_id of current_unit_ids)
+                        {
+                            if (realigned_unit_condition_data.events.get(unit_id).has(condition_id))
+                            {
+                                var unit_evts = realigned_unit_condition_data.events.get(unit_id).get(condition_id);
+                                for (let evt of unit_evts)
+                                {
                                     if (evt.name == evt_type) {
                                         has_evt = true;
                                         break
@@ -1003,58 +1014,51 @@ function plotFactors()
 {
     var parent_id="analysis_results-"+results.id+"-mean_rate";
     $('#'+parent_id).empty();
-    factor_plots=new Map();
-    for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
+    plots.factor=new Map();
+    for(let factor of factors)
     {
-        var factor=factors[factor_idx];
         if(factor.type=='condition')
         {
             var factor_parent_id='analysis_results-'+results.id+'-factor-'+factor.id+'-mean_rate';
             $('#'+parent_id).append('<div id="'+factor_parent_id+'" style="text-align:center"><h3>'+factor.name+'</h3></div>');
-            var level_ids=[];
-            var level_labels=[];
+            var levels=new Map();
 
             // Create a plot for this factor
-            for(var level_idx=0; level_idx<factor.levels.length; level_idx++)
+            for(let level of factor.levels)
             {
-                var level=factor.levels[level_idx];
-                level_labels.push(level.value);
-                level_ids.push(level.id);
+                levels.set(level.id,level.value);
             }
 
-            var rate_svg=drawMeanNormalizedFiringRates(factor_parent_id, realigned_factor_level_mean_rates.get(factor.id),
-                    realigned_factor_level_trial_events.get(factor.id), factor_event_types.get(factor.id),
-                    level_ids, level_labels, 0.5);
-            factor_plots.set(factor.id, rate_svg);
+            var rate_svg=drawMeanNormalizedFiringRates(factor_parent_id, factor_level_data.mean_rates.get(factor.id),
+                    factor_level_data.events.get(factor.id), factor_level_data.event_types.get(factor.id),
+                    levels, 0.5);
+            plots.factor.set(factor.id, rate_svg);
         }
     }
-    unit_plots=new Map();
-    for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
+    plots.unit=new Map();
+    for(let unit_id of current_unit_ids)
     {
-        var unit_id=current_unit_ids[unit_idx];
         $('#unit-'+unit_id+'-plots').empty();
         $('#unit-'+unit_id+'-plots_legend').empty();
         var rate_svg=drawPopulationFiringRate('unit-'+unit_id+'-plots', 'unit-'+unit_id+'-plots_legend',
-                realigned_unit_condition_spikes.get(unit_id), realigned_unit_condition_trial_events.get(unit_id),
-                event_types, condition_ids, condition_names, 0.5);
-        unit_plots.set(unit_id, rate_svg);
+                realigned_unit_condition_data.rates.get(unit_id), realigned_unit_condition_data.events.get(unit_id),
+                event_types, conditions, 0.5);
+        plots.unit.set(unit_id, rate_svg);
     }
 }
 
 function update_plot()
 {
     update_firing_rates();
-    for(var factor_idx=0; factor_idx<factors.length; factor_idx++)
+    for(let factor of factors)
     {
-        var factor=factors[factor_idx];
         if(factor.type=='condition')
-            factor_plots.get(factor.id).update(realigned_factor_level_mean_rates.get(factor.id), realigned_factor_level_trial_events.get(factor.id));
+            plots.factor.get(factor.id).update(factor_level_data.mean_rates.get(factor.id), factor_level_data.events.get(factor.id));
 
     }
-    for(var unit_idx=0; unit_idx<current_unit_ids.length; unit_idx++)
+    for(let unit_id of current_unit_ids)
     {
-        var unit_id=current_unit_ids[unit_idx];
-        unit_plots.get(unit_id).update(realigned_unit_condition_spikes.get(unit_id), realigned_unit_condition_trial_events.get(unit_id));
+        plots.unit.get(unit_id).update(realigned_unit_condition_data.rates.get(unit_id), realigned_unit_condition_data.events.get(unit_id));
     }
 }
 

@@ -148,40 +148,43 @@
             // Iterate through unit recordings
             for(let unit_recording of recording_trial.unit_recordings)
             {
-                // Init list with start event
-                orig_condition_data.events.get(condition_id).push({
-                    t: start_time,
-                    trial: trial_number,
-                    name: 'start',
-                    description: 'trial start'
-                });
-
-                // Add other events
-                for(let event of recording_trial.events)
+                if(unit_recording.unit.id==unit_id)
                 {
+                    // Init list with start event
                     orig_condition_data.events.get(condition_id).push({
-                        t: parseFloat(event.time),
+                        t: start_time,
                         trial: trial_number,
-                        name: event.name,
-                        description: event.description
+                        name: 'start',
+                        description: 'trial start'
                     });
-                    // Add to list of event types
-                    if(event_types.indexOf(event.name)<0)
-                        event_types.push(event.name);
-                }
 
-                // If there are any spikes
-                if(unit_recording.spike_times.length>0)
-                {
-                    var spike_times=unit_recording.spike_times.split(',');
-
-                    // Add spike times
-                    for(let spike_time of spike_times)
+                    // Add other events
+                    for(let event of recording_trial.events)
                     {
-                        orig_condition_data.spikes.get(condition_id).push({
-                            x: parseFloat(spike_time),
-                            y: trial_number
+                        orig_condition_data.events.get(condition_id).push({
+                            t: parseFloat(event.time),
+                            trial: trial_number,
+                            name: event.name,
+                            description: event.description
                         });
+                        // Add to list of event types
+                        if(event_types.indexOf(event.name)<0)
+                            event_types.push(event.name);
+                    }
+
+                    // If there are any spikes
+                    if(unit_recording.spike_times.length>0)
+                    {
+                        var spike_times=unit_recording.spike_times.split(',');
+
+                        // Add spike times
+                        for(let spike_time of spike_times)
+                        {
+                            orig_condition_data.spikes.get(condition_id).push({
+                                x: parseFloat(spike_time),
+                                y: trial_number
+                            });
+                        }
                     }
                 }
             }

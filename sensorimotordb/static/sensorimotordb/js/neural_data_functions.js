@@ -121,16 +121,8 @@ function realign_events(trial_events, event_name)
     return realigned;
 }
 
-function get_standard_firing_rate(trials, bins, bin_width, kernel_width)
+function get_standard_spike_density(trials, bins, bin_width)
 {
-    var variance=kernel_width/bin_width;
-    var window=[];
-    for(var i=-2*bin_width; i<2*bin_width+1; i++)
-        window.push(Math.exp(-Math.pow(i,2)*(1/(2*Math.pow(variance,2)))));
-    var windowSum=d3.sum(window, function(x){return x});
-    for(var i=0; i<window.length; i++)
-        window[i]=window[i]*(1.0/windowSum);
-
     var numTrials=d3.max(trials, function(d){ return d.y});
 
     hist = d3.layout.histogram()
@@ -143,11 +135,14 @@ function get_standard_firing_rate(trials, bins, bin_width, kernel_width)
             x: hist[j].x,
             y: hist[j].y/numTrials/(bin_width/1000.0)
         });
+    return scaledHist;
+}
 
-    var rate = convolute(scaledHist, window, function(datum){
-        return datum.y;
-    });
-    return rate;
+function get_standard_firing_rate(trials, bins, bin_width, kernel_width)
+{
+    var spike_density=get_standard_spike_density(trials, bins, bin_width);
+
+    return smooth_spike_density(spike_density, bin_width, kernel_width);
 }
 
 function get_firing_rate(trials, bin_width, kernel_width)
@@ -157,6 +152,22 @@ function get_firing_rate(trials, bin_width, kernel_width)
     var bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width)
 
     return get_standard_firing_rate(trials, bins, bin_width, kernel_width)
+}
+
+function smooth_spike_density(spike_density, bin_width, kernel_width)
+{
+    var variance=kernel_width/bin_width;
+    var window=[];
+    for(var i=-2*bin_width; i<2*bin_width+1; i++)
+        window.push(Math.exp(-Math.pow(i,2)*(1/(2*Math.pow(variance,2)))));
+    var windowSum=d3.sum(window, function(x){return x});
+    for(var i=0; i<window.length; i++)
+        window[i]=window[i]*(1.0/windowSum);
+
+    var rate = convolute(spike_density, window, function(datum){
+        return datum.y;
+    });
+    return rate;
 }
 
 function mean_firing_rate(rates, times)

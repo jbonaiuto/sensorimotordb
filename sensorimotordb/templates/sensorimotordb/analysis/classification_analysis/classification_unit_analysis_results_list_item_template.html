@@ -1,3 +1,4 @@
+{% load staticfiles %}
 <script type="text/html" id="unit_analysis_results-template">
     <div id="unit_analysis_results-<%= id %>" class="<%= getTRTag(idx) %>" style="display:inline">
         <table>
@@ -16,6 +17,10 @@
                 <td valign=top><strong>Pairwise comparisons</strong></td>
                 <td><pre><%= pairwise_results_text %></pre></td>
             </tr>
+            <td>
+                <div id="unit-<%= unit.id %>-plots" style="float:left"><img src="{% static 'sensorimotordb/img/loading.gif' %}"></div>
+                <div id="unit-<%= unit.id %>-plots_legend" class="legend"></div>
+            </td>
         </table>
     </div>
 </script>

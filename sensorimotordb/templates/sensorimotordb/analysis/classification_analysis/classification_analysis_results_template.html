@@ -28,6 +28,13 @@
                             <option selected value="100">100</option>
                             <option value="200">200</option>
                         </select>
+                        <label for="baseline">Baseline period</label>
+                        <select id="baseline">
+                            <option value="-1"></option>
+                            <% for(level_id in epochs) { %>
+                                <option value="<%= level_id %>"><%= epochs[level_id] %></option>
+                            <% } %>
+                        </select>
                         <input id="align_event" type="hidden" value="start"/>
                     </form>
                     <div id="analysis_results-<%= id %>-mean_rate" style="text-align:center"></div>

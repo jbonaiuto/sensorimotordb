@@ -7,7 +7,7 @@ from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionReso
     UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, ANOVAResource, ANOVAFactorResource, \
     ANOVAFactorLevelResource, ANOVAEffectResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, \
     ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, \
-    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource
+    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource
 from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, \
     ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, \
     ExperimentExportView, DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, \
@@ -40,6 +40,7 @@ v1_api.register(UnitClassificationTypeResource())
 v1_api.register(AnalysisSettingsResource())
 v1_api.register(ClassificationAnalysisSettingsResource())
 v1_api.register(ClassificationAnalysisResultsLevelMappingResource())
+v1_api.register(TimeWindowFactorLevelSettingsResource())
 v1_api.register(ANOVAResource())
 v1_api.register(ANOVAFactorResource())
 v1_api.register(ANOVAFactorLevelResource())

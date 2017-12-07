@@ -34,14 +34,49 @@
     });
 
     var condition_id={{ object.id }};
-    var unit_ids=[];
-    var unit_trials=new Map();
-    var unit_trial_events=new Map();
-    var realigned_unit_spikes=new Map();
-    var realigned_unit_trial_events=new Map();
 
-    function loadedConditionData(resp){
+    // Map from unit IDs to unit labels
+    var units=new Map();
+
+    // Original spike and event data
+    var orig_unit_data={
+        // Mapping from unit ID to spikes
+        'spikes': new Map(),
+        // Mapping from unit ID to events
+        'events': new Map()
+    };
+
+    // Realigned firing rate and event data
+    var realigned_unit_data={
+        // Mapping from unit ID to events
+        'events': new Map(),
+        // Mapping from unit ID firing rates
+        'rate': new Map(),
+        // Mapping from unit ID to spikes
+        'spikes': new Map()
+    };
+
+    // List of all event types
+    var event_types=['start'];
+
+    // Plots
+    var plots={
+        unit_raster: new Map(),
+        unit_histo: new Map(),
+        unit_rate: new Map(),
+        condition: null
+    };
+
+    /**
+     * Loaded condition data
+     * @param resp
+     */
+    function loadedConditionData(resp)
+    {
+        // Update video
         resp.video_url_mp4='{{ video_url_mp4 }}';
+
+        // Add condition information template
         $('.condition_info').each(function(index, element){
             $(this).empty();
             var tmplMarkup = $('#grasp_observation_condition-template').html();
@@ -49,6 +84,7 @@
             $(this).append(compiledTmpl);
         });
 
+        // Initialize video and event markers
         {% if video_url_mp4 %}
             var video = videojs("condition_video", {
                 plugins: {
@@ -95,19 +131,21 @@
         });
         {% endif %}
 
+        // Register for bin/kernel width changes
         d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
         d3.selectAll("#kernelwidth").on("change", function(){ dispatch.statechange()});
         dispatch.on("statechange", update);
 
+        // Init unit list
         $('.unit_list').each(function(index, element){
             $(this).empty();
         });
 
-        var data = {};
+        // Load recording trial data
         var args = {
             type: "GET",
             url: "/sensorimotordb/api/v1/full_recording_trial/?condition="+resp.id+"&limit=0&format=json",
-            data: data,
+            data: {},
             success: loadedRecordingTrialData,
             error: function(data) {
                 //alert("Something went wrong!");
@@ -115,79 +153,92 @@
         $.ajax(args);
     }
 
+    /**
+     * Loaded recording trial data
+     * @param resp
+     */
     function loadedRecordingTrialData(resp)
     {
-        var unit_labels=[];
-        var units=new Map();
-        var event_types=['start'];
-
-        for(var i=0; i<resp.objects.length; i++)
+        // For each recording trial returned
+        for(let recording_trial of resp.objects)
         {
-            var recording_trial=resp.objects[i];
+            // Get trial number and start time
             var trial_number=recording_trial.trial_number;
             var start_time=parseFloat(recording_trial.start_time);
 
-            for(var j=0; j<recording_trial.unit_recordings.length; j++)
+            // For each unit recording in this trial
+            for(var unit_recording_idx=0; unit_recording_idx<recording_trial.unit_recordings.length; unit_recording_idx++)
             {
-                var unit_recording=recording_trial.unit_recordings[j];
+                var unit_recording=recording_trial.unit_recordings[unit_recording_idx];
                 var unit=unit_recording.unit;
 
-                if(unit_ids.indexOf(unit.id)<0)
+                // If this is the first instance of this unit
+                if(!units.has(unit.id))
                 {
-                    unit_ids.push(unit.id);
-                    units.set(unit.id, unit);
-                    unit_trials.set(unit.id,[]);
-                    unit_trial_events.set(unit.id,[]);
-                    unit_labels.push('Penetration '+unit.penetration.label+', Unit '+unit.label);
+                    // Add to list
+                    units.set(unit.id, 'Penetration '+unit.penetration.label+', Unit '+unit.label);
+
+                    // Init
+                    orig_unit_data.events.set(unit.id, []);
+                    orig_unit_data.spikes.set(unit.id, []);
+
+                    // Add template to list
                     $('.unit_list').each(function(index, element){
                         unit.level=3;
-                        unit.idx=i;
+                        unit.idx=unit_recording_idx;
                         var tmplMarkup = $('#unit-template').html();
                         var compiledTmpl = _.template(tmplMarkup, unit);
                         $(this).append(compiledTmpl);
                     });
 
-                    // Load recording trials for condition
-                    var data = {};
+                    // Load unit data to get area
                     var args = {
                         type: "GET",
                         url: "/sensorimotordb/api/v1/unit/"+unit.id+"/?format=json",
-                        data: data,
+                        data: {},
                         success: function(resp){
                             $('#unit-area-'+resp.id).append(resp.area.name);
                         },
                         error: function(data) {
                             //alert("Something went wrong!");
-                        } };
+                        }
+                    };
                     $.ajax(args);
                 }
 
-                unit_trial_events.get(unit.id).push({
+                // It event list with start event
+                orig_unit_data.events.get(unit.id).push({
                     t: start_time,
                     trial: trial_number,
                     name: 'start',
                     description: 'trial start'
                 });
-                for(var k=0; k<recording_trial.events.length; k++)
+
+                // Add other events
+                for(let event of recording_trial.events)
                 {
-                    var event=recording_trial.events[k];
-                    unit_trial_events.get(unit.id).push({
+                    // Add event
+                    orig_unit_data.events.get(unit.id).push({
                         t: parseFloat(event.time),
                         trial: trial_number,
                         name: event.name,
                         description: event.description
                     });
+
+                    // Add to list of event types
                     if(event_types.indexOf(event.name)<0)
                         event_types.push(event.name);
                 }
 
+                // If there are any spikes
                 if(unit_recording.spike_times.length>0)
                 {
+                    // Add spike times
                     var spike_times=unit_recording.spike_times.split(',');
-                    for(var k=0; k<spike_times.length; k++)
+                    for(let spike_time of spike_times)
                     {
-                        unit_trials.get(unit.id).push({
-                            x: parseFloat(spike_times[k]),
+                        orig_unit_data.spikes.get(unit.id).push({
+                            x: parseFloat(spike_time),
                             y: trial_number
                         });
                     }
@@ -195,41 +246,90 @@
             }
         }
 
-        var align_event = d3.select("#align_event").node().value;
-        
-        for(var i=0; i<unit_ids.length; i++)
+        // Load more recording trials if there are more
+        if(resp.meta.next!=null)
         {
-            var unit_id=unit_ids[i];
-
-            realigned_unit_spikes.set(unit_id, realign_spikes(unit_trials.get(unit_id), unit_trial_events.get(unit_id), align_event));
-            realigned_unit_trial_events.set(unit_id, realign_events(unit_trial_events.get(unit_id), align_event));
-            
-            var single_unit_trials=realigned_unit_spikes.get(unit_id);
-            var single_unit_trial_events=realigned_unit_trial_events.get(unit_id);
-
-            $('#unit-'+unit_id+'-plots').empty();
-            drawRaster(unit_id, 'unit-'+unit_id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
-
-            drawHistogram(unit_id, 'unit-'+unit_id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
-
-            drawFiringRate(unit_id, 'unit-'+unit_id+'-plots', single_unit_trials, single_unit_trial_events, event_types);
+            var data = {};
+            var args = {
+                type: "GET",
+                url: resp.meta.next,
+                data: data,
+                success: loadedRecordingTrialData,
+                error: function(data) {
+                    //alert("Something went wrong!");
+                } };
+            $.ajax(args);
         }
-        $('#condition-'+condition_id+'-plots').empty();
-        drawPopulationFiringRate('condition-'+condition_id+'-plots', 'condition-'+condition_id+'-plots_legend', realigned_unit_spikes, realigned_unit_trial_events, event_types, unit_ids, unit_labels, 1.0);
+        else
+        {
+            // Realign spikes and events and compute firing rates
+            update_rates();
+
+            // Create unit plots
+            for(let unit_id of realigned_unit_data.rate.keys())
+            {
+                $('#unit-'+unit_id+'-plots').empty();
+                var raster_svg=drawRaster('unit-'+unit_id+'-plots', realigned_unit_data.spikes.get(unit_id),
+                        realigned_unit_data.events.get(unit_id), event_types);
+                plots.unit_raster.set(unit_id, raster_svg);
+
+                var histo_svg=drawHistogram('unit-'+unit_id+'-plots', realigned_unit_data.spikes.get(unit_id),
+                        realigned_unit_data.events.get(unit_id), event_types);
+                plots.unit_histo.set(unit_id, histo_svg);
+
+                var rate_svg=drawFiringRate('unit-'+unit_id+'-plots', realigned_unit_data.rate.get(unit_id),
+                        realigned_unit_data.events.get(unit_id), event_types);
+                plots.unit_rate.set(unit_id, rate_svg);
+            }
+
+            // Create condition plot
+            $('#condition-'+condition_id+'-plots').empty();
+            plots.condition=drawPopulationFiringRate('condition-'+condition_id+'-plots', 'condition-'+condition_id+'-plots_legend',
+                    realigned_unit_data.rate, realigned_unit_data.events, event_types, units, 1.0);
+        }
     }
 
+    /**
+     * Realign spikes and events and compute firing rates
+     */
+    function update_rates()
+    {
+        var binwidth = parseInt(d3.select("#binwidth").node().value);
+        var kernelwidth = parseInt(d3.select("#kernelwidth").node().value);
+        var align_event = d3.select("#align_event").node().value;
+
+        for(let unit_id of units.keys())
+        {
+            var realigned_spikes=realign_spikes(orig_unit_data.spikes.get(unit_id), orig_unit_data.events.get(unit_id),
+                    align_event);
+            var firing_rate=get_firing_rate(realigned_spikes, binwidth, kernelwidth);
+            var realigned_events=realign_events(orig_unit_data.events.get(unit_id), align_event);
+
+            realigned_unit_data.spikes.set(unit_id, realigned_spikes);
+            realigned_unit_data.rate.set(unit_id, firing_rate);
+            realigned_unit_data.events.set(unit_id, realigned_events);
+        }
+    }
+
+    /**
+     * Update plots
+     */
     function update()
     {
-        var align_event = d3.select("#align_event").node().value;
-        for(var i=0; i<unit_ids.length; i++)
+        update_rates();
+        for(let unit_id of units.keys())
         {
-            var unit_id=unit_ids[i];
-            realigned_unit_spikes.set(unit_id, realign_spikes(unit_trials.get(unit_id), unit_trial_events.get(unit_id), align_event));
-            realigned_unit_trial_events.set(unit_id, realign_events(unit_trial_events.get(unit_id), align_event));
+            plots.unit_raster.get(unit_id).update(realigned_unit_data.spikes.get(unit_id), realigned_unit_data.events.get(unit_id));
+            plots.unit_histo.get(unit_id).update(realigned_unit_data.spikes.get(unit_id), realigned_unit_data.events.get(unit_id));
+            plots.unit_rate.get(unit_id).update(realigned_unit_data.rate.get(unit_id), realigned_unit_data.events.get(unit_id));
         }
-        dispatch.realigned(realigned_unit_spikes, realigned_unit_trial_events);
+        plots.condition.update(realigned_unit_data.rate, realigned_unit_data.events);
     }
 
+    /**
+     * Delete condition
+     * @param id
+     */
     function deleteCondition(id)
     {
         if (confirm('Are you sure you want to delete this condition?')) {
@@ -243,6 +343,11 @@
         }
     }
 
+    /**
+     * Finished deleting condition
+     * @param data
+     * @param status
+     */
     function doneConditionDelete(data, status)
     {
         if(status=='success')

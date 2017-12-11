@@ -6,7 +6,7 @@ from neo import io, os
 import scipy.io
 from glob import glob
 from django.db.models import Q
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, ConditionVideoEvent, Penetration
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, ConditionVideoEvent, Penetration, Subject
 from uscbp import settings
 
 def remove_all(db='default'):
@@ -1192,87 +1192,91 @@ def import_social_goal_data(db='default'):
         'mo1MotorMouth_base': ('mo','movement onset'),
         }
 
-    for monkey in monkeys:
-        exp_title='F5 mirror neuron - Social goals - %s' % monkey
-        exp=Experiment()
-        exp.collator=collator
-        exp.last_modified_by=collator
-        exp.title=exp_title
-        exp.brief_description='Recording of unidentified F5 neurons while monkeys observed or performed object-directed grasps'
-        exp.subject_species=Species.objects.using(db).get(genus_name='Macaca',species_name='mulatta')
-        exp.save(using=db)
-        print('importing experiment %d' % exp.id)
+    exp_title='F5 mirror neuron - Social goals'
+    exp=Experiment()
+    exp.collator=collator
+    exp.last_modified_by=collator
+    exp.title=exp_title
+    exp.brief_description='Recording of unidentified F5 neurons while monkeys observed or performed object-directed grasps'
+    exp.save(using=db)
+    print('importing experiment %d' % exp.id)
 
-        conditions={}
-        if GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in container').count():
-            conditions['container']=GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in container')[0]
-        else:
-            conditions['container']=GraspPerformanceCondition()
-            conditions['container'].experiment=exp
-            conditions['container'].name='Grasp to place in container'
-            conditions['container'].description='The monkey was seated facing a table (60X60 cm) onto which a metallic ' \
-                                                'cube was placed along the monkey body midline, at 13 cm from monkey\'s ' \
-                                                'hand starting position. The monkey had to reach and grasp the object ' \
-                                                'and then place it in a small container located 10 cm to the left of the ' \
-                                                'grasping location. At the beginning of each trial the monkey had to keep ' \
-                                                'the right hand on a handle attached to the table for at least 1000 ms, ' \
-                                                'after which, a transparent barrier was removed to give the "go" signal ' \
-                                                'and the monkey grasped the object and placed it in the container. A juice ' \
-                                                'reward (and a solid food reward) was delivered after 500-1000 ms, if the ' \
-                                                'monkey correctly executed the trial.'
-            conditions['container'].type='grasp_perform'
-            conditions['container'].object='cube'
-            conditions['container'].object_distance=13
-            conditions['container'].grasp='precision pinch'
-            conditions['container'].hand_visible=True
-            conditions['container'].object_visible=True
-            conditions['container'].save(using=db)
-
-        if GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in mouth').count():
-            conditions['mouth']=GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in mouth')[0]
-        else:
-            conditions['mouth']=GraspPerformanceCondition()
-            conditions['mouth'].experiment=exp
-            conditions['mouth'].name='Grasp to place in mouth'
-            conditions['mouth'].description='The monkey was seated facing a table (60X60 cm) onto which a metallic '\
+    conditions={}
+    if GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in container').count():
+        conditions['container']=GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in container')[0]
+    else:
+        conditions['container']=GraspPerformanceCondition()
+        conditions['container'].experiment=exp
+        conditions['container'].name='Grasp to place in container'
+        conditions['container'].description='The monkey was seated facing a table (60X60 cm) onto which a metallic '\
                                             'cube was placed along the monkey body midline, at 13 cm from monkey\'s '\
                                             'hand starting position. The monkey had to reach and grasp the object '\
-                                            'and bring it to its mouth and eat it. At the beginning of each trial the monkey had to keep '\
+                                            'and then place it in a small container located 10 cm to the left of the '\
+                                            'grasping location. At the beginning of each trial the monkey had to keep '\
                                             'the right hand on a handle attached to the table for at least 1000 ms, '\
                                             'after which, a transparent barrier was removed to give the "go" signal '\
-                                            'and the monkey grasped the object and placed it in its mouth. A juice '\
-                                            'reward was delivered after 500-1000 ms, if the '\
+                                            'and the monkey grasped the object and placed it in the container. A juice '\
+                                            'reward (and a solid food reward) was delivered after 500-1000 ms, if the '\
                                             'monkey correctly executed the trial.'
-            conditions['mouth'].type='grasp_perform'
-            conditions['mouth'].object='cube'
-            conditions['mouth'].object_distance=13
-            conditions['mouth'].grasp='precision pinch'
-            conditions['mouth'].hand_visible=False
-            conditions['mouth'].object_visible=False
-            conditions['mouth'].save(using=db)
+        conditions['container'].type='grasp_perform'
+        conditions['container'].object='cube'
+        conditions['container'].object_distance=13
+        conditions['container'].grasp='precision pinch'
+        conditions['container'].hand_visible=True
+        conditions['container'].object_visible=True
+        conditions['container'].save(using=db)
 
-        if GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in experimenter\'s hand').count():
-            conditions['hand']=GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in experimenter\'s hand')[0]
-        else:
-            conditions['hand']=GraspPerformanceCondition()
-            conditions['hand'].experiment=exp
-            conditions['hand'].name='Grasp to place in experimenter\'s hand'
-            conditions['hand'].description='The monkey was seated facing a table (60X60 cm) onto which a metallic '\
-                                           'cube was placed along the monkey body midline, at 13 cm from monkey\'s '\
-                                           'hand starting position. The monkey had to reach and grasp the object '\
-                                           'and then place it in the hand of the experimenter. At the beginning of each trial the monkey had to keep '\
-                                           'the right hand on a handle attached to the table for at least 1000 ms, '\
-                                           'after which, a transparent barrier was removed to give the "go" signal '\
-                                           'and the monkey grasped the object and placed it in the experimenter\'s hand. A juice '\
-                                           'reward (and a solid food reward) was delivered after 500-1000 ms, if the '\
-                                           'monkey correctly executed the trial.'
-            conditions['hand'].type='grasp_perform'
-            conditions['hand'].object='cube'
-            conditions['hand'].object_distance=13
-            conditions['hand'].grasp='precision pinch'
-            conditions['hand'].hand_visible=True
-            conditions['hand'].object_visible=True
-            conditions['hand'].save(using=db)
+    if GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in mouth').count():
+        conditions['mouth']=GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in mouth')[0]
+    else:
+        conditions['mouth']=GraspPerformanceCondition()
+        conditions['mouth'].experiment=exp
+        conditions['mouth'].name='Grasp to place in mouth'
+        conditions['mouth'].description='The monkey was seated facing a table (60X60 cm) onto which a metallic '\
+                                        'cube was placed along the monkey body midline, at 13 cm from monkey\'s '\
+                                        'hand starting position. The monkey had to reach and grasp the object '\
+                                        'and bring it to its mouth and eat it. At the beginning of each trial the monkey had to keep '\
+                                        'the right hand on a handle attached to the table for at least 1000 ms, '\
+                                        'after which, a transparent barrier was removed to give the "go" signal '\
+                                        'and the monkey grasped the object and placed it in its mouth. A juice '\
+                                        'reward was delivered after 500-1000 ms, if the '\
+                                        'monkey correctly executed the trial.'
+        conditions['mouth'].type='grasp_perform'
+        conditions['mouth'].object='cube'
+        conditions['mouth'].object_distance=13
+        conditions['mouth'].grasp='precision pinch'
+        conditions['mouth'].hand_visible=False
+        conditions['mouth'].object_visible=False
+        conditions['mouth'].save(using=db)
+
+    if GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in experimenter\'s hand').count():
+        conditions['hand']=GraspPerformanceCondition.objects.using(db).filter(experiment=exp,name='Grasp to place in experimenter\'s hand')[0]
+    else:
+        conditions['hand']=GraspPerformanceCondition()
+        conditions['hand'].experiment=exp
+        conditions['hand'].name='Grasp to place in experimenter\'s hand'
+        conditions['hand'].description='The monkey was seated facing a table (60X60 cm) onto which a metallic '\
+                                       'cube was placed along the monkey body midline, at 13 cm from monkey\'s '\
+                                       'hand starting position. The monkey had to reach and grasp the object '\
+                                       'and then place it in the hand of the experimenter. At the beginning of each trial the monkey had to keep '\
+                                       'the right hand on a handle attached to the table for at least 1000 ms, '\
+                                       'after which, a transparent barrier was removed to give the "go" signal '\
+                                       'and the monkey grasped the object and placed it in the experimenter\'s hand. A juice '\
+                                       'reward (and a solid food reward) was delivered after 500-1000 ms, if the '\
+                                       'monkey correctly executed the trial.'
+        conditions['hand'].type='grasp_perform'
+        conditions['hand'].object='cube'
+        conditions['hand'].object_distance=13
+        conditions['hand'].grasp='precision pinch'
+        conditions['hand'].hand_visible=True
+        conditions['hand'].object_visible=True
+        conditions['hand'].save(using=db)
+
+    for monkey in monkeys:
+
+        subject=Subject(subj_id=monkey)
+        subject.species=Species.objects.using(db).get(genus_name='Macaca',species_name='mulatta')
+        subject.save(using=db)
 
         nex_files=glob('/home/jbonaiuto/Projects/sensorimotordb/project/data/ferrari/%s*.nex' % monkey)
         for nex_idx, nex_file in enumerate(nex_files):
@@ -1280,8 +1284,8 @@ def import_social_goal_data(db='default'):
             (path,file)=os.path.split(nex_file)
             (file,ext)=os.path.splitext(file)
             penetration_label=file.split('_')[1][3:]
-            penetration=Penetration(label=penetration_label)
-            penetration.save()
+            penetration=Penetration(label=penetration_label, subject=subject)
+            penetration.save(using=db)
 
             r=io.NeuroExplorerIO(filename=nex_file)
             block=r.read(cascade=True, lazy=False)[0]
@@ -1398,7 +1402,7 @@ def import_social_goal_data(db='default'):
 if __name__=='__main__':
     django.setup()
     #remove_all()
-    import_kraskov_data('data/kraskov/units4BODB.mat','data/kraskov/')
-    sed=import_bonini_data(['data/bonini/01_PIC_F5_09022012_mot_mirror_mrgSORTED.nex',
-                            'data/bonini/02_Pic_F5_10022012_mot_mirror_mrgSORTED.nex'])
+#    import_kraskov_data('data/kraskov/units4BODB.mat','data/kraskov/')
+#    sed=import_bonini_data(['data/bonini/01_PIC_F5_09022012_mot_mirror_mrgSORTED.nex',
+#                            'data/bonini/02_Pic_F5_10022012_mot_mirror_mrgSORTED.nex'])
     import_social_goal_data()

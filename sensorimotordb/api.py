@@ -14,7 +14,7 @@ from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial,
     Analysis, UnitAnalysisResults, ANOVAFactorLevel, ANOVAFactor, ANOVA, ANOVAEffect, UnitClassificationType,\
     ClassificationAnalysis, UnitClassificationCondition, ANOVAComparison, ANOVAPairwiseComparison,\
     ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, \
-    ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings
+    ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings, Subject
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -141,6 +141,16 @@ class NomenclatureResource(ModelResource):
         cache = SimpleCache(timeout=10)
 
 
+class SubjectResource(ModelResource):
+
+    class Meta:
+        queryset=Subject.objects.all()
+        resource_name='subject'
+        authorization=DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
 class ExperimentResource(SearchResourceMixin, ModelResource):
     collator=fields.ForeignKey(UserResource, 'collator', full=True)
     class Meta:
@@ -152,6 +162,7 @@ class ExperimentResource(SearchResourceMixin, ModelResource):
 
 
 class PenetrationResource(ModelResource):
+    subject=fields.ForeignKey(SubjectResource, 'subject', full=True)
     class Meta:
         queryset=Penetration.objects.all()
         resource_name = 'penetration'

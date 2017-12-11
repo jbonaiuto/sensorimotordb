@@ -14,7 +14,8 @@ from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial,
     Analysis, UnitAnalysisResults, ANOVAFactorLevel, ANOVAFactor, ANOVA, ANOVAEffect, UnitClassificationType,\
     ClassificationAnalysis, UnitClassificationCondition, ANOVAComparison, ANOVAPairwiseComparison,\
     ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, \
-    ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings, Subject
+    ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, \
+    ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings, Subject
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet

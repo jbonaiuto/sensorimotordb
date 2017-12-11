@@ -7,7 +7,7 @@ from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionReso
     UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, ANOVAResource, ANOVAFactorResource, \
     ANOVAFactorLevelResource, ANOVAEffectResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, \
     ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, \
-    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource
+    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource, SubjectResource
 from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, \
     ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, \
     ExperimentExportView, DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, \
@@ -46,6 +46,7 @@ v1_api.register(ANOVAFactorResource())
 v1_api.register(ANOVAFactorLevelResource())
 v1_api.register(ANOVAEffectResource())
 v1_api.register(PenetrationResource())
+v1_api.register(SubjectResource())
 
 urlpatterns = patterns('',
     (r'^analysis/$', AnalysisListDetailView.as_view(), {}, 'analysis_list'),

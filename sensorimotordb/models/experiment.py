@@ -99,11 +99,22 @@ class BrainRegion(models.Model):
         return ''
 
 
+class Subject(models.Model):
+    subj_id=models.CharField(max_length=200)
+    species=models.ForeignKey('Species')
+
+    class Meta:
+        app_label='sensorimotordb'
+
+    def export(self, output_file):
+        f = h5py.File(output_file, 'w')
+        f.attrs['species']=np.string_(self.species.__unicode__())
+
+
 class Experiment(models.Model):
     ##
     # A summary of neurophysiological experiment
     ##
-
     # user who added the entry
     collator = models.ForeignKey(User,null=True)
     title = models.CharField(max_length=200)
@@ -115,7 +126,7 @@ class Experiment(models.Model):
     last_modified_time = models.DateTimeField(auto_now=True,blank=True)
     # user who last modified the entry
     last_modified_by = models.ForeignKey(User,null=True,blank=True,related_name='last_modified_by')
-    subject_species=models.ForeignKey('Species', related_name='subject')
+
 
     class Meta:
         app_label='sensorimotordb'
@@ -239,6 +250,7 @@ class GraspObservationCondition(GraspCondition):
 
 class Penetration(models.Model):
     label=models.CharField(max_length=50)
+    subject=models.ForeignKey(Subject, related_name='penetrations')
 
     class Meta:
         app_label='sensorimotordb'
@@ -246,6 +258,8 @@ class Penetration(models.Model):
     def export(self, group):
         group.attrs['id']=self.id
         group.attrs['label']=np.string_(self.label)
+        f_subject=group.create_group('subject')
+        self.subject.export(f_subject)
         f_units=group.create_group('units')
         for unit in Unit.objects.filter(unitrecording__trial__condition__experiment=self).distinct():
             f_unit=f_units.create_group(str(unit.id))

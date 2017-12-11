@@ -164,7 +164,7 @@ class ExperimentResource(SearchResourceMixin, ModelResource):
 class PenetrationResource(ModelResource):
     subject=fields.ForeignKey(SubjectResource, 'subject', full=True)
     class Meta:
-        queryset=Penetration.objects.all()
+        queryset=Penetration.objects.all().select_related('subject')
         resource_name = 'penetration'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())

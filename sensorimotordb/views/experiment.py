@@ -14,7 +14,7 @@ from sensorimotordb.forms import GraspObservationConditionForm, GraspPerformance
     ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm, ExperimentImportForm, GraspConditionFormSet, ExperimentCreateForm
 from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, ConditionVideoEvent, \
     Unit, UnitRecording, Event, RecordingTrial, Experiment, ExperimentExportRequest, UnitAnalysisResults, \
-    UnitClassification, AnalysisResults, Analysis, GraspCondition, Species, BrainRegion, Penetration, ClassificationAnalysisResults
+    UnitClassification, AnalysisResults, Analysis, GraspCondition, Species, BrainRegion, Penetration, ClassificationAnalysisResults, Subject
 from sensorimotordb.views import LoginRequiredMixin, JSONResponseMixin
 from uscbp import settings
 from uscbp.settings import PROJECT_PATH
@@ -456,6 +456,7 @@ class DeleteExperimentView(JSONResponseMixin,BaseDetailView):
             Event.objects.filter(trial__condition__experiment=self.object).delete()
             RecordingTrial.objects.filter(condition__experiment=self.object).delete()
             Unit.objects.filter(id__in=units_to_delete).delete()
+            Subject.objects.filter(penetration__units__id__in=units_to_delete).delete()
             Penetration.objects.filter(units__id__in=units_to_delete).delete()
             Condition.objects.filter(experiment=self.object).delete()
             ExperimentExportRequest.objects.filter(experiment=self.object).delete()

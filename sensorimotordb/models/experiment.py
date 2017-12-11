@@ -100,7 +100,7 @@ class BrainRegion(models.Model):
 
 
 class Subject(models.Model):
-    id=models.CharField(max_length=200)
+    subj_id=models.CharField(max_length=200)
     species=models.ForeignKey('Species')
 
     class Meta:

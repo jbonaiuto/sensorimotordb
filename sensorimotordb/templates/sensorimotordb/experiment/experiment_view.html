@@ -243,7 +243,7 @@
             {
                 // Get unit and constract label
                 var unit=unit_recording.unit;
-                var unit_label='Penetration '+unit.penetration.label+', Unit '+unit.label;
+                var unit_label='Subject '+unit.penetration.subject.subj_id + ', Penetration '+unit.penetration.label+', Unit '+unit.label;
 
                 // If this is the first instance of this unit in this experiment
                 if(!units.has(unit.id))

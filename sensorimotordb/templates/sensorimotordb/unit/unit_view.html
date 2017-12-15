@@ -32,7 +32,9 @@
         // Mapping from condition ID to spikes
         'spikes': new Map(),
         // Mapping from condition ID to events
-        'events': new Map()
+        'events': new Map(),
+        // Mapping from condition ID to num trials
+        'numTrials': new Map()
     };
 
     // Realigned firing rate and event data
@@ -106,6 +108,7 @@
             // Init
             orig_condition_data.events.set(condition.id, []);
             orig_condition_data.spikes.set(condition.id, []);
+            orig_condition_data.numTrials.set(condition.id, 0);
 
             // Update condition template
             $('.condition_list').each(function(index, element){
@@ -144,6 +147,9 @@
 
             // Get condition ID
             var condition_id=parseInt(recording_trial.condition.split('/')[5]);
+
+            // Update number of trials
+            orig_condition_data.numTrials.set(condition_id, orig_condition_data.numTrials.get(condition_id)+1);
 
             // Iterate through unit recordings
             for(let unit_recording of recording_trial.unit_recordings)
@@ -247,7 +253,7 @@
         {
             var realigned_spikes=realign_spikes(orig_condition_data.spikes.get(condition_id), orig_condition_data.events.get(condition_id),
                     align_event);
-            var firing_rate=get_firing_rate(realigned_spikes, binwidth, kernelwidth);
+            var firing_rate=get_firing_rate(realigned_spikes, binwidth, kernelwidth, orig_condition_data.numTrials.get(condition_id));
             var realigned_events=realign_events(orig_condition_data.events.get(condition_id), align_event);
 
             realigned_condition_data.spikes.set(condition_id, realigned_spikes);

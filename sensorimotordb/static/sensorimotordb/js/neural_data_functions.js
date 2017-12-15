@@ -121,10 +121,8 @@ function realign_events(trial_events, event_name)
     return realigned;
 }
 
-function get_standard_spike_density(trials, bins, bin_width)
+function get_standard_spike_density(trials, bins, bin_width, num_trials)
 {
-    var numTrials=d3.max(trials, function(d){ return d.y});
-
     hist = d3.layout.histogram()
         .bins(bins)
         (trials.map(function(d) {return d.x; }));
@@ -133,25 +131,25 @@ function get_standard_spike_density(trials, bins, bin_width)
     for(var j=0; j<hist.length; j++)
         scaledHist.push({
             x: hist[j].x,
-            y: hist[j].y/numTrials/(bin_width/1000.0)
+            y: hist[j].y/num_trials/(bin_width/1000.0)
         });
     return scaledHist;
 }
 
-function get_standard_firing_rate(trials, bins, bin_width, kernel_width)
+function get_standard_firing_rate(trials, bins, bin_width, kernel_width, num_trials)
 {
-    var spike_density=get_standard_spike_density(trials, bins, bin_width);
+    var spike_density=get_standard_spike_density(trials, bins, bin_width, num_trials);
 
     return smooth_spike_density(spike_density, bin_width, kernel_width);
 }
 
-function get_firing_rate(trials, bin_width, kernel_width)
+function get_firing_rate(trials, bin_width, kernel_width, num_trials)
 {
     var xScale = d3.scale.linear()
         .domain([d3.min(trials, function(d) { return d.x; }), d3.max(trials, function(d) { return d.x; })]);;
     var bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width)
 
-    return get_standard_firing_rate(trials, bins, bin_width, kernel_width)
+    return get_standard_firing_rate(trials, bins, bin_width, kernel_width, num_trials)
 }
 
 function smooth_spike_density(spike_density, bin_width, kernel_width)

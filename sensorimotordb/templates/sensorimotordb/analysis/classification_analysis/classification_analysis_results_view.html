@@ -26,7 +26,9 @@ var orig_unit_condition_data={
     // Mapping from unit ID to condition ID to trial spikes
     'spikes': new Map(),
     // Mapping from unit ID to condition ID to trial events
-    'events': new Map()
+    'events': new Map(),
+    // Mapping from unit ID to condition ID to num trials
+    'numTrials': new Map()
 };
 
 // Realigned spike, rate, and event data, grouped by unit then condition
@@ -155,6 +157,7 @@ function loadedAnalysisResultsData(resp)
 
         orig_unit_condition_data.spikes.set(unit_results.unit.id, new Map());
         orig_unit_condition_data.events.set(unit_results.unit.id, new Map());
+        orig_unit_condition_data.numTrials.set(unit_results.unit.id, new Map());
         realigned_unit_condition_data.spikes.set(unit_results.unit.id, new Map());
         realigned_unit_condition_data.rates.set(unit_results.unit.id, new Map());
         realigned_unit_condition_data.events.set(unit_results.unit.id, new Map());
@@ -609,7 +612,12 @@ function loadedRecordingTrialData(resp)
             {
                 orig_unit_condition_data.spikes.get(unit.id).set(condition_id, []);
                 orig_unit_condition_data.events.get(unit.id).set(condition_id, []);
+                orig_unit_condition_data.numTrials.get(unit.id).set(condition_id, 0);
             }
+
+            // Update num trials
+            orig_unit_condition_data.numTrials.get(unit.id).set(condition_id,
+                    orig_unit_condition_data.numTrials.get(unit.id).get(condition_id)+1);
 
             // Add trial start event
             var start_event={
@@ -808,13 +816,15 @@ function update_firing_rates()
             }
 
             // Compute the spike density
-            var spike_density=get_standard_spike_density(within_cutoff_spikes, bins, bin_width);
+            var spike_density=get_standard_spike_density(within_cutoff_spikes, bins, bin_width,
+                    orig_unit_condition_data.numTrials.get(unit_id).get(condition_id));
 
             // Baseline-correction
             if(typeof baseline_setting != 'undefined')
             {
                 // Compute the spike density in the baseline period
-                var baseline_spike_density=get_standard_spike_density(baseline_spikes, baseline_bins, bin_width);
+                var baseline_spike_density=get_standard_spike_density(baseline_spikes, baseline_bins, bin_width,
+                        orig_unit_condition_data.numTrials.get(unit_id).get(condition_id));
                 // Compute average baseline frequency
                 var mean_baseline_spike_density=d3.mean(baseline_spike_density, function(d){ return d.y; });
                 // Subtract mean baseline from spike density

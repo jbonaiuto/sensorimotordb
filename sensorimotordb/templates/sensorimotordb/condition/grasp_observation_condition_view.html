@@ -43,7 +43,9 @@
         // Mapping from unit ID to spikes
         'spikes': new Map(),
         // Mapping from unit ID to events
-        'events': new Map()
+        'events': new Map(),
+        // Mapping from unit ID to num trials
+        'numTrials': new Map()
     };
 
     // Realigned firing rate and event data
@@ -181,6 +183,7 @@
                     // Init
                     orig_unit_data.events.set(unit.id, []);
                     orig_unit_data.spikes.set(unit.id, []);
+                    orig_unit_data.numTrials.set(unit.id, 0);
 
                     // Add template to list
                     $('.unit_list').each(function(index, element){
@@ -205,6 +208,9 @@
                     };
                     $.ajax(args);
                 }
+
+                // Update number of trials
+                orig_unit_data.numTrials.set(unit.id, orig_unit_data.numTrials.get(unit.id)+1);
 
                 // It event list with start event
                 orig_unit_data.events.get(unit.id).push({
@@ -302,7 +308,7 @@
         {
             var realigned_spikes=realign_spikes(orig_unit_data.spikes.get(unit_id), orig_unit_data.events.get(unit_id),
                     align_event);
-            var firing_rate=get_firing_rate(realigned_spikes, binwidth, kernelwidth);
+            var firing_rate=get_firing_rate(realigned_spikes, binwidth, kernelwidth, orig_unit_data.numTrials.get(unit_id));
             var realigned_events=realign_events(orig_unit_data.events.get(unit_id), align_event);
 
             realigned_unit_data.spikes.set(unit_id, realigned_spikes);

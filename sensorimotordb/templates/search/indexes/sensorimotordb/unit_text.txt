@@ -1,4 +1,9 @@
 {{ object.type }}
+{{ object.label }}
+{{ object.penetration.label }}
+{{ object.penetration.subject.subj_id }}
+{{ object.penetration.subject.species.genus_name }} {{ object.penetration.subject.species.species_name }}
+{{ object.penetration.subject.species.common_name }}
 {{ object.area.name }}
 {{ object.area.abbreviation }}
 {{ object.area.nomenclature.species_name }}

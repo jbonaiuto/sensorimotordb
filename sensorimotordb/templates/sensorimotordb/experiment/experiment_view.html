@@ -28,9 +28,6 @@
     // Map from unit IDs to unit labels
     var units=new Map();
 
-    // Map from unit IDs to brain regions
-    var unit_areas=new Map();
-
     // Original spike and event data
     var orig_unit_condition_data={
         // Mapping from unit ID to condition ID to spikes
@@ -259,28 +256,6 @@
                         var compiledTmpl = _.template(tmplMarkup, unit);
                         $(this).append(compiledTmpl);
                     });
-                    // Set area if unit has already been loaded
-                    if(unit_areas.has(unit.id))
-                        $('#unit-area-'+unit.id).innerHTML=unit_areas.get(unit.id)
-                    // Else load unit information
-                    else
-                    {
-                        // Load unit information
-                        var args = {
-                            type: "GET",
-                            url: "/sensorimotordb/api/v1/unit/"+unit.id+"/?format=json",
-                            data: {},
-                            success: function(resp){
-                                // Update area
-                                $('#unit-area-'+resp.id).append(resp.area.name);
-                                unit_areas.set(resp.id,resp.area.name);
-                            },
-                            error: function(data) {
-                                //alert("Something went wrong!");
-                            }
-                        };
-                        $.ajax(args);
-                    }
 
                     // Initialize map of unit - condition recordings
                     orig_unit_condition_data.spikes.set(unit.id, new Map());
@@ -380,6 +355,27 @@
                         units, 0.5);
                 plots.condition.set(condition_id, rate_svg);
             }
+
+            // Load unit information
+            var args = {
+                type: "GET",
+                url: "/sensorimotordb/api/v1/unit/?unit_recording__recording_trial__condition__experiment={{ object.id }}&format=json",
+                data: {},
+                success: loadedUnitData,
+                error: function(data) {
+                    //alert("Something went wrong!");
+                }
+            };
+            $.ajax(args);
+        }
+    }
+
+    function loadedUnitData(resp)
+    {
+        for(var idx=0; idx<resp.objects.length; idx++)
+        {
+            var unit=resp.objects[idx];
+            $('#unit-area-'+unit.id).append(unit.area.name);
         }
     }
 

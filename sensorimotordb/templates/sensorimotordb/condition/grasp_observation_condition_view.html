@@ -193,20 +193,6 @@
                         var compiledTmpl = _.template(tmplMarkup, unit);
                         $(this).append(compiledTmpl);
                     });
-
-                    // Load unit data to get area
-                    var args = {
-                        type: "GET",
-                        url: "/sensorimotordb/api/v1/unit/"+unit.id+"/?format=json",
-                        data: {},
-                        success: function(resp){
-                            $('#unit-area-'+resp.id).append(resp.area.name);
-                        },
-                        error: function(data) {
-                            //alert("Something went wrong!");
-                        }
-                    };
-                    $.ajax(args);
                 }
 
                 // Update number of trials
@@ -292,6 +278,41 @@
             $('#condition-'+condition_id+'-plots').empty();
             plots.condition=drawPopulationFiringRate('condition-'+condition_id+'-plots', 'condition-'+condition_id+'-plots_legend',
                     realigned_unit_data.rate, realigned_unit_data.events, event_types, units, 1.0);
+
+            // Load unit data to get area
+            var args = {
+                type: "GET",
+                url: "/sensorimotordb/api/v1/unit/?unit_recording__recording_trial__condition={{ object.id }}&format=json",
+                data: {},
+                success: loadedUnitData,
+                error: function(data) {
+                    //alert("Something went wrong!");
+                }
+            };
+            $.ajax(args);
+        }
+    }
+
+    function loadedUnitData(resp)
+    {
+        for(var idx=0; idx<resp.objects.length; idx++)
+        {
+            var unit=resp.objects[idx];
+            $('#unit-area-'+unit.id).append(unit.area.name);
+        }
+        // Load more recording trials if there are more
+        if(resp.meta.next!=null)
+        {
+            var data = {};
+            var args = {
+                type: "GET",
+                url: resp.meta.next,
+                data: data,
+                success: loadedUnitData,
+                error: function(data) {
+                    //alert("Something went wrong!");
+                } };
+            $.ajax(args);
         }
     }
 

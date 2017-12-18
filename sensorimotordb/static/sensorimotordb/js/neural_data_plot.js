@@ -942,7 +942,7 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trial_rates, group
     return rate_svg;
 }
 
-function drawMeanNormalizedFiringRates(parent_id, group_mean_rates, group_trial_events, event_types, groups, scale_factor)
+function drawMeanNormalizedFiringRates(parent_id, legend_id, group_mean_rates, group_trial_events, event_types, groups, scale_factor)
 {
     var margin = {top: 30, right: 20, bottom: 40, left: 50}
         , width = scale_factor*(960 - margin.left - margin.right)
@@ -1012,6 +1012,15 @@ function drawMeanNormalizedFiringRates(parent_id, group_mean_rates, group_trial_
 
     var max_length=d3.max(Array.from(groups.values()), function(d){return d.length});
 
+    var legend_svg = d3.select('#'+legend_id)
+        .append("svg")
+        .attr("width", 40+max_length*7)
+        .attr("height", 20*(groups.size+1));
+
+    var legend = legend_svg.append("g")
+        .attr("class", "legend1")
+        .attr('transform', 'translate(-20,50)');
+
     for(var group_idx=0; group_idx<groups.size; group_idx++)
     {
         var group_id=Array.from(groups.keys())[group_idx];
@@ -1054,12 +1063,15 @@ function drawMeanNormalizedFiringRates(parent_id, group_mean_rates, group_trial_
                 .attr("class", "data-line")
                 .style("stroke", p(group_idx))
                 .attr("d", line);
-            rate_svg.append("text")
+
+            legend.append("text")
+                .attr("id",parent_id+"-label-group-"+group_id)
+                .attr("group_id",group_id)
                 .attr("class","legend-label")
-                .attr("x",width-max_length*7)
-                .attr("y",margin.top+group_idx*20)
+                .attr("x", 40)
+                .attr("y", (group_idx-1) *  20 + 5)
                 .style("fill", p(group_idx))
-                .text(group_name);
+                .text(group_name)
         }
     }
 

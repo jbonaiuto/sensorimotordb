@@ -7,7 +7,7 @@ from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionReso
     UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, ANOVAResource, ANOVAFactorResource, \
     ANOVAFactorLevelResource, ANOVAEffectResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, \
     ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, \
-    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource, SubjectResource
+    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource, SubjectResource, ClusterAnalysisResultsResource
 from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, \
     ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, \
     ExperimentExportView, DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, \
@@ -15,7 +15,7 @@ from sensorimotordb.views import UnitDetailView, ConditionDetailView, Experiment
     DeleteUnitClassificationConditionView, DeleteUnitClassificationTypeView, CreateUnitClassificationTypeView, \
     UpdateUnitClassificationTypeView, CreateClassificationAnalysisWizardView, CLASSIFICATION_ANALYSIS_WIZARD_FORMS, \
     AnalysisListDetailView, DeleteClassificationAnalysisView, RunAnalysisView, RunClassificationAnalysisView, \
-    DeleteAnalysisResultsView, AnalysisResultsDetailView, ClassificationAnalysisResultsDetailView, ImportView, ExperimentImportView
+    DeleteAnalysisResultsView, AnalysisResultsDetailView, ClassificationAnalysisResultsDetailView, ImportView, ExperimentImportView, ClusterAnalysisDetailView, RunClusterAnalysisView, CreateClusterAnalysisView, ClusterAnalysisResultsDetailView
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())
@@ -47,6 +47,7 @@ v1_api.register(ANOVAFactorLevelResource())
 v1_api.register(ANOVAEffectResource())
 v1_api.register(PenetrationResource())
 v1_api.register(SubjectResource())
+v1_api.register(ClusterAnalysisResultsResource())
 
 urlpatterns = patterns('',
     (r'^analysis/$', AnalysisListDetailView.as_view(), {}, 'analysis_list'),
@@ -66,6 +67,10 @@ urlpatterns = patterns('',
     (r'^classification_analysis/(?P<pk>\d+)/run/$', RunClassificationAnalysisView.as_view(), {}, 'classification_analysis_run'),
     (r'^classification_analysis/new/$', CreateClassificationAnalysisWizardView.as_view(CLASSIFICATION_ANALYSIS_WIZARD_FORMS), {}, 'classification_analysis_add'),
     (r'^classification_analysis_results/(?P<pk>\d+)/$', ClassificationAnalysisResultsDetailView.as_view(), {}, 'classification_analysis_results_view'),
+    (r'^cluster_analysis/(?P<pk>\d+)/$', ClusterAnalysisDetailView.as_view(), {}, 'cluster_analysis_view'),
+    (r'^cluster_analysis/(?P<pk>\d+)/run/$', RunClusterAnalysisView.as_view(), {}, 'cluster_analysis_run'),
+    (r'^cluster_analysis/new/$', CreateClusterAnalysisView.as_view(), {}, 'cluster_analysis_add'),
+    (r'^cluster_analysis_results/(?P<pk>\d+)/$', ClusterAnalysisResultsDetailView.as_view(), {}, 'cluster_analysis_results_view'),
     (r'^condition/(?P<pk>\d+)/$', ConditionDetailView.as_view(), {}, 'condition_view'),
     (r'^condition/(?P<pk>\d+)/delete/$', DeleteConditionView.as_view(), {}, 'condition_edit'),
     (r'^condition/(?P<pk>\d+)/edit/$', UpdateConditionView.as_view(), {}, 'condition_edit'),

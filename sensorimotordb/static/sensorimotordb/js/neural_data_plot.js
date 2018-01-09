@@ -969,8 +969,10 @@ function drawMeanNormalizedFiringRates(parent_id, legend_id, group_mean_rates, g
         {
             var rate=group_data.rates.get(group_id);
             var events=group_data.events.get(group_id);
-            min_times.push(d3.min([d3.min(events,function(d){return d.t}),d3.min(rate,function(d){return d.x})]));
-            max_times.push(d3.max([d3.max(events,function(d){return d.t}),d3.max(rate,function(d){return d.x})]));
+            //min_times.push(d3.min([d3.min(events,function(d){return d.t}),d3.min(rate,function(d){return d.x})]));
+            min_times.push(d3.min(events,function(d){return d.t}));
+            //max_times.push(d3.max([d3.max(events,function(d){return d.t}),d3.max(rate,function(d){return d.x})]));
+            max_times.push(d3.max(rate,function(d){return d.x}));
             min_rates.push(d3.min(rate, function(d){ return d.y- d.stderr }))
             max_rates.push(d3.max(rate, function(d){ return d.y+ d.stderr }))
         }
@@ -1218,8 +1220,10 @@ function drawMeanNormalizedFiringRates(parent_id, legend_id, group_mean_rates, g
             {
                 var rate=group_data.rates.get(group_id);
                 var events=group_data.events.get(group_id);
-                min_times.push(d3.min([d3.min(events,function(d){return d.t}),d3.min(rate,function(d){return d.x})]));
-                max_times.push(d3.max([d3.max(events,function(d){return d.t}),d3.max(rate,function(d){return d.x})]));
+                //min_times.push(d3.min([d3.min(events,function(d){return d.t}),d3.min(rate,function(d){return d.x})]));
+                min_times.push(d3.min(events,function(d){return d.t}));
+                //max_times.push(d3.max([d3.max(events,function(d){return d.t}),d3.max(rate,function(d){return d.x})]));
+                max_times.push(d3.max(rate,function(d){return d.x}));
                 min_rates.push(d3.min(rate, function(d){ return d.y-d.stderr }));
                 max_rates.push(d3.max(rate, function(d){ return d.y+d.stderr }));
             }

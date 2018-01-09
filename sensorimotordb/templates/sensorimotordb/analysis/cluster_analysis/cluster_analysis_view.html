@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>SensoriMotorDB - View Cluster Analysis: {{ object.name }}</title>
+{% endblock %}
+{% block content %}
+<div class="cluster_info">
+    <h1>{{ object.name }}</h1>
+    <div id="cluster-{{ object.id }}">
+        <table>
+            <tr>
+                <td><strong>Description</strong></td>
+                <td>{{ object.description }}</td>
+            </tr>
+            <tr>
+                <td><strong>MDS type</strong></td>
+                <td>{{ object.mds_type }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+{% endblock %}

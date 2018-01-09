@@ -34,7 +34,15 @@
             durations.push((event.trial.end_time-event.trial.start_time)*1000.0);
         }
         if(resp.meta.next==null)
-            loadedAllEvents();
+        {
+            var eventMeanTimes=new Map();
+            for(let event_name of eventTimes.keys())
+            {
+                var times=eventTimes.get(event_name);
+                eventMeanTimes.set(event_name, d3.mean(times));
+            }
+            drawWOIPicker('analysis_woi_picker', 0, d3.mean(durations), eventMeanTimes);
+        }
         else
         {
             var data = {};
@@ -48,17 +56,6 @@
                 } };
             $.ajax(args);
         }
-    }
-
-    function loadedAllEvents()
-    {
-        var eventMeanTimes=new Map();
-        for(let event_name of eventTimes.keys())
-        {
-            var times=eventTimes.get(event_name);
-            eventMeanTimes.set(event_name, d3.mean(times));
-        }
-        drawWOIPicker('analysis_woi_picker', 0, d3.mean(durations), eventMeanTimes);
     }
 
     var dispatch=d3.dispatch("statechange","woi_modified");

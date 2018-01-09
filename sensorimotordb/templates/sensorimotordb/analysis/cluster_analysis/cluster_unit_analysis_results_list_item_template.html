@@ -1,0 +1,18 @@
+{% load staticfiles %}
+<script type="text/html" id="unit_analysis_results-template">
+    <div id="unit_analysis_results-<%= id %>" class="<%= getTRTag(idx) %>" style="display:inline">
+        <table>
+            <tr>
+                <td colspan="2"><a href="/sensorimotordb/unit/<%= id %>/"><h<%= level %>>Subject <%= penetration.subject.subj_id %>, Penetration <%= penetration.label %>, Unit <%= label %></h<%= level %>></a></td>
+            </tr>
+            <tr>
+                <td valign=top width="25%"><strong>Cluster</strong></td>
+                <td><%= cluster %></td>
+            </tr>
+            <td>
+                <div id="unit-<%= id %>-plots" style="float:left"><img src="{% static 'sensorimotordb/img/loading.gif' %}"></div>
+                <div id="unit-<%= id %>-plots_legend" class="legend"></div>
+            </td>
+        </table>
+    </div>
+</script>

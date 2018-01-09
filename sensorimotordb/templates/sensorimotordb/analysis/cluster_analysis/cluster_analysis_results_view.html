@@ -1,0 +1,814 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>SensoriMotorDB - View Cluster Analysis Results: {{ object.name }}</title>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/d3.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_functions.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_plot.js' %}"></script>
+<script>
+
+// Analysis results JSON object
+var results;
+
+// Unit IDs for the currently selected cluster
+var current_unit_ids=[];
+var current_cluster_idx=-1;
+
+// List of all clusters
+var clusters=[];
+
+// Map from conditions to condition names
+var conditions=new Map();
+// Map from units to unit labels
+var units=new Map();
+
+// Original spike and event data,grouped by unit, then condition
+var orig_unit_condition_data={
+    // Mapping from unit ID to condition ID to trial spikes
+    'spikes': new Map(),
+    // Mapping from unit ID to condition ID to trial events
+    'events': new Map(),
+    // Mapping from unit ID to condition ID to num trials
+    'numTrials': new Map()
+};
+
+// Realigned spike, rate, and event data, grouped by unit then condition
+var realigned_unit_condition_data={
+    // Mapping from unit ID to condition ID to realigned trial spikes
+    'spikes': new Map(),
+    // Mapping from unit ID to condition ID to realigned and baseline-corrected firing rates
+    'rates': new Map(),
+    // Mapping from unit ID to condition ID to realigned trial events
+    'events': new Map()
+};
+
+// Rate and event data grouped by cluster
+var cluster_data={
+    // Mapping from cluster number to mean, normalized, baseline corrected, and realigned rates
+    'mean_rates': new Map(),
+    // Mapping from cluster number to events
+    'events': new Map(),
+    // Mapping from cluster number to list of event types
+    'event_types': new Map(),
+};
+
+// Factor and unit plots
+var plots={
+    'cluster': null,
+    'unit': new Map()
+};
+
+// List of all event types
+var event_types=['start'];
+
+// Time window settings by condition
+var cond_timewindow_settings=new Map();
+
+/**
+ * Load analysis results data
+ */
+$(document).ready(function(){
+    // Load analysis results
+    $('<img src="{% static 'sensorimotordb/img/loading.gif' %}"/>');
+    var data = {};
+    var args = {
+        type: "GET",
+        url: "/sensorimotordb/api/v1/cluster_analysis_results/{{ object.id }}/?format=json",
+        data: data,
+        success: loadedAnalysisResultsData,
+        error: function(data) {
+            //alert("Something went wrong!");
+        } };
+    $.ajax(args);
+});
+
+/**
+ * Loaded analysis results
+ * @param resp
+ */
+function loadedAnalysisResultsData(resp)
+{
+    results=resp;
+
+    // Fill in analysis info
+    $('.analysis_results_info').each(function(index, element){
+        $(this).empty();
+        var tmplMarkup = $('#analysis_results-template').html();
+        var compiledTmpl = _.template(tmplMarkup, results);
+        $(this).append(compiledTmpl);
+    });
+
+    // Figure conditions to load
+    for(let time_window_setting of results.settings.time_window_condition_settings)
+    {
+        var condition=time_window_setting.condition;
+        cond_timewindow_settings.set(condition.id, time_window_setting);
+        if(!conditions.has(condition.id))
+        {
+            conditions.set(condition.id, condition.name);
+        }
+    }
+
+    // List of current units
+    current_unit_ids=[];
+    var unit_idx=0;
+    // Build data structure for scatter plot
+    var data=[
+    ];
+    for(var cluster_idx=0; cluster_idx<results.unit_clusters.length; cluster_idx++)
+    {
+        var cluster=results.unit_clusters[cluster_idx];
+        for(var j=0; j<cluster.units.length; j++)
+        {
+            var unit=cluster.units[j];
+            current_unit_ids.push(unit.id);
+            var unit_label='Subject '+unit.penetration.subject.subj_id + ', Penetration '+unit.penetration.label+', Unit '+unit.label;
+            units.set(unit.id, unit_label);
+
+            orig_unit_condition_data.spikes.set(unit.id, new Map());
+            orig_unit_condition_data.events.set(unit.id, new Map());
+            orig_unit_condition_data.numTrials.set(unit.id, new Map());
+            realigned_unit_condition_data.spikes.set(unit.id, new Map());
+            realigned_unit_condition_data.rates.set(unit.id, new Map());
+            realigned_unit_condition_data.events.set(unit.id, new Map());
+
+            // Fill in unit results info
+            $('.unit_analysis_results_list').each(function(index, element){
+                unit.level=3;
+                unit.idx=unit_idx;
+                unit.cluster=(cluster_idx+1);
+                var tmplMarkup = $('#unit_analysis_results-template').html();
+                var compiledTmpl = _.template(tmplMarkup, unit);
+                $(this).append(compiledTmpl);
+            });
+
+            unit_idx=unit_idx+1;
+        }
+        for(var j=0; j<cluster.cluster_projection.length; j++)
+        {
+            var projection=cluster.cluster_projection[j];
+            var unit_id=parseInt(projection.unit.split('/')[5]);
+            data.push({x: parseFloat(projection.point_x), y: parseFloat(projection.point_y), cluster: cluster_idx+1,
+                label:'<strong>Cluster '+(cluster_idx+1)+'</strong><br/>'+units.get(unit_id)});
+        }
+    }
+
+    // Update firing rates and plot if bin or kernel width or baseline epoch changed
+    d3.selectAll("#binwidth").on("change", function(){ dispatch.statechange()});
+    d3.selectAll("#kernelwidth").on("change", function(){ dispatch.statechange()});
+    dispatch.on("statechange", update_plot);
+
+    // Create hierarchical plot
+    d3.select(self.frameElement).style("height", "800px");
+    init_cluster_scatter_plot("analysis_results-"+results.id+"-scatter", data);
+
+    // Set rate to loading
+    $('#analysis_results-'+results.id+'-mean_rate').empty();
+    $('#analysis_results-'+results.id+'-mean_rate').append('<img src="/static/sensorimotordb/img/loading.gif">');
+
+    // If conditions have not been loaded yet
+    if(conditions.size>0)
+    {
+        // Load recording trials for conditions
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/api/v1/full_recording_trial/?condition__in="+Array.from(conditions.keys()).join(',')+"&limit=0&format=json",
+            data: data,
+            success: loadedRecordingTrialData,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+    // Update firing rates and plot if already loaded
+    else
+    {
+        update_firing_rates();
+        plotFactors();
+    }
+}
+
+function init_cluster_scatter_plot(element_id, data)
+{
+    var plot = document.getElementById(element_id);
+
+    while (plot.hasChildNodes())
+    {
+        plot.removeChild(plot.firstChild);
+    }
+
+    /*var width = 450;
+    var height = width;
+    var x_margin = 40;
+    var y_margin = 40;*/
+
+    var margin = {top: 20, right: 20, bottom: 30, left: 40},
+            width = 450 - margin.left - margin.right,
+            height = 450 - margin.top - margin.bottom;
+
+    /*
+     * value accessor - returns the value to encode for a given data object.
+     * scale - maps value to a visual display encoding, such as a pixel position.
+     * map function - maps from data value to display value
+     * axis - sets up axis
+     */
+
+    // setup x
+    var xValue = function(d) { return d.x;}, // data -> value
+            xScale = d3.scale.linear().range([0, width]), // value -> display
+            xMap = function(d) { return xScale(xValue(d));}, // data -> display
+            xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+
+    // setup y
+    var yValue = function(d) { return d.y;}, // data -> value
+            yScale = d3.scale.linear().range([height, 0]), // value -> display
+            yMap = function(d) { return yScale(yValue(d));}, // data -> display
+            yAxis = d3.svg.axis().scale(yScale).orient("left");
+
+    // setup fill color
+    var cValue = function(d) { return d.cluster;},
+            color = d3.scale.category10();
+
+// add the graph canvas to the body of the webpage
+    /*var svg = d3.select("#"+element_id).append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", "translate(" + width / 2 + "," + height * .52 + ")");*/
+    var svg = d3.select("#"+element_id).append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // add the tooltip area to the webpage
+    var tooltip = d3.select("#"+element_id).append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+    // load data
+    // don't want dots overlapping axis, so add in buffer to data domain
+    xScale.domain([d3.min(data, xValue)-1, d3.max(data, xValue)+1]);
+    yScale.domain([d3.min(data, yValue)-1, d3.max(data, yValue)+1]);
+
+    // x-axis
+    svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis)
+            .append("text")
+            .attr("class", "label")
+            .attr("x", width)
+            .attr("y", -6)
+            .style("text-anchor", "end");
+
+    // y-axis
+    svg.append("g")
+            .attr("class", "y axis")
+            .call(yAxis)
+            .append("text")
+            .attr("class", "label")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("dy", ".71em")
+            .style("text-anchor", "end");
+
+    // draw dots
+    svg.selectAll(".dot")
+            .data(data)
+            .enter().append("circle")
+            .attr("class", "dot")
+            .attr("r", 3.5)
+            .attr("cx", xMap)
+            .attr("cy", yMap)
+            .style("fill", function(d) { return color(cValue(d));})
+            .on("mouseover", function(d) {
+                tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                tooltip.html(d["label"])
+                        .style("left", (d3.event.pageX + 5) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+            })
+            .on("mouseout", function(d) {
+                tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+            })
+            .on("click", function(d) {
+                loadUnitRates(d['cluster']-1)
+            });
+
+    // draw legend
+    /*var legend = svg.selectAll(".legend")
+            .data(color.domain())
+            .enter().append("g")
+            .attr("class", "legend")
+            .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+    // draw legend colored rectangles
+    legend.append("rect")
+            .attr("x", width - 18)
+            .attr("width", 18)
+            .attr("height", 18)
+            .style("fill", color);
+
+    // draw legend text
+    legend.append("text")
+            .attr("x", width - 24)
+            .attr("y", 9)
+            .attr("dy", ".35em")
+            .style("text-anchor", "end")
+            .text(function(d) { return d;})*/
+}
+
+function loadUnitRates(cluster_idx)
+{
+    current_cluster_idx=cluster_idx;
+    // Update list of current units
+    current_unit_ids=[];
+
+    // Show and hide right unit statistics
+    for(var cluster_idx=0; cluster_idx<results.unit_clusters.length; cluster_idx++)
+    {
+        var cluster=results.unit_clusters[cluster_idx];
+        for(var j=0; j<cluster.units.length; j++)
+        {
+            var unit=cluster.units[j];
+            if(cluster_idx==current_cluster_idx)
+            {
+                $('#unit_analysis_results-'+unit.id).show();
+                //$('#unit-'+unit.id+'-plots').append('<img src="/static/sensorimotordb/img/loading.gif">');
+                current_unit_ids.push(unit.id);
+            }
+            else
+            {
+                //$('#unit-'+unit.id+'-plots').empty();
+                $('#unit_analysis_results-'+unit.id).hide();
+            }
+        }
+    }
+
+    // Set rate to loading
+    $('#analysis_results-'+results.id+'-mean_rate').empty();
+    $('#analysis_results-'+results.id+'-mean_rate').append('<img src="/static/sensorimotordb/img/loading.gif">');
+
+
+    update_firing_rates();
+    plotCluster();
+}
+
+/**
+ * Loaded recording trials for all conditions
+ * @param resp
+ */
+function loadedRecordingTrialData(resp)
+{
+    // For each recording trial
+    for(let recording_trial of resp.objects)
+    {
+        var trial_number=recording_trial.trial_number;
+        var start_time=parseFloat(recording_trial.start_time);
+
+        // Get condition ID
+        var condition_id=parseInt(recording_trial.condition.split('/')[5]);
+
+        // Iterate through unit recordings
+        for(let unit_recording of recording_trial.unit_recordings)
+        {
+            var unit=unit_recording.unit;
+
+            // If this is the first instance of this unit in this condition
+            if(!orig_unit_condition_data.spikes.get(unit.id).has(condition_id))
+            {
+                orig_unit_condition_data.spikes.get(unit.id).set(condition_id, []);
+                orig_unit_condition_data.events.get(unit.id).set(condition_id, []);
+                orig_unit_condition_data.numTrials.get(unit.id).set(condition_id, 0);
+            }
+
+            // Update num trials
+            orig_unit_condition_data.numTrials.get(unit.id).set(condition_id,
+                    orig_unit_condition_data.numTrials.get(unit.id).get(condition_id)+1);
+
+            // Add trial start event
+            var start_event={
+                t: start_time,
+                trial: trial_number,
+                name: 'start',
+                description: 'trial start'
+            };
+            orig_unit_condition_data.events.get(unit.id).get(condition_id).push(start_event);
+
+            // Add each event in trial
+            for(let evt of recording_trial.events)
+            {
+                var current_event={
+                    t: parseFloat(evt.time),
+                    trial: trial_number,
+                    name: evt.name,
+                    description: evt.description
+                };
+                if(event_types.indexOf(current_event.name)<0)
+                    event_types.push(current_event.name);
+                orig_unit_condition_data.events.get(unit.id).get(condition_id).push(current_event);
+            }
+
+            // Add unit spikes
+            if(unit_recording.spike_times.length>0)
+            {
+                var spike_times=unit_recording.spike_times.split(',');
+                for(var l=0; l<spike_times.length; l++)
+                {
+                    var spk={
+                        x: parseFloat(spike_times[l]),
+                        y: trial_number
+                    };
+                    orig_unit_condition_data.spikes.get(unit.id).get(condition_id).push(spk);
+                }
+            }
+        }
+    }
+
+    // If no more recordings to load - update rates and plot
+    if(resp.meta.next==null)
+    {
+        update_firing_rates();
+
+        plotCluster();
+    }
+    // Otherwise load next batch
+    else
+    {
+        var data = {};
+        var args = {
+            type: "GET",
+            url: resp.meta.next,
+            data: data,
+            success: loadedRecordingTrialData,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+}
+
+/**
+ * Update firing rates
+ */
+function update_firing_rates()
+{
+    // Get rate calculation parameters
+    var align_event = d3.select("#align_event").node().value;
+    var bin_width = parseInt(d3.select("#binwidth").node().value);
+    var kernel_width = parseInt(d3.select("#kernelwidth").node().value);
+
+    /**
+     * Realign spikes and events
+     */
+    // Min/max trial times
+    var min_times=[];
+    var max_times=[];
+    var min_baseline_times=[];
+    var max_baseline_times=[];
+    for(let unit_id of current_unit_ids)
+    {
+        // realigned spikes for each condition
+        realigned_unit_condition_data.spikes.set(unit_id, new Map());
+        realigned_unit_condition_data.rates.set(unit_id, new Map());
+        realigned_unit_condition_data.events.set(unit_id, new Map());
+
+        // For each unit in this condition
+        for(let condition_id of conditions.keys())
+        {
+            var unit_trial_spikes=orig_unit_condition_data.spikes.get(unit_id).get(condition_id);
+            var unit_trial_events=orig_unit_condition_data.events.get(unit_id).get(condition_id);
+
+            // Realign spikes to align event
+            realigned_unit_condition_data.spikes.get(unit_id).set(condition_id,
+                    realign_spikes(unit_trial_spikes, unit_trial_events, align_event));
+
+            // Realign trial events to align event
+            var realigned_unit_trial_events=realign_events(unit_trial_events, align_event);
+            realigned_unit_condition_data.events.get(unit_id).set(condition_id, realigned_unit_trial_events);
+
+            // Add min/max event times to min/max times array
+            min_times.push(d3.min(realigned_unit_condition_data.events.get(unit_id).get(condition_id), function(d) { return d.t; }));
+            min_times.push(d3.min(realigned_unit_condition_data.spikes.get(unit_id).get(condition_id), function(d) { return d.x; }));
+            max_times.push(d3.max(realigned_unit_condition_data.events.get(unit_id).get(condition_id), function(d) { return d.t; }));
+            max_times.push(d3.max(realigned_unit_condition_data.spikes.get(unit_id).get(condition_id), function(d) { return d.x; }));
+
+            // Look for baseline times
+            var time_window_settings=null;
+            if(cond_timewindow_settings.has(condition_id))
+            {
+                time_window_settings=cond_timewindow_settings.get(condition_id);
+            }
+
+            if(time_window_settings != null)
+            {
+                for(let evt of realigned_unit_trial_events)
+                {
+                    // Baseline-relative event
+                    if(evt.name==time_window_settings.rel_evt)
+                    {
+                        // Add baseline start time
+                        min_baseline_times.push(evt.t+time_window_settings.baseline_start);
+                        // If absolute baseline duration
+                        //if(time_window_settings.rel_end_evt=='')
+                        max_baseline_times.push(evt.t+time_window_settings.baseline_end);
+                    }
+                    // Baseline-relative end event
+                    /*else if(baseline_setting.rel_end_evt!='' && evt.name==baseline_setting.rel_end_evt)
+                    {
+                        max_baseline_times.push(evt.t);
+                    }*/
+                }
+            }
+        }
+    }
+
+    // Compute realigned time bins - common set of bins from min to max time for spike density calculation
+    //var min_time=d3.mean(min_times)-100;
+    var min_time=d3.min(min_times);//-100;
+    //var max_time=d3.mean(max_times)+100;
+    var max_time=d3.max(max_times);//+100;
+    var xScale = d3.scale.linear().domain([min_time, max_time]);
+    var bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width);
+    var realigned_times=d3.range(xScale.domain()[0], xScale.domain()[1], bin_width);
+
+    // Compute realigned baseline time bins - common set of bins from min to max baseline time
+    var min_baseline_time=d3.mean(min_baseline_times);
+    var max_baseline_time=d3.mean(max_baseline_times);
+    var xScale = d3.scale.linear().domain([min_baseline_time, max_baseline_time]);
+    var baseline_bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width);
+
+    /**
+     *  Compute spike density (baseline-corrected) for each unit
+     */
+    for(let unit_id of current_unit_ids)
+    {
+        for(let condition_id of conditions.keys())
+        {
+            // Get the start and end of the baseline in each trial
+            var unit_evts = realigned_unit_condition_data.events.get(unit_id).get(condition_id);
+            var trial_baseline_start={};
+            var trial_baseline_end={};
+            var time_window_setting=null;
+            if(cond_timewindow_settings.has(condition_id))
+            {
+                time_window_setting=cond_timewindow_settings.get(condition_id);
+            }
+            if(time_window_setting!=null)
+            {
+                for (let evt of unit_evts)
+                {
+                    if(evt.name==time_window_setting.rel_evt)
+                    {
+                        trial_baseline_start[evt.trial]=evt.t+time_window_setting.baseline_start;
+                        trial_baseline_end[evt.trial]=evt.t+time_window_setting.baseline_end;
+                    }
+                    /*else if(baseline_setting.rel_end_evt!='' && evt.name==baseline_setting.rel_end_evt)
+                    {
+                        trial_baseline_end.push[evt.trial]=evt.t+baseline_setting.rel_end;
+                    }*/
+                }
+            }
+
+            // Get the unit's spikes in each trial, within the start and end time, and baseline spikes
+            var unit_spikes=realigned_unit_condition_data.spikes.get(unit_id).get(condition_id);
+            var within_cutoff_spikes=[];
+            var baseline_spikes=[];
+            for(let spk of unit_spikes)
+            {
+                if(spk.x>=min_time && spk.x<=max_time)
+                {
+                    within_cutoff_spikes.push({
+                        x: spk.x,
+                        y: spk.y
+                    });
+                }
+                if(time_window_setting!=null && spk.x>=trial_baseline_start[spk.y] && spk.x<=trial_baseline_end[spk.y])
+                {
+                    baseline_spikes.push({
+                        x: spk.x,
+                        y: spk.y
+                    });
+                }
+            }
+
+            // Compute the spike density
+            var spike_density=get_standard_spike_density(within_cutoff_spikes, bins, bin_width,
+                    orig_unit_condition_data.numTrials.get(unit_id).get(condition_id));
+
+            // Baseline-correction
+            if(time_window_setting!=null)
+            {
+                // Compute the spike density in the baseline period
+                var baseline_spike_density=get_standard_spike_density(baseline_spikes, baseline_bins, bin_width,
+                        orig_unit_condition_data.numTrials.get(unit_id).get(condition_id));
+                // Compute average baseline frequency
+                var mean_baseline_spike_density=d3.mean(baseline_spike_density, function(d){ return d.y; });
+                // Subtract mean baseline from spike density
+                for(var idx=0; idx<spike_density.length; idx++)
+                    spike_density[idx]={x: spike_density[idx].x,
+                        y: spike_density[idx].y-mean_baseline_spike_density};
+            }
+            var rate=smooth_spike_density(spike_density, bin_width, kernel_width);
+            realigned_unit_condition_data.rates.get(unit_id).set(condition_id,rate);
+        }
+    }
+
+    /**
+     * For current cluster - normalize each unit's firing rate across conditions, average unit firing rates within each condition,
+     * get event times
+     */
+    if(current_cluster_idx>-1)
+    {
+        var cluster=results.unit_clusters[current_cluster_idx];
+
+        // Set types of events for this factor
+        cluster_data.event_types.set(current_cluster_idx, get_all_event_types(get_event_types()));
+
+        // Reset factor trial events and mean firing rates
+        cluster_data.events.set(current_cluster_idx, new Map());
+        cluster_data.mean_rates.set(current_cluster_idx, new Map());
+
+        // Mapping from unit ID to condition ID to firing rate
+        var unit_condition_rates=new Map();
+
+        // For each condition
+        for (let condition_id of conditions.keys())
+        {
+            cluster_data.events.get(current_cluster_idx).set(condition_id, []);
+
+            // For each unit
+            for (let unit_id of current_unit_ids)
+            {
+                // Get this unit's events in this condition
+                var unit_evts = realigned_unit_condition_data.events.get(unit_id).get(condition_id);
+
+                // For each unit event
+                for (let evt of unit_evts)
+                {
+                    // If this factor includes this type of event (TODO:?)
+                    if (cluster_data.event_types.get(current_cluster_idx).indexOf(evt.name) > -1)
+                    {
+                        // Add to list of fevents
+                        cluster_data.events.get(current_cluster_idx).get(condition_id).push(evt);
+                    }
+                }
+
+                // Initialize
+                if(!unit_condition_rates.has(unit_id))
+                    unit_condition_rates.set(unit_id, new Map());
+                unit_condition_rates.get(unit_id).set(condition_id, realigned_unit_condition_data.rates.get(unit_id).get(condition_id));
+            }
+        }
+
+        // Mapping from unit ID to normalized firing rate
+        var unit_norm_rates=new Map();
+        for(let unit_id of current_unit_ids)
+        {
+            var unit_condition_peak_rates=[];
+            for(let condition_id of unit_condition_rates.get(unit_id).keys())
+            {
+                unit_condition_peak_rates.push(d3.max(unit_condition_rates.get(unit_id).get(condition_id), function(d){return d.y}));
+            }
+
+            var unit_max_rate=d3.max(unit_condition_peak_rates);
+            for(let condition_id of unit_condition_rates.get(unit_id).keys())
+            {
+                if(!unit_norm_rates.has(condition_id))
+                    unit_norm_rates.set(condition_id, []);
+
+                var unit_condition_rate=unit_condition_rates.get(unit_id).get(condition_id);
+                unit_norm_rates.get(condition_id).push(normalize_unit_rate(unit_condition_rate, unit_max_rate));
+            }
+        }
+
+        for(let condition_id of unit_norm_rates.keys())
+        {
+            var condition_mean_rate=mean_firing_rate(unit_norm_rates.get(condition_id), realigned_times);
+            cluster_data.mean_rates.get(current_cluster_idx).set(condition_id, condition_mean_rate);
+        }
+    }
+
+    /**
+     * Get list of all event types for given factor - all event types in all conditions, all units
+     * @param factor
+     * @return {Array}
+     */
+    function get_event_types()
+    {
+        var evt_types = [];
+        for (let condition_id of conditions.keys())
+        {
+            for (let unit_id of current_unit_ids)
+            {
+                if (realigned_unit_condition_data.events.get(unit_id).has(condition_id))
+                {
+                    var unit_evts = realigned_unit_condition_data.events.get(unit_id).get(condition_id);
+                    for (let evt of unit_evts)
+                    {
+                        if (evt_types.indexOf(evt.name) < 0)
+                            evt_types.push(evt.name);
+                    }
+                }
+            }
+        }
+        return evt_types;
+    }
+
+    function get_all_event_types(evt_types)
+    {
+        var all_evt_types = [];
+        for (let evt_type of evt_types)
+        {
+            var all_have = true;
+            for (let condition_id of conditions.keys())
+            {
+                for (let unit_id of current_unit_ids)
+                {
+                    if (realigned_unit_condition_data.events.get(unit_id).has(condition_id))
+                    {
+                        var unit_evts = realigned_unit_condition_data.events.get(unit_id).get(condition_id);
+                        for (let evt of unit_evts)
+                        {
+                            if (evt.name == evt_type) {
+                                has_evt = true;
+                                break
+                            }
+                        }
+                    }
+                    if (has_evt)
+                        break
+                }
+                if (has_evt)
+                    break
+            }
+            if (!has_evt) {
+                all_have = false;
+                break
+            }
+            if (all_have)
+                all_evt_types.push(evt_type);
+        }
+        return all_evt_types;
+    }
+
+}
+
+function plotCluster()
+{
+    var parent_id="analysis_results-"+results.id+"-mean_rate";
+    $('#'+parent_id).empty();
+    plots.cluster=null;
+    if(current_cluster_idx>-1)
+    {
+        var cluster_parent_id='analysis_results-'+results.id+'-cluster-'+current_cluster_idx+'-mean_rate';
+        var cluster_legend_id='analysis_results-'+results.id+'-cluster-'+current_cluster_idx+'_legend'
+        $('#'+parent_id).append('<div id="'+cluster_parent_id+'" style="text-align:center"><h3>Cluster '+(current_cluster_idx+1)+'</h3></div>');
+        $('#'+parent_id).append('<div id="analysis_results-'+results.id+'-cluster-'+current_cluster_idx+'_legend" class="legend"></div>');
+        plots.cluster=drawMeanNormalizedFiringRates(cluster_parent_id, cluster_legend_id, cluster_data.mean_rates.get(current_cluster_idx),
+                cluster_data.events.get(current_cluster_idx), cluster_data.event_types.get(current_cluster_idx),
+                conditions, 0.5);
+    }
+    plots.unit=new Map();
+    for(let unit_id of current_unit_ids)
+    {
+        $('#unit-'+unit_id+'-plots').empty();
+        $('#unit-'+unit_id+'-plots_legend').empty();
+        var rate_svg=drawPopulationFiringRate('unit-'+unit_id+'-plots', 'unit-'+unit_id+'-plots_legend',
+                realigned_unit_condition_data.rates.get(unit_id), realigned_unit_condition_data.events.get(unit_id),
+                event_types, conditions, 0.5);
+        plots.unit.set(unit_id, rate_svg);
+    }
+}
+
+function update_plot()
+{
+    update_firing_rates();
+    if(plots.cluster!=null)
+    {
+        plots.cluster.update(cluster_data.mean_rates.get(current_cluster_idx), cluster_data.events.get(current_cluster_idx));
+
+    }
+    for(let unit_id of current_unit_ids)
+    {
+        plots.unit.get(unit_id).update(realigned_unit_condition_data.rates.get(unit_id), realigned_unit_condition_data.events.get(unit_id));
+    }
+}
+
+</script>
+{% endblock %}
+{% block content %}
+<div class="analysis_results_info"></div>
+<h2>Unit Analysis Results</h2>
+<div class="unit_analysis_results_list"></div>
+{% include "sensorimotordb/analysis/cluster_analysis/cluster_unit_analysis_results_list_item_template.html" %}
+{% include "sensorimotordb/analysis/cluster_analysis/cluster_analysis_results_template.html" %}
+{% endblock %}
+	

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block extrahead %}
+<title>SensoriMotorDB - Create Cluster Analysis</title>
+{% endblock %}
+{% block content %}
+<h2>New Cluster Analysis</h2>
+<form id="analysisForm" method="post" action="" enctype="multipart/form-data">
+    {{ form.management_form }}
+    {% csrf_token %}
+    <table>
+        <tr>
+            <td>
+                <strong>{{ form.name.label_tag }}</strong>
+            </td>
+            <td colspan="3">
+                {{ form.name }}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <strong>{{ form.description.label_tag }}</strong>
+            </td>
+            <td colspan="3">
+                {{ form.description }}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <strong>{{ form.mds_type.label_tag }}</strong>
+            </td>
+            <td colspan="3">{{ form.mds_type }}</td>
+        </tr>
+    </table>
+    <input type="submit" value="Next" />
+</form>
+{% endblock %}

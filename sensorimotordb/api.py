@@ -15,7 +15,7 @@ from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial,
     ClassificationAnalysis, UnitClassificationCondition, ANOVAComparison, ANOVAPairwiseComparison,\
     ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, \
     ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, \
-    ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings, Subject
+    ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings, Subject, ClusterAnalysisResults, UnitClusterProjection, ClusterAnalysisSettings, TimeWindowConditionSettings, UnitCluster
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -538,7 +538,7 @@ class TimeWindowFactorLevelSettingsResource(ModelResource):
     level=fields.ToOneField(ANOVAFactorLevelResource, 'level')
     class Meta:
         queryset=TimeWindowFactorLevelSettings.objects.all()
-        resource_name='classification_analysis_results_level_mapping'
+        resource_name='time_window_factor_level_settings'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
@@ -557,6 +557,10 @@ class AnalysisSettingsResource(ModelResource):
             results_res = ClassificationAnalysisSettingsResource()
             results_bundle = results_res.build_bundle(obj=ClassificationAnalysisSettings.objects.get(id=bundle.obj.id), request=bundle.request)
             bundle.data = results_res.full_dehydrate(results_bundle).data
+        elif ClusterAnalysisSettings.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ClusterAnalysisSettings):
+            results_res = ClusterAnalysisSettingsResource()
+            results_bundle = results_res.build_bundle(obj=ClusterAnalysisSettings.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = results_res.full_dehydrate(results_bundle).data
         return bundle
 
 
@@ -566,6 +570,26 @@ class ClassificationAnalysisSettingsResource(AnalysisSettingsResource):
     class Meta:
         queryset=ClassificationAnalysisSettings.objects.all()
         resource_name='classification_analysis_settings'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
+class TimeWindowConditionSettingsResource(ModelResource):
+    condition=fields.ToOneField(BasicConditionResource, 'condition', full=True)
+    class Meta:
+        queryset=TimeWindowConditionSettings.objects.all()
+        resource_name='time_window_condition_settings'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
+class ClusterAnalysisSettingsResource(AnalysisSettingsResource):
+    time_window_condition_settings = fields.ToManyField(TimeWindowConditionSettingsResource, 'time_window_condition_settings', related_name='time_window_condition_settings', full=True)
+    class Meta:
+        queryset=ClusterAnalysisSettings.objects.all()
+        resource_name='cluster_analysis_settings'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
@@ -590,6 +614,10 @@ class AnalysisResultsResource(ModelResource):
         if ClassificationAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ClassificationAnalysisResults):
             results_res = ClassificationAnalysisResultsResource()
             results_bundle = results_res.build_bundle(obj=ClassificationAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
+            bundle.data = results_res.full_dehydrate(results_bundle).data
+        elif ClusterAnalysisResults.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ClusterAnalysisResults):
+            results_res = ClusterAnalysisResultsResource()
+            results_bundle = results_res.build_bundle(obj=ClusterAnalysisResults.objects.get(id=bundle.obj.id), request=bundle.request)
             bundle.data = results_res.full_dehydrate(results_bundle).data
         return bundle
 
@@ -618,3 +646,45 @@ class UnitAnalysisResultsResource(ModelResource):
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
 
+
+class ClusterAnalysisResultsResource(AnalysisResultsResource):
+    unit_clusters=fields.ToManyField('sensorimotordb.api.UnitClusterResource', 'unit_clusters', related_name='unit_clusters',full=True)
+    class Meta:
+        queryset=ClusterAnalysisResults.objects.all().select_related('analysis','experiment').prefetch_related('unit_clusters')
+        resource_name='cluster_analysis_results'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        filtering={
+            'analysis': ALL_WITH_RELATIONS,
+            'experiment': ALL_WITH_RELATIONS,
+            }
+        cache = SimpleCache(timeout=10)
+
+
+class UnitClusterResource(ModelResource):
+    units=fields.ToManyField(UnitResource, 'units', full=True)
+    cluster_projection=fields.ToManyField('sensorimotordb.api.UnitClusterProjectionResource', 'cluster_projections', full=True)
+    class Meta:
+        queryset=UnitCluster.objects.all().prefetch_related('units')
+        resource_name='unit_cluster'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        filtering={
+            'analysis': ALL_WITH_RELATIONS,
+            'experiment': ALL_WITH_RELATIONS,
+            }
+        cache = SimpleCache(timeout=10)
+
+
+class UnitClusterProjectionResource(ModelResource):
+    unit=fields.ToOneField(UnitResource, 'unit')
+    class Meta:
+        queryset=UnitClusterProjection.objects.all().select_related('unit')
+        resource_name='unit_cluster_projection'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        filtering={
+            'analysis': ALL_WITH_RELATIONS,
+            'experiment': ALL_WITH_RELATIONS,
+            }
+        cache = SimpleCache(timeout=10)

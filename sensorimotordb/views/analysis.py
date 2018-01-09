@@ -4,8 +4,8 @@ from django.views.generic import DetailView, CreateView, TemplateView
 from django.views.generic.detail import BaseDetailView
 from formtools.wizard.views import SessionWizardView
 from tastypie.models import ApiKey
-from sensorimotordb.forms import ClassificationAnalysisForm, ClassificationAnalysisBaseForm, UnitClassificationTypeConditionFormSet, ANOVAForm, ANOVAFactorLevelFormSet, ClassificationAnalysisResultsForm, ClassificationAnalysisStep2Form
-from sensorimotordb.models import AnalysisResults, ClassificationAnalysis, ANOVA, ANOVAComparison, UnitClassificationType, Analysis, ANOVAFactor, ANOVAEffect, ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, ANOVAFactorLevel, UnitClassificationCondition, Condition, Event, ClassificationAnalysisResultsLevelMapping, ClassificationAnalysisResults, Experiment, ClassificationAnalysisSettings, TimeWindowFactorLevelSettings, UnitClassification, UnitAnalysisResults, AnalysisSettings, ANOVAPairwiseComparison
+from sensorimotordb.forms import ClassificationAnalysisForm, ClassificationAnalysisBaseForm, UnitClassificationTypeConditionFormSet, ANOVAForm, ANOVAFactorLevelFormSet, ClassificationAnalysisResultsForm, ClassificationAnalysisStep2Form, ClusterAnalysisForm, ClusterAnalysisResultsForm
+from sensorimotordb.models import AnalysisResults, ClassificationAnalysis, ANOVA, ANOVAComparison, UnitClassificationType, Analysis, ANOVAFactor, ANOVAEffect, ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, ANOVAFactorLevel, UnitClassificationCondition, Condition, Event, ClassificationAnalysisResultsLevelMapping, ClassificationAnalysisResults, Experiment, ClassificationAnalysisSettings, TimeWindowFactorLevelSettings, UnitClassification, UnitAnalysisResults, AnalysisSettings, ANOVAPairwiseComparison, ClusterAnalysis, ClusterAnalysisResults, ClusterAnalysisSettings, TimeWindowConditionSettings
 from sensorimotordb.views import LoginRequiredMixin, JSONResponseMixin
 from uscbp import settings
 
@@ -15,6 +15,7 @@ class AnalysisListDetailView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = TemplateView.get_context_data(self, **kwargs)
         context['classification_analyses']=ClassificationAnalysis.objects.all()
+        context['cluster_analyses']=ClusterAnalysis.objects.all()
         return context
 
 
@@ -386,6 +387,38 @@ class DeleteUnitClassificationTypeView(JSONResponseMixin, BaseDetailView):
         return context
 
 
+class CreateClusterAnalysisView(LoginRequiredMixin,CreateView):
+    model = ClusterAnalysis
+    template_name = 'sensorimotordb/analysis/cluster_analysis/cluster_analysis_create.html'
+    form_class = ClusterAnalysisForm
+
+    def get_context_data(self, **kwargs):
+        context_data=super(CreateClusterAnalysisView,self).get_context_data(**kwargs)
+        return context_data
+
+    def get_initial(self):
+        initial_data={}
+        return initial_data
+
+    def form_valid(self, form):
+        """
+        If the form is valid, save the associated model.
+        """
+        context=self.get_context_data()
+
+        self.object=form.save()
+        return redirect('/sensorimotordb/cluster_analysis/%d/' % self.object.id)
+
+
+class ClusterAnalysisDetailView(LoginRequiredMixin, DetailView):
+    model = ClusterAnalysis
+    template_name = 'sensorimotordb/analysis/cluster_analysis/cluster_analysis_view.html'
+
+    def get_context_data(self, **kwargs):
+        context=super(ClusterAnalysisDetailView,self).get_context_data(**kwargs)
+        return context
+
+
 class RunAnalysisView(LoginRequiredMixin, DetailView):
     model=Analysis
 
@@ -393,6 +426,8 @@ class RunAnalysisView(LoginRequiredMixin, DetailView):
         id=self.kwargs.get('pk', None)
         if ClassificationAnalysis.objects.filter(id=id).exists():
             return redirect('/sensorimotordb/classification_analysis/%s/run/?%s' % (id, '&'.join(['%s=%s' % (x,str(request.GET[x])) for x in request.GET])))
+        elif ClusterAnalysis.objects.filter(id=id).exists():
+            return redirect('/sensorimotordb/cluster_analysis/%s/run/?%s' % (id, '&'.join(['%s=%s' % (x,str(request.GET[x])) for x in request.GET])))
 
 
 class RunClassificationAnalysisView(LoginRequiredMixin, CreateView):
@@ -455,6 +490,72 @@ class RunClassificationAnalysisView(LoginRequiredMixin, CreateView):
         return redirect('/sensorimotordb/analysis_results/%d/' % self.object.id)
 
 
+class RunClusterAnalysisView(LoginRequiredMixin, CreateView):
+    model = ClusterAnalysisResults
+    form_class = ClusterAnalysisResultsForm
+    template_name = 'sensorimotordb/analysis/cluster_analysis/cluster_analysis_run.html'
+
+    def get_context_data(self, **kwargs):
+        context=CreateView.get_context_data(self, **kwargs)
+        context['analysis']=Analysis.objects.get_subclass(id=self.kwargs.get('pk',None))
+        context['experiment']=Experiment.objects.get(id=self.request.GET.get('experiment',None))
+        context['conditions']=Condition.objects.filter(experiment=context['experiment'])
+        context['events']=Event.objects.filter(trial__condition__experiment__id=self.request.GET.get('experiment',None)).values_list('name',flat=True).distinct()
+        return context
+
+    def get_initial(self):
+        initial_data=CreateView.get_initial(self)
+        experiment_id=self.request.GET.get('experiment',None)
+        if experiment_id is not None:
+            initial_data['experiment']=Experiment.objects.get(id=experiment_id)
+        analysis_id=self.kwargs.get('pk',None)
+        if analysis_id is not None:
+            initial_data['analysis']=Analysis.objects.get(id=analysis_id)
+        return initial_data
+
+    def form_valid(self, form):
+        context=self.get_context_data()
+        analysis=context['analysis']
+        self.object=form.save()
+
+        settings=ClusterAnalysisSettings(analysis=analysis, num_clusters=int(self.request.POST['num_clusters']),
+            bin_width=int(self.request.POST['bin_width']), kernel_width=int(self.request.POST['kernel_width']))
+        settings.save()
+
+        self.object.analysis_settings=settings
+        self.object.save()
+
+        num_conditions=int(self.request.POST['conditions-TOTAL_FORMS'])
+
+        for idx in range(num_conditions):
+            condition_id=int(self.request.POST['condition_%d-condition' % idx])
+            time_window_condition_settings=TimeWindowConditionSettings(analysis_settings=settings,
+                condition=Condition.objects.get(id=condition_id))
+
+            time_window_condition_settings.rel_evt=self.request.POST['condition_%d_rel_event' % idx]
+            rel_start=self.request.POST['condition_%d_rel_start' % idx]
+            if len(rel_start):
+                time_window_condition_settings.rel_start=int(rel_start)
+            rel_end=self.request.POST['condition_%d_rel_end' % idx]
+            if len(rel_end):
+                time_window_condition_settings.rel_end=int(rel_end)
+            time_window_condition_settings.rel_end_evt=self.request.POST['condition_%d_rel_end_event' % idx]
+
+            time_window_condition_settings.baseline_evt=self.request.POST['condition_%d_baseline_event' % idx]
+            baseline_start=self.request.POST['condition_%d_baseline_start' % idx]
+            if len(baseline_start):
+                time_window_condition_settings.baseline_start=int(baseline_start)
+            baseline_end=self.request.POST['condition_%d_baseline_end' % idx]
+            if len(baseline_end):
+                time_window_condition_settings.baseline_end=int(baseline_end)
+            time_window_condition_settings.baseline_end_evt=self.request.POST['condition_%d_baseline_end_event' % idx]
+
+            time_window_condition_settings.save()
+        analysis.run(self.object, settings)
+
+        return redirect('/sensorimotordb/analysis_results/%d/' % self.object.id)
+
+
 class AnalysisResultsDetailView(LoginRequiredMixin, DetailView):
     model=AnalysisResults
 
@@ -462,6 +563,8 @@ class AnalysisResultsDetailView(LoginRequiredMixin, DetailView):
         id=self.kwargs.get('pk', None)
         if ClassificationAnalysisResults.objects.filter(id=id).exists():
             return redirect('/sensorimotordb/classification_analysis_results/%s/' % id)
+        elif ClusterAnalysisResults.objects.filter(id=id).exists():
+            return redirect('/sensorimotordb/cluster_analysis_results/%s/' % id)
 
 
 class DeleteAnalysisResultsView(JSONResponseMixin,BaseDetailView):
@@ -494,4 +597,18 @@ class ClassificationAnalysisResultsDetailView(AnalysisResultsDetailView):
         context['bodb_server']=settings.BODB_SERVER
         context['api_key']=ApiKey.objects.get(user=self.request.user).key
         context['username']=self.request.user.username
+        return context
+
+
+class ClusterAnalysisResultsDetailView(AnalysisResultsDetailView):
+    model=ClusterAnalysisResults
+    template_name = 'sensorimotordb/analysis/cluster_analysis/cluster_analysis_results_view.html'
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        context = AnalysisResultsDetailView.get_context_data(self, **kwargs)
         return context

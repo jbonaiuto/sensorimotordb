@@ -1360,8 +1360,11 @@ def import_social_goal_data(db='default'):
                                 for evt_time in seg.eventarrays[evt_idx].times:
                                     if trial.start_time <= evt_time < trial.end_time:
                                         # create trial events
-                                        new_event=Event(name=event, description='', trial=trial, time=evt_time.rescale('s').magnitude.item(0))
-                                        new_event.save(using=db)
+                                        if not Event.objects.filter(name=event, description='', trial=trial,
+                                            time=evt_time.rescale('s').magnitude.item(0)).exists():
+                                            new_event=Event(name=event, description='', trial=trial,
+                                                time=evt_time.rescale('s').magnitude.item(0))
+                                            new_event.save(using=db)
 
                             condition_name=None
                             if Event.objects.using(db).filter(name='mo1MotorContainer',trial=trial).count():

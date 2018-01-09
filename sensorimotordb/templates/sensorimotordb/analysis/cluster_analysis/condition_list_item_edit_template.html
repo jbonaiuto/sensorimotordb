@@ -1,0 +1,129 @@
+<script type="text/html" id="condition-template">
+    <div id="id_condition-<%= idx %>" class="<%= getTRTag(idx) %>">
+        <input id="id_condition-<%= idx %>-DELETE" name="condition-<%= idx %>-DELETE" type="hidden" />
+        <input id="id_condition-<%= idx %>-id" name="condition-<%= idx %>-id" type="hidden" />
+        <table>
+            <tbody id="id_condition-<%= idx %>_table">
+            <tr>
+                <td><strong>Condition:</strong></td>
+                <td colspan="3">
+                    <select id="id_condition_<%= idx %>-condition" name="condition_<%= idx %>-condition">
+                        <% for(var cond_idx=0; cond_idx<conditions.length; cond_idx++) { %>
+                            <option value="<%= conditions[cond_idx].id %>"><%= conditions[cond_idx].name %></option>
+                        <% } %>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    <div id="analysis_condition_<%= idx %>_woi_picker" style="text-align:center"></div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <strong>Relative event</strong>
+                </td>
+                <td>
+                    <select id="id_condition_<%= idx %>_rel_event" name="condition_<%= idx %>_rel_event">
+                        {% for event in events %}
+                        <option value="{{ event }}">{{ event }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    WOI type
+                </td>
+                <td>
+                    <select id="id_condition_<%= idx %>_rel_type" name="condition_<%= idx %>_rel_type" onchange="setWOIRelType(<%= idx %>)">
+                        <option value="fixed" selected>Fixed duration</option>
+                        <option value="relative">Relative duration</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="condition_woi_<%= idx %>_fixed">
+                        Start (ms)
+                    </div>
+                    <div class="condition_woi_<%= idx %>_relative" style="display: none;">
+                        End event
+                    </div>
+                </td>
+                <td>
+                    <div class="condition_woi_<%= idx %>_fixed">
+                        <input id="id_condition_<%= idx %>_rel_start" name="condition_<%= idx %>_rel_start"/>
+                    </div>
+                    <div class="condition_woi_<%= idx %>_relative" style="display: none;">
+                        <select id="id_condition_<%= idx %>_rel_end_event" name="condition_<%= idx %>_rel_end_event">
+                            <option value=""></option>
+                            {% for event in events %}
+                            <option value="{{ event }}">{{ event }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </td>
+                <td>
+                    <div class="condition_woi_<%= idx %>_fixed">End (ms)</div>
+                </td>
+                <td>
+                    <div class="condition_woi_<%= idx %>_fixed">
+                        <input id="id_condition_<%= idx %>_rel_end" name="condition_<%= idx %>_rel_end"/>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <strong>Baseline relative event</strong>
+                </td>
+                <td>
+                    <select id="id_condition_<%= idx %>_baseline_event" name="condition_<%= idx %>_baseline_event">
+                        {% for event in events %}
+                        <option value="{{ event }}">{{ event }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    WOI type
+                </td>
+                <td>
+                    <select id="id_condition_<%= idx %>_baseline_type" name="condition_<%= idx %>_baseline_type" onchange="setBaselineRelType(<%= idx %>)">
+                        <option value="fixed" selected>Fixed duration</option>
+                        <option value="relative">Relative duration</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="condition_baseline_<%= idx %>_fixed">
+                        Baseline start (ms)
+                    </div>
+                    <div class="condition_baseline_<%= idx %>_relative" style="display: none;">
+                        Baseline end event
+                    </div>
+                </td>
+                <td>
+                    <div class="condition_baseline_<%= idx %>_fixed">
+                        <input id="id_condition_<%= idx %>_baseline_start" name="condition_<%= idx %>_baseline_start"/>
+                    </div>
+                    <div class="condition_baseline_<%= idx %>_relative" style="display: none;">
+                        <select id="id_condition_<%= idx %>_baseline_end_event" name="condition_<%= idx %>_baseline_end_event">
+                            <option value=""></option>
+                            {% for event in events %}
+                            <option value="{{ event }}">{{ event }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </td>
+                <td>
+                    <div class="condition_baseline_<%= idx %>_fixed">Baseline end (ms)</div>
+                </td>
+                <td>
+                    <div class="condition_baseline_<%= idx %>_fixed">
+                        <input id="id_condition_<%= idx %>_baseline_end" name="condition_<%= idx %>_baseline_end"/>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</script>

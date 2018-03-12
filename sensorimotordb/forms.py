@@ -5,7 +5,8 @@ from registration.forms import RegistrationForm
 from registration.users import UsernameField
 from sensorimotordb.models import ExperimentExportRequest, Experiment, Analysis, GraspObservationCondition, \
     GraspPerformanceCondition, ClassificationAnalysis, ANOVA, ANOVAFactor, ANOVAFactorLevel, UnitClassificationType, \
-    UnitClassificationCondition, ANOVAComparison, ClassificationAnalysisResults, ClassificationAnalysisSettings, ClusterAnalysis, ClusterAnalysisSettings, ClusterAnalysisResults
+    UnitClassificationCondition, ANOVAComparison, ClassificationAnalysisResults, ClassificationAnalysisSettings, \
+    ClusterAnalysis, ClusterAnalysisSettings, ClusterAnalysisResults, Species, Condition, GraspCondition
 from uscbp.nested_formset import nestedformset_factory
 
 

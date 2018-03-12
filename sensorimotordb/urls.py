@@ -9,13 +9,18 @@ from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionReso
     ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, \
     ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource, SubjectResource, ClusterAnalysisResultsResource
 from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, \
-    ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, \
-    DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, CreateANOVAView, ANOVADetailView, \
-    DeleteANOVAView, ClassificationAnalysisDetailView, DeleteUnitClassificationConditionView, DeleteUnitClassificationTypeView, \
+    ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, \
+    ExperimentExportView, \
+    DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, CreateANOVAView, \
+    ANOVADetailView, \
+    DeleteANOVAView, ClassificationAnalysisDetailView, DeleteUnitClassificationConditionView, \
+    DeleteUnitClassificationTypeView, \
     CreateUnitClassificationTypeView, UpdateUnitClassificationTypeView, CreateClassificationAnalysisWizardView, \
     CLASSIFICATION_ANALYSIS_WIZARD_FORMS, AnalysisListDetailView, DeleteClassificationAnalysisView, RunAnalysisView, \
-    RunClassificationAnalysisView, DeleteAnalysisResultsView, AnalysisResultsDetailView, ClassificationAnalysisResultsDetailView, \
-    ImportView, ExperimentImportView
+    RunClassificationAnalysisView, DeleteAnalysisResultsView, AnalysisResultsDetailView, \
+    ClassificationAnalysisResultsDetailView, \
+    ImportView, ExperimentImportView, ClusterAnalysisDetailView, RunClusterAnalysisView, CreateClusterAnalysisView, \
+    ClusterAnalysisResultsDetailView
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())

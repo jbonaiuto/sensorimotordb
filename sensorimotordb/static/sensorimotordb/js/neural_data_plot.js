@@ -107,7 +107,7 @@ function drawRaster(parent_id, trial_spikes, trial_events, event_types)
         .attr("transform", "rotate(-90)")
         .text("Trial");
 
-    origin_transform.update=function update(realigned_spikes, realigned_trial_events)
+    raster_svg.update=function update(realigned_spikes, realigned_trial_events)
     {
         data.spikes=realigned_spikes;
         data.events=realigned_trial_events;
@@ -285,7 +285,7 @@ function drawHistogram(parent_id, trial_spikes, trial_events, event_types)
     var old_binwidth = binwidth;
     var old_xBinwidth = xBinwidth;
 
-    origin_transform.update=function update(realigned_spikes, realigned_trial_events)
+    histo_svg.update=function update(realigned_spikes, realigned_trial_events)
     {
         data.spikes=realigned_spikes;
         data.events=realigned_trial_events;
@@ -550,7 +550,7 @@ function drawFiringRate(parent_id, trial_rate, trial_events, event_types)
         focus.select("text").text(d.y.toFixed(2)+'Hz');
     }
 
-    origin_transform.update=function update(realigned_rate, realigned_trial_events)
+    rate_svg.update=function update(realigned_rate, realigned_trial_events)
     {
         data.rate=realigned_rate;
         data.events=realigned_trial_events;
@@ -859,7 +859,7 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trial_rates, group
         focus.select("text").text(min_y_d.y.toFixed(2)+'Hz');
     }
 
-    origin_transform.update=function update(realigned_rates, realigned_trial_events)
+    rate_svg.update=function update(realigned_rates, realigned_trial_events)
     {
         group_data.rates=realigned_rates;
         group_data.events=realigned_trial_events
@@ -946,7 +946,7 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trial_rates, group
 
     };
 
-    dispatch.on("realigned.rate.population."+parent_id, origin_transform.update);
+    dispatch.on("realigned.rate.population."+parent_id, rate_svg.update);
 
     d3.select("#"+parent_id+"_generate")
         .on("click", writeDownloadLink);
@@ -1236,7 +1236,7 @@ function drawMeanNormalizedFiringRates(parent_id, legend_id, group_mean_rates, g
         focus.select("text").text(min_y_d.y.toFixed(2)+'Hz');
     }
 
-    origin_transform.update=function update(realigned_mean_rates, realigned_trial_events)
+    rate_svg.update=function update(realigned_mean_rates, realigned_trial_events)
     {
         group_data.rates=realigned_mean_rates;
         group_data.events=realigned_trial_events;
@@ -1351,6 +1351,6 @@ function drawMeanNormalizedFiringRates(parent_id, legend_id, group_mean_rates, g
 
     };
 
-    dispatch.on("realigned.rate.population."+parent_id, origin_transform.update);
+    dispatch.on("realigned.rate.population."+parent_id, rate_svg.update);
     return rate_svg;
 }

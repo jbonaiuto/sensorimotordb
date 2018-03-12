@@ -7,6 +7,8 @@
 <script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/d3.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/FileSaver.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/jszip.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_functions.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_plot.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/video-js/video.dev.js' %}"></script>
@@ -271,6 +273,44 @@
                 var rate_svg=drawFiringRate('unit-'+unit_id+'-plots', realigned_unit_data.rate.get(unit_id),
                         realigned_unit_data.events.get(unit_id), event_types);
                 plots.unit_rate.set(unit_id, rate_svg);
+
+                d3.select("#unit-"+unit_id+"-plots_generate")
+                    .on("click", writeDownloadLink);
+
+                function writeDownloadLink(){
+                    try {
+                        var isFileSaverSupported = !!new Blob();
+                    } catch (e) {
+                        alert("blob not supported");
+                    }
+
+                    var raster_html = raster_svg
+                        .attr("title", "test2")
+                        .attr("version", 1.1)
+                        .attr("xmlns", "http://www.w3.org/2000/svg")
+                        .node().outerHTML;
+
+                    var histo_html = histo_svg
+                        .attr("title", "test2")
+                        .attr("version", 1.1)
+                        .attr("xmlns", "http://www.w3.org/2000/svg")
+                        .node().outerHTML;
+
+                    var rate_html = rate_svg
+                        .attr("title", "test2")
+                        .attr("version", 1.1)
+                        .attr("xmlns", "http://www.w3.org/2000/svg")
+                        .node().outerHTML;
+
+                    var zip=new JSZip();
+                    zip.file("unit-"+unit_id+"_raster.svg",raster_html);
+                    zip.file("unit-"+unit_id+"_histogram.svg",histo_html);
+                    zip.file("unit-"+unit_id+"_rate.svg",rate_html);
+                    zip.generateAsync({type:"blob"})
+                        .then(function(content) {
+                            saveAs(content, "condition-{{ object.id }}.zip");
+                        });
+                };
             }
 
             // Create condition plot

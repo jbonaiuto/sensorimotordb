@@ -725,10 +725,10 @@ function update_firing_rates()
             realigned_unit_condition_data.events.get(unit_id).set(condition_id, realigned_unit_trial_events);
 
             // Add min/max event times to min/max times array
-            min_times.push(d3.min(realigned_unit_trial_events, function(d) { return d.t; }));
-            min_times.push(d3.min(realigned_unit_condition_data.spikes.get(unit_id), function(d) { return d.x; }));
-            max_times.push(d3.max(realigned_unit_trial_events, function(d) { return d.t; }));
-            max_times.push(d3.max(realigned_unit_condition_data.spikes.get(unit_id), function(d) { return d.x; }));
+            min_times.push(d3.min(realigned_unit_condition_data.events.get(unit_id).get(condition_id), function(d) { return d.t; }));
+            min_times.push(d3.min(realigned_unit_condition_data.spikes.get(unit_id).get(condition_id), function(d) { return d.x; }));
+            max_times.push(d3.max(realigned_unit_condition_data.events.get(unit_id).get(condition_id), function(d) { return d.t; }));
+            max_times.push(d3.max(realigned_unit_condition_data.spikes.get(unit_id).get(condition_id), function(d) { return d.x; }));
 
             // Look for baseline times
             if(typeof baseline_setting != 'undefined')
@@ -756,9 +756,9 @@ function update_firing_rates()
 
     // Compute realigned time bins - common set of bins from min to max time for spike density calculation
     //var min_time=d3.mean(min_times)-100;
-    var min_time=d3.min(min_times)-100;
+    var min_time=d3.min(min_times);//-100;
     //var max_time=d3.mean(max_times)+100;
-    var max_time=d3.max(max_times)+100;
+    var max_time=d3.max(max_times);//+100;
     var xScale = d3.scale.linear().domain([min_time, max_time]);
     var bins=d3.range(xScale.domain()[0], xScale.domain()[1]+bin_width, bin_width);
     var realigned_times=d3.range(xScale.domain()[0], xScale.domain()[1], bin_width);

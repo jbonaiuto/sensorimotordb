@@ -29,6 +29,30 @@
     {
         document.location.href='/sensorimotordb/classification_analysis/new/';
     }
+
+    function deleteClusterAnalysis(id)
+    {
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/cluster_analysis/"+id+"/delete/",
+            data: data,
+            success: deletedClusterAnalysis,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+
+    function deletedClusterAnalysis(resp)
+    {
+        $('#id_cluster_analysis-'+resp.id).hide();
+    }
+
+    function addClusterAnalysis()
+    {
+        document.location.href='/sensorimotordb/cluster_analysis/new/';
+    }
 </script>
 {% endblock %}
 {% block content %}
@@ -49,6 +73,25 @@
             </td>
             <td>{{ analysis.description }}</td>
         </tr>
+    {% endfor %}
+</table>
+<h1>Cluster Analyses <input type="button" value="New" onclick="addClusterAnalysis();"></h1>
+<table>
+    <tr>
+        <td>&nbsp;</td>
+        <td><strong>Name</strong></td>
+        <td><strong>Description</strong></td>
+    </tr>
+    {% for analysis in cluster_analyses %}
+    <tr id="id_cluster_analysis-{{ analysis.id }}">
+        <td>
+            <input type="button" value="Delete" onclick="return deleteClusterAnalysis({{ analysis.id }});"/>
+        </td>
+        <td>
+            <a href="/sensorimotordb/cluster_analysis/{{ analysis.id }}/">{{ analysis.name }}</a>
+        </td>
+        <td>{{ analysis.description }}</td>
+    </tr>
     {% endfor %}
 </table>
 {% endblock %}

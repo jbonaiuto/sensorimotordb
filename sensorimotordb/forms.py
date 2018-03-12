@@ -5,8 +5,31 @@ from registration.forms import RegistrationForm
 from registration.users import UsernameField
 from sensorimotordb.models import ExperimentExportRequest, Experiment, Analysis, GraspObservationCondition, \
     GraspPerformanceCondition, ClassificationAnalysis, ANOVA, ANOVAFactor, ANOVAFactorLevel, UnitClassificationType, \
-    UnitClassificationCondition, ANOVAComparison, ClassificationAnalysisResults, ClassificationAnalysisSettings, Species, Condition, GraspCondition
+    UnitClassificationCondition, ANOVAComparison, ClassificationAnalysisResults, ClassificationAnalysisSettings, ClusterAnalysis, ClusterAnalysisSettings, ClusterAnalysisResults
 from uscbp.nested_formset import nestedformset_factory
+
+
+class ClusterAnalysisForm(ModelForm):
+    name=forms.CharField(max_length=100, required=True)
+    description=forms.CharField(widget=forms.Textarea(attrs={'cols':'57','rows':'5'}),required=True)
+    mds_type=forms.ChoiceField(choices=ClusterAnalysis.MDS_TYPE_CHOICES, required=False)
+
+    class Meta:
+        model=ClusterAnalysis
+        exclude=()
+
+
+class ClusterAnalysisResultsForm(ModelForm):
+    analysis=forms.ModelChoiceField(queryset=ClusterAnalysis.objects.all(),widget=forms.HiddenInput,required=True)
+    analysis_settings=forms.ModelChoiceField(queryset=ClusterAnalysisSettings.objects.none(),required=False)
+    experiment=forms.ModelChoiceField(queryset=Experiment.objects.all(),widget=forms.HiddenInput,required=True)
+    name=forms.CharField(max_length=100, required=True)
+    description=forms.CharField(widget=forms.Textarea(attrs={'cols':'57','rows':'5'}),required=True)
+
+    class Meta:
+        model=ClusterAnalysisResults
+        exclude=()
+
 
 class ClassificationAnalysisBaseForm(ModelForm):
     id=forms.CharField(max_length=100, required=True, widget=forms.HiddenInput)
@@ -32,6 +55,7 @@ class ClassificationAnalysisStep2Form(ModelForm):
     class Meta:
         model=ClassificationAnalysis
         exclude=('name','description')
+
 
 class ClassificationAnalysisResultsForm(ModelForm):
     analysis=forms.ModelChoiceField(queryset=ClassificationAnalysis.objects.all(),widget=forms.HiddenInput,required=True)
@@ -75,6 +99,7 @@ class ANOVAFactorLevelInlineForm(ModelForm):
 
 
 ANOVAFactorLevelFormSet = lambda *a, **kw: nestedformset_factory(ANOVA,ANOVAFactor,nested_formset=inlineformset_factory(ANOVAFactor, ANOVAFactorLevel, form=ANOVAFactorLevelInlineForm, fk_name='factor', extra=0, can_delete=True), extra=0)(*a, **kw)
+
 
 class UnitClassificationConditionInlineForm(ModelForm):
     id=forms.IntegerField(widget=forms.HiddenInput,required=False)
@@ -160,6 +185,7 @@ GraspConditionFormSet = lambda *a, **kw: inlineformset_factory(Experiment,GraspC
 
 
 class ExperimentForm(ModelForm):
+
     class Meta:
         model = Experiment
         exclude=('collator','creation_time','last_modified_time')

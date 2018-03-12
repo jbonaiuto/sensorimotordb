@@ -1260,7 +1260,8 @@ def import_social_goal_data(db='default'):
             conditions['hand'].description='The monkey was seated facing a table (60X60 cm) onto which a metallic '\
                                            'cube was placed along the monkey body midline, at 13 cm from monkey\'s '\
                                            'hand starting position. The monkey had to reach and grasp the object '\
-                                           'and then place it in the hand of the experimenter. At the beginning of each trial the monkey had to keep '\
+                                           'and then place it in the hand of the experimenter. At the beginning of ' \
+                                           'each trial the monkey had to keep '\
                                            'the right hand on a handle attached to the table for at least 1000 ms, '\
                                            'after which, a transparent barrier was removed to give the "go" signal '\
                                            'and the monkey grasped the object and placed it in the experimenter\'s hand. A juice '\
@@ -1356,8 +1357,11 @@ def import_social_goal_data(db='default'):
                                 for evt_time in seg.eventarrays[evt_idx].times:
                                     if trial.start_time <= evt_time < trial.end_time:
                                         # create trial events
-                                        new_event=Event(name=event, description='', trial=trial, time=evt_time.rescale('s').magnitude.item(0))
-                                        new_event.save(using=db)
+                                        if not Event.objects.filter(name=event, description='', trial=trial,
+                                            time=evt_time.rescale('s').magnitude.item(0)).exists():
+                                            new_event=Event(name=event, description='', trial=trial,
+                                                time=evt_time.rescale('s').magnitude.item(0))
+                                            new_event.save(using=db)
 
                             condition_name=None
                             if Event.objects.using(db).filter(name='mo1MotorContainer',trial=trial).count():

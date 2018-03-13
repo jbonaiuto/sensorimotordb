@@ -15,7 +15,7 @@ var results;
 // Unit IDs for the currently selected classification
 var current_unit_ids=[];
 
-// List of all factors from all ANOVAs
+// List of all factors
 var factors=[];
 
 // Map from conditions to condition names
@@ -91,17 +91,14 @@ function loadedAnalysisResultsData(resp)
     results=resp;
     // Mapping from level IDs to epoch names
     results.epochs={};
-    for(let anova of results.analysis.analysis_anovas)
+    for(let factor of results.analysis.analysis_factors)
     {
-        for(let factor of anova.factors)
+        factors.push(factor);
+        if(factor.type=='time window')
         {
-            factors.push(factor);
-            if(factor.type=='time window')
+            for(let level of factor.levels)
             {
-                for(let level of factor.levels)
-                {
-                    results.epochs[level.id]=level.value;
-                }
+                results.epochs[level.id]=level.value;
             }
         }
     }
@@ -165,8 +162,6 @@ function loadedAnalysisResultsData(resp)
         // Fill in unit results info
         unit_results.results_text=unit_results.results_text.replace(/\n/g,'<br>');
         unit_results.results_text=unit_results.results_text.replace(/ /g,'&nbsp;');
-        unit_results.pairwise_results_text=unit_results.pairwise_results_text.replace(/\n/g,'<br>');
-        unit_results.pairwise_results_text=unit_results.pairwise_results_text.replace(/ /g,'&nbsp;');
         $('.unit_analysis_results_list').each(function(index, element){
             unit_results.level=3;
             unit_results.idx=unit_idx;

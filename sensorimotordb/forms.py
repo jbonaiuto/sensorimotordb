@@ -6,7 +6,7 @@ from registration.users import UsernameField
 from sensorimotordb.models import ExperimentExportRequest, Experiment, GraspObservationCondition, \
     GraspPerformanceCondition, ClassificationAnalysis, Factor, FactorLevel, UnitClassificationType, \
     ClassificationAnalysisResults, ClassificationAnalysisSettings, ClusterAnalysis, ClusterAnalysisSettings, \
-    ClusterAnalysisResults, GraspCondition, Condition
+    ClusterAnalysisResults, GraspCondition, Condition, Species
 from uscbp.nested_formset import nestedformset_factory
 
 

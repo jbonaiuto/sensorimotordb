@@ -1380,8 +1380,8 @@ def import_social_goal_mirror_data(db='default'):
                     # create trial
                     trial = RecordingTrial()
                     trial.trial_number = trial_idx + 1
-                    trial.start_time = -2
-                    trial.end_time = 2
+                    trial.start_time = -3
+                    trial.end_time = 3
                     trial.condition = conditions['hand']
                     trial.save(using=db)
                     print('importing trial %d, %.3f-%.3f' % (trial_idx, trial.start_time, trial.end_time))
@@ -1419,8 +1419,8 @@ def import_social_goal_mirror_data(db='default'):
                     # create trial
                     trial = RecordingTrial()
                     trial.trial_number = trial_idx + 1
-                    trial.start_time = -2
-                    trial.end_time = 2
+                    trial.start_time = -3
+                    trial.end_time = 3
                     trial.condition = conditions['monkey']
                     trial.save(using=db)
                     print('importing trial %d, %.3f-%.3f' % (trial_idx, trial.start_time, trial.end_time))
@@ -1461,8 +1461,8 @@ def import_social_goal_mirror_data(db='default'):
                     # create trial
                     trial = RecordingTrial()
                     trial.trial_number = trial_idx + 1
-                    trial.start_time = -2
-                    trial.end_time = 2
+                    trial.start_time = -3
+                    trial.end_time = 3
                     trial.condition = conditions['container']
                     trial.save(using=db)
                     print('importing trial %d, %.3f-%.3f' % (trial_idx, trial.start_time, trial.end_time))
@@ -1499,8 +1499,8 @@ def import_social_goal_mirror_data(db='default'):
                     # create trial
                     trial = RecordingTrial()
                     trial.trial_number = trial_idx + 1
-                    trial.start_time = -2
-                    trial.end_time = 2
+                    trial.start_time = -3
+                    trial.end_time = 3
                     trial.condition = conditions['mouth']
                     trial.save(using=db)
                     print('importing trial %d, %.3f-%.3f' % (trial_idx, trial.start_time, trial.end_time))

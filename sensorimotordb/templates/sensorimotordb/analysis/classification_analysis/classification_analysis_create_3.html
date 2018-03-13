@@ -7,145 +7,277 @@
 <script type="text/javascript">
 
 
-    $(document).ready(function(){
-        $('<img src="{% static 'sensorimotordb/img/loading.gif' %}"/>');
-        $.ajax(args);
+var classification_types_tree=[];
+var classification_types_dict={};
+
+function addNewClassificationType()
+{
+    $('#id_new_classification_type_label').val('');
+    $('#id_new_classification_type').show();
+}
+
+function saveNewClassificationType()
+{
+    var label=$('#id_new_classification_type_label').val();
+
+    var data = {
+        analysis: {{ analysis.id }}, label: label, 'csrfmiddlewaretoken': '{{ csrf_token }}'
+};
+var args = {
+    type: "POST",
+    url: "/sensorimotordb/unit_classification_type/new/",
+    data: data,
+    success: createdNewClassificationType,
+    error: function(data) {
+        //alert("Something went wrong!");
+    } };
+$.ajax(args);
+}
+
+function createdNewClassificationType(resp)
+{
+    $('#id_new_classification_type').hide();
+    var tmplMarkup = $('#classification_type-template').html();
+    var data={
+        id: resp.id,
+        label: resp.label
+    };
+    var compiledTmpl = _.template(tmplMarkup, data);
+    $('#id_classification_types').append(compiledTmpl);
+    $('#id_classification_type_'+resp.id+'_parent').on('change', function() { setParent(resp.id, this.value) });
+    classification_types_dict[resp.id]=resp;
+    rebuildTree();
+    updateParentOptions();
+}
+
+function cancelNewClassificationType()
+{
+    $('#id_new_classification_type').hide();
+}
+
+function addClassificationType(type)
+{
+    classification_types_dict[type.id]=type;
+
+    if(type.parent==null)
+    {
+        var tmplMarkup = $('#classification_type-template').html();
+        var data={
+            id: type.id,
+            label: type.label
+        };
+        var compiledTmpl = _.template(tmplMarkup, data);
+        $('#id_classification_types').append(compiledTmpl);
+    }
+    else
+    {
+        var parent_id=parseInt(type.parent.split('/')[5]);
+        var tmplMarkup = $('#classification_type-template').html();
+        var data={
+            id: type.id,
+            label: type.label
+        };
+        var compiledTmpl = _.template(tmplMarkup, data);
+        $('#id_classification_type_'+parent_id+'_children').append(compiledTmpl);
+    }
+    $('#id_classification_type_'+type.id+'_parent').on('change', function() { setParent(type.id, this.value) });
+
+    for(var idx=0; idx<type.children.length; idx++)
+    {
+        var child=type.children[idx];
+        addClassificationType(child);
+    }
+}
+
+function isAncestor(node1, node2)
+{
+    for(var idx=0; idx<node1.children.length; idx++)
+    {
+        var child=node1.children[idx];
+        if(child.id==node2.id || isAncestor(child,node2))
+            return true;
+    }
+    return false;
+}
+
+function updateParentOptions()
+{
+    var classification_type_ids=Object.keys(classification_types_dict);
+    for(var node_idx=0; node_idx<classification_type_ids.length; node_idx++)
+    {
+        var classification_type_id=classification_type_ids[node_idx];
+        var classification_type=classification_types_dict[classification_type_id];
+        var parent_id=null;
+        if(classification_type.parent!=null)
+            parent_id=parseInt(classification_type.parent.split('/')[5]);
+        var parent_options=[{id:'', label: ''}];
+        for(var node2_idx=0; node2_idx<classification_type_ids.length; node2_idx++)
+        {
+            var classification_type2_id=classification_type_ids[node2_idx];
+            var classification_type2=classification_types_dict[classification_type2_id];
+            if(classification_type2_id!=classification_type_id && !isAncestor(classification_type, classification_type2))
+            {
+                parent_options.push({id: classification_type2_id, label: classification_type2.label});
+            }
+        }
+        $('#id_classification_type_'+classification_type_id+'_parent').find('option').remove();
+        for(var p_idx=0; p_idx<parent_options.length; p_idx++)
+        {
+            var parent_option=parent_options[p_idx];
+            $('#id_classification_type_'+classification_type_id+'_parent').append($('<option>', {value:parent_option.id, text:parent_option.label}).attr('selected',parseInt(parent_option.id)==parent_id));
+        }
+    }
+}
+
+function deleteClassificationType(idx, id)
+{
+    if(id.length>0)
+    {
         var data = {};
         var args = {
             type: "GET",
-            url: "/sensorimotordb/api/v1/unit_classification_type/?analysis={{ analysis.id }}&limit=0&format=json",
+            url: "/sensorimotordb/unit_classification_type/"+parseInt(id)+"/delete/?idx="+idx,
             data: data,
-            success: loadedClassificationTypes,
+            success: deletedClassificationType,
             error: function(data) {
                 //alert("Something went wrong!");
             } };
         $.ajax(args);
-    });
+    }
+    else{
+        deletedClassificationType({idx: idx, id: parseInt(id)});
+    }
+}
 
-    function loadedClassificationTypes(resp){
-        for(var idx=0; idx<resp.objects.length; idx++)
+function deletedClassificationType(resp)
+{
+    $('#id_classification_type-'+resp.idx+'-DELETE').val("1");
+    $('#id_classification_type-'+resp.idx).hide();
+}
+
+function setParent(type_id, parent_id)
+{
+    console.log(type_id+' '+parent_id)
+    var parent_uri=null;
+    if(parent_id.length>0)
+    {
+        parent_uri='/sensorimotordb/api/v1/unit_classification_type/'+parent_id+'/';
+        var compiledHTML=$('#id_classification_type_'+type_id).detach().appendTo('#id_classification_type_'+parent_id+'_children');
+    }
+    else
+        var compiledHTML=$('#id_classification_type_'+type_id).detach().appendTo('#id_classification_types');
+    classification_types_dict[type_id].parent=parent_uri;
+    rebuildTree();
+    updateParentOptions();
+}
+
+function rebuildTree()
+{
+    classification_types_tree=[];
+    types_to_add=[];
+    var classification_type_ids=Object.keys(classification_types_dict);
+    for(var node_idx=0; node_idx<classification_type_ids.length; node_idx++)
+    {
+        var classification_type_id=classification_type_ids[node_idx];
+        var classification_type=classification_types_dict[classification_type_id];
+        types_to_add.push(classification_type);
+    }
+    while(types_to_add.length>0)
+    {
+        for(var idx=0; idx<types_to_add.length; idx++)
         {
-            var type=resp.objects[idx];
-            addClassificationType(''+type.id, type.label, type.conditions);
+            var type=types_to_add[idx];
+            type.children=[];
+            var added=addToTree(type, classification_types_tree);
+            if(added)
+            {
+                types_to_add.splice(idx,1);
+                break;
+            }
         }
     }
+}
 
-    function addClassificationType(id, label, conditions)
+function addToTree(type, nodes)
+{
+    if(type.parent!=null)
     {
-        var tmplMarkup = $('#classification_type-template').html();
-        var type_idx=$('#id_classification_types').children().length;
-        var data={
-            idx: type_idx,
-            id: id,
-            label: label
+        var parent_id=parseInt(type.parent.split('/')[5]);
+        for(var idx=0; idx<nodes.length; idx++)
+        {
+            var node=nodes[idx];
+            if(node.id==parent_id)
+            {
+                node.children.push(type);
+                return true;
+            }
+            if(addToTree(type, node.children))
+                return true;
+        }
+    }
+    else
+    {
+        nodes.push(type);
+        return true;
+    }
+    return false;
+}
+
+var types_saved=0;
+function save()
+{
+    var classification_type_ids=Object.keys(classification_types_dict);
+    for(var node_idx=0; node_idx<classification_type_ids.length; node_idx++)
+    {
+        var classification_type_id=classification_type_ids[node_idx];
+        var classification_type=classification_types_dict[classification_type_id];
+        var parent_id=-1;
+        if(classification_type.parent!=null)
+            parent_id=parseInt(classification_type.parent.split('/')[5]);
+        var data = {
+            id: classification_type_id, parent: parent_id, 'csrfmiddlewaretoken': '{{ csrf_token }}'
         };
-        var compiledTmpl = _.template(tmplMarkup, data);
-        $('#id_classification_types').append(compiledTmpl);
-        $('#id_classification_type-TOTAL_FORMS').val(parseInt($('#id_classification_type-TOTAL_FORMS').val())+1);
-        if(id.length>0)
-            $('#id_classification_type-INITIAL_FORMS').val(parseInt($('#id_classification_type-INITIAL_FORMS').val())+1);
-
-        for(var cond_idx=0; cond_idx<conditions.length; cond_idx++)
-        {
-            var condition=conditions[cond_idx];
-            var comparisons=[];
-            for (var cidx=0; cidx<condition.comparisons.length; cidx++)
-                comparisons.push(condition.comparisons[cidx].id);
-            addClassificationCondition(type_idx, ''+id, ''+condition.id, comparisons)
-        }
+        var args = {
+            type: "POST",
+            url: "/sensorimotordb/unit_classification_type/"+classification_type_id+"/edit/",
+            data: data,
+            success: updatedClassificationType,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
     }
+}
 
-    function addClassificationCondition(type_idx, type_id, id, comparisons)
-    {
-        var tmplMarkup = $('#classification_condition-template').html();
-        var idx=$('#id_classification_type-'+type_idx+'_table').children().length-3;
-        var data={
-            idx: idx,
-            type_idx: type_idx,
-            type_id: type_id,
-            id: id,
-            comparisons: comparisons
-        };
-        var compiledTmpl = _.template(tmplMarkup, data);
-        $('#id_classification_type-'+type_idx+'_table').append(compiledTmpl);
-        $('#id_classification_type-'+type_idx+'-unit_classification_type_conditions-TOTAL_FORMS').val(parseInt($('#id_classification_type-'+type_idx+'-unit_classification_type_conditions-TOTAL_FORMS').val())+1);
-        if(id.length>0)
-            $('#id_classification_type-'+type_idx+'-unit_classification_type_conditions-INITIAL_FORMS').val(parseInt($('#id_classification_type-'+type_idx+'-unit_classification_type_conditions-INITIAL_FORMS').val())+1);
-    }
-
-    function deleteClassificationCondition(type_idx, idx, id)
-    {
-        if(id.length>0)
-        {
-            var data = {};
-            var args = {
-                type: "GET",
-                url: "/sensorimotordb/unit_classification_condition/"+parseInt(id)+"/delete/?type_idx="+type_idx+"&idx="+idx,
-                data: data,
-                success: deletedClassificationCondition,
-                error: function(data) {
-                    //alert("Something went wrong!");
-                } };
-            $.ajax(args);
-        }
-        else{
-            deletedClassificationCondition({type_idx: type_idx, idx: idx, id: parseInt(id)});
-        }
-    }
-
-    function deletedClassificationCondition(resp)
-    {
-        $('#id_classification_type-'+resp.type_idx+'-unit_classification_type_conditions-'+resp.idx+'-DELETE').val("1");
-        $('#id_classification_type-'+resp.type_idx+'_condition-'+resp.idx).hide();
-    }
-
-    function deleteClassificationType(idx, id)
-    {
-        if(id.length>0)
-        {
-            var data = {};
-            var args = {
-                type: "GET",
-                url: "/sensorimotordb/unit_classification_type/"+parseInt(id)+"/delete/?idx="+idx,
-                data: data,
-                success: deletedClassificationType,
-                error: function(data) {
-                    //alert("Something went wrong!");
-                } };
-            $.ajax(args);
-        }
-        else{
-            deletedClassificationType({idx: idx, id: parseInt(id)});
-        }
-    }
-
-    function deletedClassificationType(resp)
-    {
-        $('#id_classification_type-'+resp.idx+'-DELETE').val("1");
-        $('#id_classification_type-'+resp.idx).hide();
-    }
+function updatedClassificationType(resp)
+{
+    types_saved=types_saved+1;
+    var classification_type_ids=Object.keys(classification_types_dict);
+    if(types_saved==classification_type_ids.length)
+        $('#analysisForm').submit();
+}
 </script>
 {% endblock %}
 {% block content %}
-<h2>New Classification Analysis (Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}): Base-level classification types</h2>
+<h2>New Classification Analysis (Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}): Classification types</h2>
 <form id="analysisForm" method="post" action="" enctype="multipart/form-data">
     {{ wizard.management_form }}
     {% csrf_token %}
     <table>
         <tr>
             <td>
-                <strong>Name</strong>
+                <strong>{{ form.name.label_tag }}</strong>
             </td>
             <td colspan="3">
-                {{ analysis.name }}
+                {{ form.name }}
             </td>
         </tr>
         <tr>
             <td>
-                <strong>Description</strong>
+                <strong>{{ form.description.label_tag }}</strong>
             </td>
             <td colspan="3">
-                {{ analysis.description }}
+                {{ form.description }}
             </td>
         </tr>
     </table>
@@ -154,13 +286,18 @@
     <input id="id_classification_type-INITIAL_FORMS" name="classification_type-INITIAL_FORMS" type="hidden" value="0" />
     <input id="id_classification_type-MIN_NUM_FORMS" name="classification_type-MIN_NUM_FORMS" type="hidden" value="0" />
     <input id="id_classification_type-MAX_NUM_FORMS" name="classification_type-MAX_NUM_FORMS" type="hidden" value="1000" />
-    <h2>Classification Types <input type="button" onclick="return addClassificationType('','','',[]);" value="Add"/></h2>
+    <h2>Classification Types <input type="button" onclick="return addNewClassificationType();" value="Add"/></h2>
+    <div id="id_new_classification_type" style="display:none">
+        <table>
+            <tr>
+                <td><strong>Label:</strong> <input type="text" id="id_new_classification_type_label" name="new_classification_type_label"/></td>
+                <td><input type="button" value="Save" onclick="saveNewClassificationType();"/> <input type="button" value="Cancel" onclick="cancelNewClassificationType();"/>   </td>
+            </tr>
+        </table>
+    </div>
     <div id="id_classification_types">
     </div>
-    <input type="submit" value="Next" />
+    <input type="button" value="Next" onclick="save()"/>
 </form>
-{% with analysis as object %}
-    {% include "sensorimotordb/analysis/classification_analysis/classification_type_list_item_edit_template.html" %}
-{% endwith %}
-{% include "sensorimotordb/analysis/classification_analysis/classification_condition_list_item_edit_template.html" %}
+{% include "sensorimotordb/analysis/classification_analysis/classification_type_hierarchy_item_template.html" %}
 {% endblock %}

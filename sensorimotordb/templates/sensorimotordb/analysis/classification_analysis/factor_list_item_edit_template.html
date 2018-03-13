@@ -1,7 +1,7 @@
-<script type="text/html" id="anova_factor-template">
-    <div id="id_anova_factor-<%= idx %>" class="<%= getTRTag(idx) %>">
+<script type="text/html" id="factor-template">
+    <div id="id_factor-<%= idx %>" class="<%= getTRTag(idx) %>">
         <input id="id_factor-<%= idx %>-DELETE" name="factor-<%= idx %>-DELETE" type="hidden" />
-        <input id="id_factor-<%= idx %>-anova" name="factor-<%= idx %>-anova" type="hidden" value="<%= anova_id %>"/>
+        <input id="id_factor-<%= idx %>-analysis" name="factor-<%= idx %>-analysis" type="hidden" value="<%= analysis_id %>"/>
         <input id="id_factor-<%= idx %>-id" name="factor-<%= idx %>-id" type="hidden" />
         <table>
             <tr>
@@ -15,10 +15,10 @@
                 <td>&nbsp;</td>
                 <td colspan="4">
                     <h3>Levels <input type="button" onclick="return addFactorLevel(<%= idx %>);" value="Add"/></h3>
-                    <input id="id_factor-<%= idx %>-anova_factor_levels-TOTAL_FORMS" name="factor-<%= idx %>-anova_factor_levels-TOTAL_FORMS" type="hidden" value="0" />
-                    <input id="id_factor-<%= idx %>-anova_factor_levels-INITIAL_FORMS" name="factor-<%= idx %>-anova_factor_levels-INITIAL_FORMS" type="hidden" value="0" />
-                    <input id="id_factor-<%= idx %>-anova_factor_levels-MIN_NUM_FORMS" name="factor-<%= idx %>-anova_factor_levels-MIN_NUM_FORMS" type="hidden" value="0" />
-                    <input id="id_factor-<%= idx %>-anova_factor_levels-MAX_NUM_FORMS" name="factor-<%= idx %>-anova_factor_levels-MAX_NUM_FORMS" type="hidden" value="1000" />
+                    <input id="id_factor-<%= idx %>-factor_levels-TOTAL_FORMS" name="factor-<%= idx %>-factor_levels-TOTAL_FORMS" type="hidden" value="0" />
+                    <input id="id_factor-<%= idx %>-factor_levels-INITIAL_FORMS" name="factor-<%= idx %>-factor_levels-INITIAL_FORMS" type="hidden" value="0" />
+                    <input id="id_factor-<%= idx %>-factor_levels-MIN_NUM_FORMS" name="factor-<%= idx %>-factor_levels-MIN_NUM_FORMS" type="hidden" value="0" />
+                    <input id="id_factor-<%= idx %>-factor_levels-MAX_NUM_FORMS" name="factor-<%= idx %>-factor_levels-MAX_NUM_FORMS" type="hidden" value="1000" />
                     <div id="id_factor-<%= idx %>_levels" class="<%= getTRTag(idx) %>">
                     </div>
                 </td>

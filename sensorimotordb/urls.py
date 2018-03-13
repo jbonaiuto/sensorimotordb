@@ -4,18 +4,14 @@ from tastypie.api import Api
 from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, \
     EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, \
     UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, \
-    UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, ANOVAResource, ANOVAFactorResource, \
-    ANOVAFactorLevelResource, ANOVAEffectResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, \
+    UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, FactorResource, \
+    FactorLevelResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, \
     ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, \
     ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource, SubjectResource, ClusterAnalysisResultsResource
 from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, \
-    ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, \
-    ExperimentExportView, \
-    DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, CreateANOVAView, \
-    ANOVADetailView, \
-    DeleteANOVAView, ClassificationAnalysisDetailView, DeleteUnitClassificationConditionView, \
-    DeleteUnitClassificationTypeView, \
-    CreateUnitClassificationTypeView, UpdateUnitClassificationTypeView, CreateClassificationAnalysisWizardView, \
+    ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, \
+    DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, ClassificationAnalysisDetailView, \
+    DeleteUnitClassificationTypeView, CreateUnitClassificationTypeView, UpdateUnitClassificationTypeView, CreateClassificationAnalysisWizardView, \
     CLASSIFICATION_ANALYSIS_WIZARD_FORMS, AnalysisListDetailView, DeleteClassificationAnalysisView, RunAnalysisView, \
     RunClassificationAnalysisView, DeleteAnalysisResultsView, AnalysisResultsDetailView, \
     ClassificationAnalysisResultsDetailView, \
@@ -46,10 +42,8 @@ v1_api.register(AnalysisSettingsResource())
 v1_api.register(ClassificationAnalysisSettingsResource())
 v1_api.register(ClassificationAnalysisResultsLevelMappingResource())
 v1_api.register(TimeWindowFactorLevelSettingsResource())
-v1_api.register(ANOVAResource())
-v1_api.register(ANOVAFactorResource())
-v1_api.register(ANOVAFactorLevelResource())
-v1_api.register(ANOVAEffectResource())
+v1_api.register(FactorResource())
+v1_api.register(FactorLevelResource())
 v1_api.register(PenetrationResource())
 v1_api.register(SubjectResource())
 v1_api.register(ClusterAnalysisResultsResource())
@@ -59,9 +53,6 @@ urlpatterns = patterns('',
     (r'^analysis/(?P<pk>\d+)/run/$', RunAnalysisView.as_view(), {}, 'analysis_run'),
     (r'^analysis_results/(?P<pk>\d+)/$', AnalysisResultsDetailView.as_view(), {}, 'analysis_results_view'),
     (r'^analysis_results/(?P<pk>\d+)/delete/$', DeleteAnalysisResultsView.as_view(), {}, 'analysis_results_delete'),
-    (r'^anova/(?P<pk>\d+)/$', ANOVADetailView.as_view(), {}, 'anova_view'),
-    (r'^anova/(?P<pk>\d+)/delete/$', DeleteANOVAView.as_view(), {}, 'anova_delete'),
-    (r'^anova/new/$', CreateANOVAView.as_view(), {}, 'anova_add'),
     (r'^api/', include(v1_api.urls)),
     (r'^search/', SearchView.as_view(), {}, 'search_view'),
     (r'^import/', ImportView.as_view(), {}, 'import_view'),
@@ -88,7 +79,6 @@ urlpatterns = patterns('',
     (r'^experiment/(?P<pk>\d+)/export/$', ExperimentExportView.as_view(), {}, 'experiment_export_view'),
     (r'^search/', SearchView.as_view(), {}, 'search_view'),
     (r'^unit/(?P<pk>\d+)/$', UnitDetailView.as_view(), {}, 'unit_view'),
-    (r'^unit_classification_condition/(?P<pk>\d+)/delete/$', DeleteUnitClassificationConditionView.as_view(), {}, 'unit_classification_condition_delete'),
     (r'^unit_classification_type/(?P<pk>\d+)/delete/$', DeleteUnitClassificationTypeView.as_view(), {}, 'unit_classification_type_delete'),
     (r'^unit_classification_type/(?P<pk>\d+)/edit/$', UpdateUnitClassificationTypeView.as_view(), {}, 'unit_classification_type_edit'),
     (r'^unit_classification_type/new/$', CreateUnitClassificationTypeView.as_view(), {}, 'unit_classification_type_add'),

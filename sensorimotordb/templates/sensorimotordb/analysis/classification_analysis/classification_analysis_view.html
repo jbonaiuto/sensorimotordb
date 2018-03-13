@@ -11,9 +11,9 @@
         var data = {};
         var args = {
             type: "GET",
-            url: "/sensorimotordb/api/v1/anova/?analysis={{ object.id }}&limit=0&format=json",
+            url: "/sensorimotordb/api/v1/factor/?analysis={{ object.id }}&limit=0&format=json",
             data: data,
-            success: loadedAnovas,
+            success: loadedFactors,
             error: function(data) {
                 //alert("Something went wrong!");
             } };
@@ -30,53 +30,38 @@
         $.ajax(args);
     });
 
-    function loadedAnovas(resp){
+    function loadedFactors(resp){
         for(var idx=0; idx<resp.objects.length; idx++)
         {
-            loadedAnova(resp.objects[idx]);
+            loadedFactor(resp.objects[idx]);
         }
     }
 
-    function loadedAnova(resp){
-        var tmplMarkup = $('#anova-template').html();
+    function loadedFactor(resp){
+        var tmplMarkup = $('#factor-template').html();
         var data={
-            idx: $('#id_anovas').children().length,
-            edit: false,
+            idx: $('#id_factors').children().length,
             id: resp.id,
+            analysis_id: {{ object.id }},
             name: resp.name,
-            dependent_variable: resp.dependent_variable
+            type: resp.type
         };
         var compiledTmpl = _.template(tmplMarkup, data);
-        $('#id_anovas').append(compiledTmpl);
+        $('#id_factors').append(compiledTmpl);
 
-        for(var f_idx=0; f_idx<resp.factors.length; f_idx++)
+        for(var l_idx=0; l_idx<resp.levels.length; l_idx++)
         {
-            var factor=resp.factors[f_idx];
-            var tmplMarkup = $('#anova_factor-template').html();
+            var level=resp.levels[l_idx];
+            var tmplMarkup = $('#factor_level-template').html();
             var data={
-                idx: $('#id_anova-'+resp.id+'_factors').children().length,
-                id: factor.id,
-                anova_id: resp.id,
-                name: factor.name,
-                type: factor.type
+                idx: $('#id_factor-'+resp.id+'_levels').children().length,
+                id: level.id,
+                factor_id: resp.id,
+                analysis_id: {{ object.id }},
+                value: level.value
             };
             var compiledTmpl = _.template(tmplMarkup, data);
-            $('#id_anova-'+resp.id+'_factors').append(compiledTmpl);
-
-            for(var l_idx=0; l_idx<factor.levels.length; l_idx++)
-            {
-                var level=factor.levels[l_idx];
-                var tmplMarkup = $('#anova_factor_level-template').html();
-                var data={
-                    idx: $('#id_anova-'+resp.id+'_factor-'+factor.id+'_levels').children().length,
-                    id: level.id,
-                    factor_id: factor.id,
-                    anova_id: resp.id,
-                    value: level.value
-                };
-                var compiledTmpl = _.template(tmplMarkup, data);
-                $('#id_anova-'+resp.id+'_factor-'+factor.id+'_levels').append(compiledTmpl);
-            }
+            $('#id_factor-'+resp.id+'_levels').append(compiledTmpl);
         }
     }
 
@@ -119,24 +104,6 @@
             var child=resp.children[idx];
             loadedClassificationType(child);
         }
-
-        for(var cond_idx=0; cond_idx<resp.conditions.length; cond_idx++)
-        {
-            var condition=resp.conditions[cond_idx];
-            var comparisons=[];
-            for (var cidx=0; cidx<condition.comparisons.length; cidx++)
-                comparisons.push(condition.comparisons[cidx].id);
-
-            var tmplMarkup = $('#classification_condition-template').html();
-            var idx=$('#id_classification_type-'+resp.id+'_table').children().length-3;
-            var data={
-                type_id: resp.id,
-                id: condition.id,
-                comparisons: comparisons
-            };
-            var compiledTmpl = _.template(tmplMarkup, data);
-            $('#id_classification_type-'+resp.id+'_table').append(compiledTmpl);
-        }
     }
 
 </script>
@@ -150,20 +117,14 @@
                 <td><strong>Description</strong></td>
                 <td>{{ object.description }}</td>
             </tr>
-            <tr>
-                <td><strong>Multiple comparison correction</strong></td>
-                <td>{{ object.multiple_comparison_correction }}</td>
-            </tr>
         </table>
     </div>
 </div>
-<h2>ANOVAs</h2>
-<div id="id_anovas"></div>
+<h2>Factors</h2>
+<div id="id_factors"></div>
 <h2>Unit Classification Types</h2>
 <div id="id_classification_types"></div>
-{% include "sensorimotordb/analysis/classification_analysis/anova_list_item_template.html" %}
-{% include "sensorimotordb/analysis/classification_analysis/anova_factor_list_item_template.html" %}
-{% include "sensorimotordb/analysis/classification_analysis/anova_factor_level_list_item_template.html" %}
+{% include "sensorimotordb/analysis/classification_analysis/factor_list_item_template.html" %}
+{% include "sensorimotordb/analysis/classification_analysis/factor_level_list_item_template.html" %}
 {% include "sensorimotordb/analysis/classification_analysis/classification_type_list_item_template.html" %}
-{% include "sensorimotordb/analysis/classification_analysis/classification_condition_list_item_template.html" %}
 {% endblock %}

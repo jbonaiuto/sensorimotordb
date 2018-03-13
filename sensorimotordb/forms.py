@@ -3,9 +3,10 @@ from django import forms
 from django.forms.models import ModelForm, inlineformset_factory
 from registration.forms import RegistrationForm
 from registration.users import UsernameField
-from sensorimotordb.models import ExperimentExportRequest, Experiment, Analysis, GraspObservationCondition, \
-    GraspPerformanceCondition, ClassificationAnalysis, ANOVA, ANOVAFactor, ANOVAFactorLevel, UnitClassificationType, \
-    UnitClassificationCondition, ANOVAComparison, ClassificationAnalysisResults, ClassificationAnalysisSettings, ClusterAnalysis, ClusterAnalysisSettings, ClusterAnalysisResults, Species, Condition, GraspCondition
+from sensorimotordb.models import ExperimentExportRequest, Experiment, GraspObservationCondition, \
+    GraspPerformanceCondition, ClassificationAnalysis, Factor, FactorLevel, UnitClassificationType, \
+    ClassificationAnalysisResults, ClassificationAnalysisSettings, ClusterAnalysis, ClusterAnalysisSettings, \
+    ClusterAnalysisResults, GraspCondition, Condition
 from uscbp.nested_formset import nestedformset_factory
 
 
@@ -50,12 +51,19 @@ class ClassificationAnalysisForm(ModelForm):
 
 class ClassificationAnalysisStep2Form(ModelForm):
     id=forms.CharField(max_length=100, required=True, widget=forms.HiddenInput)
-    multiple_comparison_correction=forms.ChoiceField(choices=ClassificationAnalysis.MULT_COMP_CORRECTION_CHOICES, required=False)
 
     class Meta:
         model=ClassificationAnalysis
         exclude=('name','description')
 
+
+class ClassificationAnalysisStep4Form(ModelForm):
+    id=forms.CharField(max_length=100, required=True, widget=forms.HiddenInput)
+    script_file=forms.FileField()
+
+    class Meta:
+        model=ClassificationAnalysis
+        exclude=('name','description')
 
 class ClassificationAnalysisResultsForm(ModelForm):
     analysis=forms.ModelChoiceField(queryset=ClassificationAnalysis.objects.all(),widget=forms.HiddenInput,required=True)
@@ -69,47 +77,30 @@ class ClassificationAnalysisResultsForm(ModelForm):
         exclude=()
 
 
-class ANOVAForm(ModelForm):
+class FactorInlineForm(ModelForm):
     analysis=forms.ModelChoiceField(queryset=ClassificationAnalysis.objects.all(),widget=forms.HiddenInput,required=True)
     name=forms.CharField(max_length=100, required=True)
-    dependent_variable=forms.CharField(max_length=100, required=True)
+    type=forms.ChoiceField(choices=Factor.FACTOR_TYPES, required=True)
 
     class Meta:
-        model=ANOVA
+        model=Factor
         exclude=()
 
 
-class ANOVAFactorInlineForm(ModelForm):
-    anova=forms.ModelChoiceField(queryset=ANOVA.objects.all(),widget=forms.HiddenInput,required=True)
-    name=forms.CharField(max_length=100, required=True)
-    type=forms.ChoiceField(choices=ANOVAFactor.ANOVA_FACTOR_TYPES, required=True)
-
-    class Meta:
-        model=ANOVAFactor
-        exclude=()
-
-
-class ANOVAFactorLevelInlineForm(ModelForm):
-    factor=forms.ModelChoiceField(queryset=ANOVAFactor.objects.all(),widget=forms.HiddenInput,required=True)
+class FactorLevelInlineForm(ModelForm):
+    factor=forms.ModelChoiceField(queryset=Factor.objects.all(),widget=forms.HiddenInput,required=True)
     value=forms.CharField(max_length=100, required=True)
 
     class Meta:
-        model=ANOVAFactorLevel
+        model=FactorLevel
         exclude=()
 
 
-ANOVAFactorLevelFormSet = lambda *a, **kw: nestedformset_factory(ANOVA,ANOVAFactor,nested_formset=inlineformset_factory(ANOVAFactor, ANOVAFactorLevel, form=ANOVAFactorLevelInlineForm, fk_name='factor', extra=0, can_delete=True), extra=0)(*a, **kw)
-
-
-class UnitClassificationConditionInlineForm(ModelForm):
-    id=forms.IntegerField(widget=forms.HiddenInput,required=False)
-    comparisons=forms.ModelMultipleChoiceField(ANOVAComparison.objects.all().select_subclasses(),widget=forms.CheckboxSelectMultiple)
-    classification_type=forms.ModelChoiceField(UnitClassificationType.objects.all(), widget=forms.HiddenInput,required=False)
-    class Meta:
-        model=UnitClassificationCondition
-        exclude=('lft','tree_id','rght','level')
-
-UnitClassificationTypeConditionFormSet = lambda *a, **kw: nestedformset_factory(ClassificationAnalysis,UnitClassificationType,nested_formset=inlineformset_factory(UnitClassificationType, UnitClassificationCondition, form=UnitClassificationConditionInlineForm, fk_name='classification_type', extra=0, can_delete=True), fk_name='analysis', extra=0, fields=['label','analysis'])(*a, **kw)
+ClassificationAnalysisFactorLevelFormSet = lambda *a, **kw: nestedformset_factory(ClassificationAnalysis,Factor,
+                                                                                  nested_formset=inlineformset_factory(Factor, FactorLevel,
+                                                                                                                       form=FactorLevelInlineForm,
+                                                                                                                       fk_name='factor', extra=0,
+                                                                                                                       can_delete=True), extra=0)(*a, **kw)
 
 
 class ExperimentCreateForm(ModelForm):

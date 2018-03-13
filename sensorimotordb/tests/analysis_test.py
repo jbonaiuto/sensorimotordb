@@ -22,5 +22,5 @@ def test_cluster_analysis(experiment_id, analysis_id, analysis_settings_id):
 
 if __name__=='__main__':
     django.setup()
-    #test_classification_analysis(120,69,32)
-    test_cluster_analysis(125,70,44)
+    test_classification_analysis(24,17,11)
+    #test_cluster_analysis(24,17,10)

@@ -1352,5 +1352,26 @@ function drawMeanNormalizedFiringRates(parent_id, legend_id, group_mean_rates, g
     };
 
     dispatch.on("realigned.rate.population."+parent_id, rate_svg.update);
+
+    d3.select("#"+parent_id+"_generate")
+        .on("click", writeDownloadLink);
+
+    function writeDownloadLink(){
+        try {
+            var isFileSaverSupported = !!new Blob();
+        } catch (e) {
+            alert("blob not supported");
+        }
+
+        var html = rate_svg
+            .attr("title", "test2")
+            .attr("version", 1.1)
+            .attr("xmlns", "http://www.w3.org/2000/svg")
+            .node().parentNode.innerHTML;
+
+        var blob = new Blob([html], {type: "image/svg+xml"});
+        saveAs(blob, parent_id+".svg");
+    };
+
     return rate_svg;
 }

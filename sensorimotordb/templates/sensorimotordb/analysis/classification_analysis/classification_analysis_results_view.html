@@ -5,6 +5,7 @@
 <script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/d3.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/FileSaver.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_functions.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_plot.js' %}"></script>
 <script>
@@ -349,7 +350,9 @@ function init_code_hierarchy_plot(element_id, data)
 
     var svg = d3.select("#"+element_id).append("svg")
             .attr("width", width)
-            .attr("height", height)
+            .attr("height", height);
+
+    var origin_transform=svg
             .append("g")
             .attr("transform", "translate(" + width / 2 + "," + height * .52 + ")");
 
@@ -394,7 +397,7 @@ function init_code_hierarchy_plot(element_id, data)
             .innerRadius(function(d) { return 1.1*d[3]*thickness; })
             .outerRadius(function(d) { return (1.1*d[3]+1)*thickness; });
 
-    var slices = svg.selectAll(".form")
+    var slices = origin_transform.selectAll(".form")
             .data(function(d) { return data_slices; })
             .enter()
             .append("g");
@@ -485,7 +488,7 @@ function init_code_hierarchy_plot(element_id, data)
             legend.html(legend_function(d));
             loadUnitRates(d[4][1]);
             new_ref = ref;
-            svg.selectAll(".form")
+            origin_transform.selectAll(".form")
                     .filter(
                     function (b)
                     {
@@ -503,7 +506,7 @@ function init_code_hierarchy_plot(element_id, data)
             legend.html(legend_function(d));
             loadUnitRates(d[4][1]);
             new_ref = d;
-            svg.selectAll(".form")
+            origin_transform.selectAll(".form")
                     .filter(
                     function (b)
                     {
@@ -516,7 +519,7 @@ function init_code_hierarchy_plot(element_id, data)
             )
                     .transition().duration(1000).style("opacity","0").attr("pointer-events","none");
         }
-        svg.selectAll(".form")
+        origin_transform.selectAll(".form")
                 .filter(
                 function (b)
                 {
@@ -542,6 +545,25 @@ function init_code_hierarchy_plot(element_id, data)
         },1000);
     };
 
+    d3.select("#"+element_id+"_generate")
+        .on("click", writeDownloadLink);
+
+    function writeDownloadLink(){
+        try {
+            var isFileSaverSupported = !!new Blob();
+        } catch (e) {
+            alert("blob not supported");
+        }
+
+        var html = svg
+            .attr("title", "test2")
+            .attr("version", 1.1)
+            .attr("xmlns", "http://www.w3.org/2000/svg")
+            .node().parentNode.innerHTML;
+
+        var blob = new Blob([html], {type: "image/svg+xml"});
+        saveAs(blob, element_id+".svg");
+    };
 }
 
 function loadUnitRates(units)
@@ -1032,6 +1054,7 @@ function plotFactors()
             var factor_legend_id='analysis_results-'+results.id+'-factor-'+factor.id+'_legend'
             $('#'+parent_id).append('<div id="'+factor_parent_id+'" style="text-align:center"><h3>'+factor.name+'</h3></div>');
             $('#'+parent_id).append('<div id="analysis_results-'+results.id+'-factor-'+factor.id+'_legend" class="legend"></div>');
+            $('#'+parent_id).append('<button id="analysis_results-'+results.id+'-factor-'+factor.id+'-mean_rate_generate">Save as SVG</button>');
             var levels=new Map();
 
             // Create a plot for this factor

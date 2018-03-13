@@ -11,11 +11,10 @@ from tastypie.paginator import Paginator
 from tastypie.utils import trailing_slash
 from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition,\
     Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, UnitClassification,\
-    Analysis, UnitAnalysisResults, ANOVAFactorLevel, ANOVAFactor, ANOVA, ANOVAEffect, UnitClassificationType,\
-    ClassificationAnalysis, UnitClassificationCondition, ANOVAComparison, ANOVAPairwiseComparison,\
-    ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, \
+    Analysis, UnitAnalysisResults, FactorLevel, Factor, UnitClassificationType, ClassificationAnalysis, \
     ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, \
-    ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings, Subject, ClusterAnalysisResults, UnitClusterProjection, ClusterAnalysisSettings, TimeWindowConditionSettings, UnitCluster
+    ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings, Subject, ClusterAnalysisResults, \
+    UnitClusterProjection, ClusterAnalysisSettings, TimeWindowConditionSettings, UnitCluster
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -348,152 +347,26 @@ class UnitClassificationResource(ModelResource):
         cache = SimpleCache(timeout=10)
 
 
-class ANOVAOneWayPairwiseComparisonResource(ModelResource):
-    factor=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor', related_name='anova_oneway_pairwise',null=False, full=True)
-    level1=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'level1', related_name='anova_oneway_pairwise_level1',null=False, full=True)
-    level2=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'level2', related_name='anova_oneway_pairwise_level2',null=False, full=True)
-
+class FactorLevelResource(ModelResource):
     class Meta:
-        queryset=ANOVAOneWayPairwiseComparison.objects.all()
-        resource_name='anova_oneway_pairwise_comparison'
+        queryset=FactorLevel.objects.all()
+        resource_name='factor_level'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
 
 
-class ANOVATwoWayPairwiseComparisonResource(ModelResource):
-    factor1=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor1', related_name='anova_twoway_pairwise_factor1',null=False, full=True)
-    factor1_level=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor1_level', related_name='anova_twoway_pairwise_factor1_level',null=False, full=True)
-    factor2=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor2', related_name='anova_twoway_pairwise_factor2',null=False, full=True)
-    factor2_level1=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor2_level1', related_name='anova_twoway_pairwise_factor2_level1',null=False, full=True)
-    factor2_level2=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor2_level2', related_name='anova_twoway_pairwise_factor2_level2',null=False, full=True)
-
+class FactorResource(ModelResource):
+    levels=fields.ToManyField(FactorLevelResource, 'factor_levels', related_name='factor_levels',null=True,full=True)
     class Meta:
-        queryset=ANOVATwoWayPairwiseComparison.objects.all()
-        resource_name='anova_twoway_pairwise_comparison'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-
-
-class ANOVAThreeWayPairwiseComparisonResource(ModelResource):
-    factor1=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor1', related_name='anova_twoway_pairwise_factor1',null=False, full=True)
-    factor1_level=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor1_level', related_name='anova_twoway_pairwise_factor1_level',null=False, full=True)
-    factor2=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor2', related_name='anova_twoway_pairwise_factor2',null=False, full=True)
-    factor2_level=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor2_level', related_name='anova_twoway_pairwise_factor2_level',null=False, full=True)
-    factor3=fields.ToOneField('sensorimotordb.api.ANOVAFactorResource', 'factor3', related_name='anova_twoway_pairwise_factor2',null=False, full=True)
-    factor3_level1=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor3_level1', related_name='anova_twoway_pairwise_factor3_level1',null=False, full=True)
-    factor3_level2=fields.ToOneField('sensorimotordb.api.ANOVAFactorLevelResource', 'factor3_level2', related_name='anova_twoway_pairwise_factor3_level2',null=False, full=True)
-
-    class Meta:
-        queryset=ANOVAThreeWayPairwiseComparison.objects.all()
-        resource_name='anova_threeway_pairwise_comparison'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-
-
-class ANOVAPairwiseComparisonResource(ModelResource):
-    class Meta:
-        queryset=ANOVAPairwiseComparison.objects.all()
-        resource_name='anova_pairwise_comparison'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-
-    def dehydrate(self, bundle):
-        if ANOVAOneWayPairwiseComparison.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ANOVAOneWayPairwiseComparisonResource):
-            analysis_res = ANOVAOneWayPairwiseComparisonResource()
-            analysis_bundle = analysis_res.build_bundle(obj=ANOVAOneWayPairwiseComparison.objects.get(id=bundle.obj.id), request=bundle.request)
-            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
-        elif ANOVATwoWayPairwiseComparison.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ANOVATwoWayPairwiseComparisonResource):
-            analysis_res = ANOVATwoWayPairwiseComparisonResource()
-            analysis_bundle = analysis_res.build_bundle(obj=ANOVATwoWayPairwiseComparison.objects.get(id=bundle.obj.id), request=bundle.request)
-            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
-        elif ANOVAThreeWayPairwiseComparison.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ANOVAThreeWayPairwiseComparisonResource):
-            analysis_res = ANOVAThreeWayPairwiseComparisonResource()
-            analysis_bundle = analysis_res.build_bundle(obj=ANOVAThreeWayPairwiseComparison.objects.get(id=bundle.obj.id), request=bundle.request)
-            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
-        return bundle
-
-
-class ANOVAEffectResource(ModelResource):
-    factors=fields.ManyToManyField('sensorimotordb.api.ANOVAFactorResource', 'factors', related_name='factors',null=True,full=True)
-    class Meta:
-        queryset=ANOVAEffect.objects.all()
-        resource_name='anova_effect'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-        filtering={
-            'factors': ALL_WITH_RELATIONS,
-            }
-
-class ANOVAComparisonResource(ModelResource):
-    class Meta:
-        queryset=ANOVAComparison.objects.all()
-        resource_name='anova_comparison'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-
-    def dehydrate(self, bundle):
-        if ANOVAEffect.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ANOVAEffectResource):
-            analysis_res = ANOVAEffectResource()
-            analysis_bundle = analysis_res.build_bundle(obj=ANOVAEffect.objects.get(id=bundle.obj.id), request=bundle.request)
-            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
-        elif ANOVAPairwiseComparison.objects.filter(id=bundle.obj.id).count() and not isinstance(bundle.obj,ANOVAPairwiseComparisonResource):
-            analysis_res = ANOVAPairwiseComparisonResource()
-            analysis_bundle = analysis_res.build_bundle(obj=ANOVAPairwiseComparison.objects.get(id=bundle.obj.id), request=bundle.request)
-            bundle.data = analysis_res.full_dehydrate(analysis_bundle).data
-
-        return bundle
-
-
-class UnitClassificationConditionResource(ModelResource):
-    comparisons=fields.ManyToManyField('sensorimotordb.api.ANOVAComparisonResource', 'comparisons', related_name='anova_comparison_conditions',null=True,full=True)
-    class Meta:
-        queryset=UnitClassificationCondition.objects.all().prefetch_related('units')
-        resource_name='unit_classification_condition'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-
-
-class ANOVAFactorLevelResource(ModelResource):
-    class Meta:
-        queryset=ANOVAFactorLevel.objects.all()
-        resource_name='anova_factor_level'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-
-
-class ANOVAFactorResource(ModelResource):
-    levels=fields.ToManyField(ANOVAFactorLevelResource, 'anova_factor_levels', related_name='anova_factor_levels',null=True,full=True)
-    class Meta:
-        queryset=ANOVAFactor.objects.all().prefetch_related('anova_factor_levels')
-        resource_name='anova_factor'
+        queryset=Factor.objects.all().prefetch_related('factor_levels')
+        resource_name='factor'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
         filtering={
             'id': ALL_WITH_RELATIONS,
         }
-
-
-class ANOVAResource(ModelResource):
-    analysis=fields.ToOneField('sensorimotordb.api.AnalysisResource', 'analysis', related_name='analysis', null=False, full=False)
-    factors=fields.ToManyField(ANOVAFactorResource, 'anova_factors', related_name='anova_factors',null=False,full=True)
-    class Meta:
-        queryset=ANOVA.objects.all().prefetch_related('anova_factors')
-        resource_name='anova'
-        authorization= DjangoAuthorization()
-        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
-        cache = SimpleCache(timeout=10)
-        filtering={
-            'analysis': ALL_WITH_RELATIONS,
-            }
 
 
 class AnalysisResource(ModelResource):
@@ -514,9 +387,9 @@ class AnalysisResource(ModelResource):
 
 
 class ClassificationAnalysisResource(ModelResource):
-    analysis_anovas=fields.ToManyField(ANOVAResource,'analysis_anovas', related_name='analysis_anovas',null=False,full=True)
+    analysis_factors=fields.ToManyField(FactorResource,'analysis_factors', related_name='analysis_factors',null=False,full=True)
     class Meta:
-        queryset=ClassificationAnalysis.objects.all().prefetch_related('analysis_anovas')
+        queryset=ClassificationAnalysis.objects.all().prefetch_related('analysis_factors')
         resource_name='classification_analysis'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
@@ -524,7 +397,7 @@ class ClassificationAnalysisResource(ModelResource):
 
 
 class ClassificationAnalysisResultsLevelMappingResource(ModelResource):
-    level=fields.ToOneField(ANOVAFactorLevelResource, 'level')
+    level=fields.ToOneField(FactorLevelResource, 'level')
     conditions=fields.ToManyField(BasicConditionResource, 'conditions', related_name='conditions', full=True)
     class Meta:
         queryset=ClassificationAnalysisResultsLevelMapping.objects.all()
@@ -535,7 +408,7 @@ class ClassificationAnalysisResultsLevelMappingResource(ModelResource):
 
 
 class TimeWindowFactorLevelSettingsResource(ModelResource):
-    level=fields.ToOneField(ANOVAFactorLevelResource, 'level')
+    level=fields.ToOneField(FactorLevelResource, 'level')
     class Meta:
         queryset=TimeWindowFactorLevelSettings.objects.all()
         resource_name='time_window_factor_level_settings'

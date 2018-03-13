@@ -1,11 +1,19 @@
 from collections import OrderedDict
+
+import os
 from django.shortcuts import redirect
 from django.views.generic import DetailView, CreateView, TemplateView
 from django.views.generic.detail import BaseDetailView
+from django.core.files.storage import FileSystemStorage
 from formtools.wizard.views import SessionWizardView
 from tastypie.models import ApiKey
-from sensorimotordb.forms import ClassificationAnalysisForm, ClassificationAnalysisBaseForm, UnitClassificationTypeConditionFormSet, ANOVAForm, ANOVAFactorLevelFormSet, ClassificationAnalysisResultsForm, ClassificationAnalysisStep2Form, ClusterAnalysisForm, ClusterAnalysisResultsForm
-from sensorimotordb.models import AnalysisResults, ClassificationAnalysis, ANOVA, ANOVAComparison, UnitClassificationType, Analysis, ANOVAFactor, ANOVAEffect, ANOVAOneWayPairwiseComparison, ANOVATwoWayPairwiseComparison, ANOVAThreeWayPairwiseComparison, ANOVAFactorLevel, UnitClassificationCondition, Condition, Event, ClassificationAnalysisResultsLevelMapping, ClassificationAnalysisResults, Experiment, ClassificationAnalysisSettings, TimeWindowFactorLevelSettings, UnitClassification, UnitAnalysisResults, AnalysisSettings, ANOVAPairwiseComparison, ClusterAnalysis, ClusterAnalysisResults, ClusterAnalysisSettings, TimeWindowConditionSettings
+from sensorimotordb.forms import ClassificationAnalysisForm, ClassificationAnalysisBaseForm, \
+    ClassificationAnalysisResultsForm, ClassificationAnalysisStep2Form, ClusterAnalysisForm, \
+    ClusterAnalysisResultsForm, ClassificationAnalysisFactorLevelFormSet, ClassificationAnalysisStep4Form
+from sensorimotordb.models import AnalysisResults, ClassificationAnalysis, UnitClassificationType, Analysis, Factor, \
+    FactorLevel, Condition, Event, ClassificationAnalysisResultsLevelMapping, ClassificationAnalysisResults, Experiment, \
+    ClassificationAnalysisSettings, TimeWindowFactorLevelSettings, UnitClassification, UnitAnalysisResults, AnalysisSettings, \
+    ClusterAnalysis, ClusterAnalysisResults, ClusterAnalysisSettings, TimeWindowConditionSettings
 from sensorimotordb.views import LoginRequiredMixin, JSONResponseMixin
 from uscbp import settings
 
@@ -25,8 +33,9 @@ class DeleteClassificationAnalysisView(JSONResponseMixin,BaseDetailView):
         context={'msg':u'No POST data sent.' }
         if self.request.is_ajax():
             self.object=self.get_object()
+            if self.object.script_name is not None and os.path.exists(os.path.join(settings.MEDIA_ROOT,'scripts',self.object.script_name)):
+                os.remove(os.path.join(settings.MEDIA_ROOT,'scripts',self.object.script_name))
             id=self.object.id
-            UnitClassificationCondition.objects.filter(classification_type__analysis=self.object).delete()
             UnitClassificationType.objects.filter(analysis=self.object).delete()
             UnitClassification.objects.filter(analysis_results__analysis=self.object).delete()
             UnitAnalysisResults.objects.filter(analysis_results__analysis=self.object).delete()
@@ -36,15 +45,8 @@ class DeleteClassificationAnalysisView(JSONResponseMixin,BaseDetailView):
             TimeWindowFactorLevelSettings.objects.filter(analysis_settings__analysis=self.object).delete()
             ClassificationAnalysisSettings.objects.filter(analysis=self.object).delete()
             AnalysisSettings.objects.filter(analysis=self.object).delete()
-            ANOVAComparison.objects.filter(anova__analysis=self.object).delete()
-            ANOVAEffect.objects.filter(anova__analysis=self.object).delete()
-            ANOVAPairwiseComparison.objects.filter(anova__analysis=self.object).delete()
-            ANOVAOneWayPairwiseComparison.objects.filter(anova__analysis=self.object).delete()
-            ANOVATwoWayPairwiseComparison.objects.filter(anova__analysis=self.object).delete()
-            ANOVAThreeWayPairwiseComparison.objects.filter(anova__analysis=self.object).delete()
-            ANOVAFactorLevel.objects.filter(factor__anova__analysis=self.object).delete()
-            ANOVAFactor.objects.filter(anova__analysis=self.object).delete()
-            ANOVA.objects.filter(analysis=self.object).delete()
+            FactorLevel.objects.filter(factor__analysis=self.object).delete()
+            Factor.objects.filter(analysis=self.object).delete()
             self.object.delete()
             context={'id': id}
 
@@ -57,18 +59,14 @@ class ClassificationAnalysisDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context=super(ClassificationAnalysisDetailView,self).get_context_data(**kwargs)
-        context['anovas']=ANOVA.objects.filter(analysis=self.object).order_by('id')
-        context['anova_comparisons']=[]
-        for anova in context['anovas']:
-            for comparison in ANOVAComparison.objects.filter(anova=anova).select_subclasses().order_by('id'):
-                context['anova_comparisons'].append(comparison)
+        context['factors']=Factor.objects.filter(analysis=self.object).order_by('id')
         return context
 
 
 CLASSIFICATION_ANALYSIS_WIZARD_FORMS = [("step1", ClassificationAnalysisForm),
                                         ("step2", ClassificationAnalysisStep2Form),
                                         ("step3", ClassificationAnalysisBaseForm),
-                                        ("step4", ClassificationAnalysisBaseForm)
+                                        ("step4", ClassificationAnalysisStep4Form)
 ]
 
 CLASSIFICATION_ANALYSIS_TEMPLATES = {"step1": 'sensorimotordb/analysis/classification_analysis/classification_analysis_create_1.html',
@@ -78,6 +76,8 @@ CLASSIFICATION_ANALYSIS_TEMPLATES = {"step1": 'sensorimotordb/analysis/classific
 }
 
 class CreateClassificationAnalysisWizardView(LoginRequiredMixin, SessionWizardView):
+
+    file_storage=FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'temp'))
 
     def get_template_names(self):
         return [CLASSIFICATION_ANALYSIS_TEMPLATES[self.steps.current]]
@@ -96,49 +96,43 @@ class CreateClassificationAnalysisWizardView(LoginRequiredMixin, SessionWizardVi
                 step_data['analysis_id']=analysis.id
                 self.storage.set_step_data('step1', step_data)
                 print(self.storage.get_step_data('step1'))
+                context['factor_level_formset'] = ClassificationAnalysisFactorLevelFormSet(None,
+                                                                                           instance=analysis,
+                                                                                           queryset=Factor.objects.filter(analysis__id=analysis.id).order_by('id'), prefix='factor')
             elif self.request.POST['create_classification_analysis_wizard_view-current_step']=='step2':
                 step1_data=self.storage.get_step_data('step1')
                 analysis=ClassificationAnalysis.objects.get(id=step1_data['analysis_id'])
                 context['analysis']=analysis
-                context['classification_type_formset']=UnitClassificationTypeConditionFormSet(None,
-                    instance=analysis, queryset=UnitClassificationType.objects.filter(analysis=analysis),
-                    prefix='classification_type')
-                context['anovas']=ANOVA.objects.filter(analysis=analysis).order_by('id')
-                context['anova_comparisons']=[]
-                for anova in context['anovas']:
-                    for comparison in ANOVAComparison.objects.filter(anova=anova).select_subclasses().order_by('id'):
-                        context['anova_comparisons'].append(comparison)
+                context['factor_level_formset'] = ClassificationAnalysisFactorLevelFormSet(self.request.POST or None,
+                                                                                           instance=analysis,
+                                                                                           queryset=Factor.objects.filter(analysis__id=analysis.id).order_by('id'), prefix='factor')
+                if context['factor_level_formset'].is_valid():
+                    for factor_form in context['factor_level_formset'].forms:
+                        if not factor_form.cleaned_data.get('DELETE', False):
+                            factor=factor_form.save(commit=False)
+                            factor.analysis=analysis
+                            factor.save()
+                            for level_form in factor_form.nested.forms:
+                                if not level_form.cleaned_data.get('DELETE', False):
+                                    level=level_form.save(commit=False)
+                                    level.factor=factor
+                                    level.save()
                 step2_data=self.request.POST
-                context['analysis'].multiple_comparison_correction=step2_data['step2-multiple_comparison_correction']
-                context['analysis'].save()
                 step2_data['analysis_id']=analysis.id
                 self.storage.set_step_data('step2', step2_data)
                 print(self.storage.get_step_data('step2'))
             elif self.request.POST['create_classification_analysis_wizard_view-current_step']=='step3':
-                step3_data=self.request.POST
-                analysis=ClassificationAnalysis.objects.get(id=step3_data['step3-id'])
+                step2_data = self.storage.get_step_data('step2')
+                analysis = ClassificationAnalysis.objects.get(id=step2_data['analysis_id'])
                 context['analysis']=analysis
-                context['classification_type_formset']=UnitClassificationTypeConditionFormSet(self.request.POST,
-                    instance=analysis, queryset=UnitClassificationType.objects.filter(analysis=analysis), prefix='classification_type')
-                if context['classification_type_formset'].is_valid():
-                    for classification_type_form in context['classification_type_formset'].forms:
-                        if not classification_type_form.cleaned_data.get('DELETE', False):
-                            classification_type=classification_type_form.save(commit=False)
-                            classification_type.analysis=analysis
-                            classification_type.save()
-                            for condition_form in classification_type_form.nested.forms:
-                                if not condition_form.cleaned_data.get('DELETE', False):
-                                    condition=condition_form.save(commit=False)
-                                    condition.classification_type=classification_type
-                                    condition.save()
-                                    condition_form.save_m2m()
-                step3_data=self.request.POST
-                step3_data['analysis_id']=analysis.id
+                step3_data = self.request.POST
+                step3_data['analysis_id'] = analysis.id
                 self.storage.set_step_data('step3', step3_data)
             elif self.request.POST['create_classification_analysis_wizard_view-current_step']=='step4':
+                step3_data = self.storage.get_step_data('step3')
+                analysis = ClassificationAnalysis.objects.get(id=step3_data['analysis_id'])
+                context['analysis'] = analysis
                 step4_data=self.request.POST
-                analysis=ClassificationAnalysis.objects.get(id=step4_data['step4-id'])
-                context['analysis']=analysis
                 self.storage.set_step_data('step4', step4_data)
 
         return context
@@ -168,157 +162,17 @@ class CreateClassificationAnalysisWizardView(LoginRequiredMixin, SessionWizardVi
         return done_response
 
     def done(self, form_list, **kwargs):
-        analysis=int(self.storage.get_step_data('step4')['step4-id'])
-        return redirect('/sensorimotordb/classification_analysis/%d/' % analysis)
-
-
-
-
-class CreateANOVAView(LoginRequiredMixin,CreateView):
-    model = ANOVA
-    template_name = 'sensorimotordb/analysis/classification_analysis/anova_create.html'
-    form_class = ANOVAForm
-
-    def get_context_data(self, **kwargs):
-        context_data=super(CreateANOVAView,self).get_context_data(**kwargs)
-        context_data['factor_level_formset']=ANOVAFactorLevelFormSet(self.request.POST or None, instance=self.object,
-            queryset=ANOVA.objects.filter(analysis__id=self.request.GET.get('analysis','')).order_by('id'), prefix='factor')
-        return context_data
-
-    def get_initial(self):
-        initial_data={'analysis': Analysis.objects.get(id=self.request.GET.get('analysis',''))}
-        return initial_data
-
-    def form_valid(self, form):
-        """
-        If the form is valid, save the associated model.
-        """
-        context=self.get_context_data()
-        factor_level_formset = context['factor_level_formset']
-
-        self.object=form.save()
-        if factor_level_formset.is_valid():
-            for factor_form in factor_level_formset.forms:
-                if not factor_form.cleaned_data.get('DELETE', False):
-                    factor=factor_form.save(commit=False)
-                    factor.anova=self.object
-                    factor.save()
-                    for level_form in factor_form.nested.forms:
-                        if not level_form.cleaned_data.get('DELETE', False):
-                            level=level_form.save(commit=False)
-                            level.factor=factor
-                            level.save()
-
-            # Create comparisons
-            factors=ANOVAFactor.objects.filter(anova=self.object)
-
-            # Main effect
-            for factor in factors:
-                main_effect=ANOVAEffect(anova=self.object)
-                main_effect.save()
-                main_effect.factors.add(factor)
-                main_effect.save()
-
-            # Two-way interactions
-            for f_idx1, factor1 in enumerate(factors):
-                for f_idx2, factor2 in enumerate(factors):
-                    if f_idx2>f_idx1:
-                        interaction_effect=ANOVAEffect(anova=self.object)
-                        interaction_effect.save()
-                        interaction_effect.factors.add(factor1)
-                        interaction_effect.factors.add(factor2)
-                        interaction_effect.save()
-
-            # Three-way interaction
-            if factors.count()==3:
-                interaction_effect=ANOVAEffect(anova=self.object)
-                interaction_effect.save()
-                for factor in factors:
-                    interaction_effect.factors.add(factor)
-                interaction_effect.save()
-
-            # Main effect pairwise comparisons
-            for f_idx, factor in enumerate(factors):
-                for l_idx1, level1 in enumerate(factor.anova_factor_levels.all()):
-                    for l_idx2, level2 in enumerate(factor.anova_factor_levels.all()):
-                        if l_idx2>l_idx1:
-                            pairwise=ANOVAOneWayPairwiseComparison(anova=self.object, factor=factor,level1=level1, level2=level2, relationship='gt')
-                            pairwise.save()
-                            pairwise=ANOVAOneWayPairwiseComparison(anova=self.object, factor=factor,level1=level1, level2=level2, relationship='lt')
-                            pairwise.save()
-
-            # Two-way interactions pairwise comparisons
-            for f_idx1, factor1 in enumerate(factors):
-                for f1_l_idx, f1_level in enumerate(factor1.anova_factor_levels.all()):
-                    for f_idx2, factor2 in enumerate(factors):
-                        if not f_idx2==f_idx1:
-                            for f2_l_idx1, f2_level1 in enumerate(factor2.anova_factor_levels.all()):
-                                for f2_l_idx2, f2_level2 in enumerate(factor2.anova_factor_levels.all()):
-                                    if f2_l_idx2>f2_l_idx1:
-                                        pairwise=ANOVATwoWayPairwiseComparison(anova=self.object, factor1=factor1, factor1_level=f1_level,
-                                            factor2=factor2, factor2_level1=f2_level1, factor2_level2=f2_level2,
-                                            relationship='gt')
-                                        pairwise.save()
-                                        pairwise=ANOVATwoWayPairwiseComparison(anova=self.object, factor1=factor1, factor1_level=f1_level,
-                                            factor2=factor2, factor2_level1=f2_level1, factor2_level2=f2_level2,
-                                            relationship='lt')
-                                        pairwise.save()
-
-            # Three-way interactions pairwise comparisons
-            for f_idx1, factor1 in enumerate(factors):
-                for f1_l_idx, f1_level in enumerate(factor1.anova_factor_levels.all()):
-                    for f_idx2, factor2 in enumerate(factors):
-                        if not f_idx2==f_idx1:
-                            for f2_l_idx, f2_level in enumerate(factor2.anova_factor_levels.all()):
-                                for f_idx3, factor3 in enumerate(factors):
-                                    if not f_idx3==f_idx1 and not f_idx3==f_idx2:
-                                        for f3_l_idx1, f3_level1 in enumerate(factor3.anova_factor_levels.all()):
-                                            for f3_l_idx2, f3_level2 in enumerate(factor3.anova_factor_levels.all()):
-                                                if f3_l_idx2>f3_l_idx1:
-                                                    pairwise=ANOVAThreeWayPairwiseComparison(anova=self.object, factor1=factor1, factor1_level=f1_level,
-                                                        factor2=factor2, factor2_level=f2_level, factor3=factor3,
-                                                        factor3_level1=f3_level1, factor3_level2=f3_level2,
-                                                        relationship='gt')
-                                                    pairwise.save()
-                                                    pairwise=ANOVAThreeWayPairwiseComparison(anova=self.object, factor1=factor1, factor1_level=f1_level,
-                                                        factor2=factor2, factor2_level=f2_level, factor3=factor3,
-                                                        factor3_level1=f3_level1, factor3_level2=f3_level2,
-                                                        relationship='lt')
-                                                    pairwise.save()
-        else:
-            return self.form_invalid(form)
-
-        return redirect('/sensorimotordb/anova/%d/?action=create' % self.object.id)
-
-
-class ANOVADetailView(LoginRequiredMixin, DetailView):
-    model=ANOVA
-    template_name = 'sensorimotordb/analysis/classification_analysis/anova_view.html'
-
-    def get_context_data(self, **kwargs):
-        context_data=super(ANOVADetailView,self).get_context_data(**kwargs)
-        context_data['factors']=ANOVAFactor.objects.filter(anova=self.object)
-        return context_data
-
-
-class DeleteANOVAView(JSONResponseMixin,BaseDetailView):
-    model=ANOVA
-
-    def get_context_data(self, **kwargs):
-        context={'msg':u'No POST data sent.' }
-        if self.request.is_ajax():
-            id=self.object.id
-            self.object=self.get_object()
-            ANOVAEffect.objects.filter(factors__anova=self.object).delete()
-            ANOVAOneWayPairwiseComparison.objects.filter(factor__anova=self.object).delete()
-            ANOVATwoWayPairwiseComparison.objects.filter(factor1__anova=self.object).delete()
-            ANOVAThreeWayPairwiseComparison.objects.filter(factor1__anova=self.object).delete()
-            ANOVAFactorLevel.objects.filter(factor__anova=self.object).delete()
-            ANOVAFactor.objects.filter(anova=self.object).delete()
-            self.object.delete()
-            context={'id': id}
-
-        return context
+        analysis=ClassificationAnalysis.objects.get(id=int(self.storage.get_step_data('step4')['step4-id']))
+        for key, f in form_list[3].files.iteritems():
+            (file,ext)=os.path.splitext(f.name)
+            new_fname='classify_unit_%d%s' % (analysis.id,ext)
+            analysis.script_name=new_fname
+            with open(os.path.join(settings.MEDIA_ROOT, 'scripts', new_fname),'wb+') as destination:
+                for chunk in f.chunks():
+                    destination.write(chunk)
+            os.remove(os.path.join(settings.MEDIA_ROOT,'temp',f.name))
+        analysis.save()
+        return redirect('/sensorimotordb/classification_analysis/%d/' % analysis.id)
 
 
 class CreateUnitClassificationTypeView(JSONResponseMixin, CreateView):
@@ -357,20 +211,6 @@ class UpdateUnitClassificationTypeView(JSONResponseMixin, BaseDetailView):
         return context
 
 
-class DeleteUnitClassificationConditionView(JSONResponseMixin, BaseDetailView):
-    model=UnitClassificationCondition
-
-    def get_context_data(self, **kwargs):
-        context={'msg':u'No POST data sent.' }
-        if self.request.is_ajax():
-            id=self.object.id
-            self.object=self.get_object()
-            self.object.delete()
-            context={'id': id, 'type_idx': self.request.GET.get('type_idx',-1), 'idx': self.request.GET.get('idx',-1)}
-
-        return context
-
-
 class DeleteUnitClassificationTypeView(JSONResponseMixin, BaseDetailView):
     model=UnitClassificationType
 
@@ -380,7 +220,6 @@ class DeleteUnitClassificationTypeView(JSONResponseMixin, BaseDetailView):
             id=self.object.id
             self.object=self.get_object()
             UnitClassification.objects.filter(type=self.object).delete()
-            UnitClassificationCondition.objecs.filter(classification_type=self.object).delete()
             self.object.delete()
             context={'id': id, 'idx': self.request.GET.get('idx',-1)}
 
@@ -464,27 +303,26 @@ class RunClassificationAnalysisView(LoginRequiredMixin, CreateView):
         self.object.analysis_settings=settings
         self.object.save()
 
-        for anova in analysis.analysis_anovas.all():
-            for factor in anova.anova_factors.all():
-                if factor.type=='time window':
-                    for level in factor.anova_factor_levels.all():
-                        tw_settings=TimeWindowFactorLevelSettings(analysis_settings=settings, level=level)
-                        tw_settings.rel_evt=self.request.POST.get('level_%d_rel_event' % level.id)
-                        rel_start=self.request.POST.get('level_%d_rel_start' % level.id)
-                        if len(rel_start):
-                            tw_settings.rel_start=int(rel_start)
-                        rel_end=self.request.POST.get('level_%d_rel_end' % level.id)
-                        if len(rel_end):
-                            tw_settings.rel_end=int(rel_end)
-                        tw_settings.rel_end_evt=self.request.POST.get('level_%d_rel_end_event' % level.id)
-                        tw_settings.save()
-                elif factor.type=='condition':
-                    for level in factor.anova_factor_levels.all():
-                        condition_ids=self.request.POST.getlist('level_mapping_%d' % level.id)
-                        mapping=ClassificationAnalysisResultsLevelMapping(analysis_settings=settings, level=level)
-                        mapping.save()
-                        for condition_id in condition_ids:
-                            mapping.conditions.add(Condition.objects.get(id=condition_id))
+        for factor in analysis.analysis_factors.all():
+            if factor.type=='time window':
+                for level in factor.factor_levels.all():
+                    tw_settings=TimeWindowFactorLevelSettings(analysis_settings=settings, level=level)
+                    tw_settings.rel_evt=self.request.POST.get('level_%d_rel_event' % level.id)
+                    rel_start=self.request.POST.get('level_%d_rel_start' % level.id)
+                    if len(rel_start):
+                        tw_settings.rel_start=int(rel_start)
+                    rel_end=self.request.POST.get('level_%d_rel_end' % level.id)
+                    if len(rel_end):
+                        tw_settings.rel_end=int(rel_end)
+                    tw_settings.rel_end_evt=self.request.POST.get('level_%d_rel_end_event' % level.id)
+                    tw_settings.save()
+            elif factor.type=='condition':
+                for level in factor.factor_levels.all():
+                    condition_ids=self.request.POST.getlist('level_mapping_%d' % level.id)
+                    mapping=ClassificationAnalysisResultsLevelMapping(analysis_settings=settings, level=level)
+                    mapping.save()
+                    for condition_id in condition_ids:
+                        mapping.conditions.add(Condition.objects.get(id=condition_id))
         analysis.run(self.object, settings)
 
         return redirect('/sensorimotordb/analysis_results/%d/' % self.object.id)
@@ -593,7 +431,7 @@ class ClassificationAnalysisResultsDetailView(AnalysisResultsDetailView):
 
     def get_context_data(self, **kwargs):
         context = AnalysisResultsDetailView.get_context_data(self, **kwargs)
-        context['factors']=ANOVAFactor.objects.filter(anova__analysis=self.object.analysis)
+        context['factors']=Factor.objects.filter(analysis=self.object.analysis)
         context['bodb_server']=settings.BODB_SERVER
         context['api_key']=ApiKey.objects.get(user=self.request.user).key
         context['username']=self.request.user.username

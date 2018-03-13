@@ -4,6 +4,8 @@ from mptt.fields import TreeForeignKey
 from mptt.models import MPTTModel
 import numpy as np
 import os
+
+from pymatlab import MatlabSession
 from rpy2 import robjects
 from sensorimotordb.models import UnitRecording, Condition, Unit, Event, RecordingTrial
 from uscbp import settings
@@ -46,8 +48,15 @@ class ClassificationAnalysis(Analysis):
         results.total_num_units=len(unit_ids)
         results.save()
 
-        r_source(os.path.join(settings.MEDIA_ROOT,'scripts',self.script_name))
-        r_classify_script = robjects.globalenv['classify_unit']
+        (script_base,script_ext)=os.path.splitext(self.script_name)
+        if script_ext=='.R':
+            r_source(os.path.join(settings.MEDIA_ROOT,'scripts',self.script_name))
+            r_classify_script = robjects.globalenv['classify_unit']
+        elif script_ext=='.m':
+            matlab_session = MatlabSession(settings.MATLAB_ROOT)
+            matlab_classify_script=''
+            with open(os.path.join(settings.MEDIA_ROOT,'scripts',self.script_name),'r') as myfile:
+                matlab_classify_script=myfile.read()
 
 
         unit_classifications={}
@@ -114,23 +123,38 @@ class ClassificationAnalysis(Analysis):
                                         conditions__id__exact=trial_condition_id)
                                     factor_values[other_factor.name].append(level_settings.level.value)
 
-            df = pd.DataFrame({
-                'trial': pd.Series(trial_ids),
-                'rate': pd.Series(rates),
-                'spikes': pd.Series(spikes)
-            })
-            for factor_name,values in factor_values.iteritems():
-                factor_name = factor_name.replace(' ', '_')
-                df[factor_name]=pd.Series(values)
+            if script_ext=='.R':
+                df = pd.DataFrame({
+                    'trial': pd.Series(trial_ids),
+                    'rate': pd.Series(rates),
+                    'spikes': pd.Series(spikes)
+                })
+                for factor_name,values in factor_values.iteritems():
+                    factor_name = factor_name.replace(' ', '_')
+                    df[factor_name]=pd.Series(values)
 
-            df.to_csv('/home/bonaiuto/Dropbox/sensorimotordb/test.csv')
+                df.to_csv('/home/bonaiuto/Dropbox/sensorimotordb/test.csv')
 
-            (classification,stats) = r_classify_script(df)
+                (classification,stats) = r_classify_script(df)
+                stats=stats[0]
+                classification=classification[0]
+            elif script_ext=='.m':
+                matlab_session.putvalue('trial',np.asarray(trial_ids))
+                matlab_session.putvalue('rate',np.asarray(rates))
+                matlab_session.putvalue('spikes',np.asarray(spikes))
+                for factor_name,values in factor_values.iteritems():
+                    factor_name = factor_name.replace(' ', '_')
+                    matlab_session.putvalue(factor_name,np.asarray(values))
+                matlab_session.putvalue('classify_script',matlab_classify_script)
+                matlab_session.run('eval(classify_script)')
+                stats=matlab_session.getvalue('stats')
+                classification=matlab_session.getvalue('classification')
 
-            unit_results.results_text=stats[0]
+
+            unit_results.results_text=stats
             unit_results.save()
 
-            unit_classifications[classification[0]].add_hierarchically(unit)
+            unit_classifications[classification].add_hierarchically(unit)
 
 
 class AnalysisSettings(models.Model):

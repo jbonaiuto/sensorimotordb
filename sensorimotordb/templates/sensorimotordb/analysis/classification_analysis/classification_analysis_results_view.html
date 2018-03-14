@@ -134,6 +134,16 @@ function loadedAnalysisResultsData(resp)
         factor_level_data.timewindow_settings.set(level_id,time_window_settings);
     }
 
+    // Fill in analysis info
+    $('.analysis_settings_info').each(function(index, element){
+        $(this).empty();
+        var tmplMarkup = $('#analysis_settings-template').html();
+        results.settings.factors=factors;
+        results.factor_level_data=factor_level_data;
+        var compiledTmpl = _.template(tmplMarkup, results.settings);
+        $(this).append(compiledTmpl);
+    });
+
     // List of current units
     current_unit_ids=[];
     for(var unit_idx=0; unit_idx<results.unit_analysis_results.length; unit_idx++)
@@ -1107,9 +1117,12 @@ function exportToBODB(analysis_id)
 {% endblock %}
 {% block content %}
 <div class="analysis_results_info"></div>
+<h2>Analysis Settings</h2>
+<div class="analysis_settings_info"></div>
 <h2>Unit Analysis Results</h2>
 <div class="unit_analysis_results_list"></div>
 {% include "sensorimotordb/analysis/classification_analysis/classification_unit_analysis_results_list_item_template.html" %}
 {% include "sensorimotordb/analysis/classification_analysis/classification_analysis_results_template.html" %}
+{% include "sensorimotordb/analysis/classification_analysis/classification_analysis_settings_template.html" %}
 {% endblock %}
 	

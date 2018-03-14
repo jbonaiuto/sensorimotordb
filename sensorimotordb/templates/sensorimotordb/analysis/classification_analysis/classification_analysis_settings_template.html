@@ -1,0 +1,83 @@
+<script type="text/html" id="analysis_settings-template">
+    <div id="analysis_settings-<%= id %>">
+        <table>
+            <tr>
+                <td>
+                    <h3>Time Window Settings</h3>
+                    <div id="analysis_settings-<%= id %>_time_window">
+                        <% for(var idx=0; idx<factors.length; idx++) {
+                            if(factors[idx].type=='time window') {
+                        %>
+                            <table border="0" cellspacing="0">
+                                <tr>
+                                    <td><strong>Factor</strong></td>
+                                    <td colspan="4"><%= factors[idx].name %></td>
+                                </tr>
+                                <% for(var l_idx=0; l_idx<factors[idx].levels.length; l_idx++) { %>
+                                    <tr class="<%= getTRTag(l_idx) %>">
+                                        <td>&nbsp</td>
+                                        <td><strong>Level</strong></td>
+                                        <td colspan="3"><%= factors[idx].levels[l_idx].value %></td>
+                                    </tr>
+                                    <tr class="<%= getTRTag(l_idx) %>">
+                                        <td>&nbsp</td>
+                                        <td><strong>Relative event</strong></td>
+                                        <td><%= factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_evt %></td>
+                                        <td><strong>Start (ms)</strong></td>
+                                        <td><%= factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_start %></td>
+                                    </tr>
+                                    <tr class="<%= getTRTag(l_idx) %>">
+                                        <td>&nbsp</td>
+                                        <% if(factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_end_evt.length>0) { %>
+                                            <td><strong>End event</strong></td>
+                                            <td colspan="3"><%= factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_end_evt %></td>
+                                        <% } else { %>
+                                            <td><strong>End (ms)</strong></td>
+                                            <td colspan="3"><%= factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_end %></td>
+                                        <% } %>
+                                    </tr>
+                                <% } %>
+                            </table>
+                        <%
+                            }
+                        } %>
+                    </div>
+                </td>
+                <td>
+                    <h3>Condition Settings</h3>
+                    <div id="analysis_settings-<%= id %>_condition">
+                        <% for(var idx=0; idx<factors.length; idx++) {
+                            if(factors[idx].type=='condition') {
+                        %>
+                            <table border="0" cellspacing="0">
+                                <tr>
+                                    <td><strong>Factor</strong></td>
+                                    <td colspan="4"><%= factors[idx].name %></td>
+                                </tr>
+                                <tr>
+                                    <td>&nbsp;</td>
+                                    <td><strong>Level</strong></td>
+                                    <td>&nbsp;</td>
+                                    <td colspan="2"><strong>Conditions</strong></td>
+                                </tr>
+                                <% for(var l_idx=0; l_idx<factors[idx].levels.length; l_idx++) { %>
+                                    <tr class="<%= getTRTag(l_idx) %>">
+                                        <td>&nbsp;</td>
+                                        <td><%= factors[idx].levels[l_idx].value %></td>
+                                        <td colspan="2">
+                                            <% for(var c_idx=0; c_idx<factor_level_data.level_mappings.get(factors[idx].levels[l_idx].id).length; c_idx++) { %>
+                                                <%= conditions.get(factor_level_data.level_mappings.get(factors[idx].levels[l_idx].id)[c_idx]) %>
+                                                <br>
+                                            <% } %>
+                                        </td>
+                                    </tr>
+                                <% } %>
+                            </table>
+                        <% }
+                        }%>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</script>

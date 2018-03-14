@@ -113,7 +113,7 @@ class ClassificationAnalysis(Analysis):
 
                             factor_values[factor.name].append(level.value)
                             rates.append(rate)
-                            spikes.append(woi_spikes)
+                            spikes.append(len(woi_spikes))
                             trial_ids.append(trial_idx + 1)
 
                             for other_factor in self.analysis_factors.all():
@@ -132,8 +132,6 @@ class ClassificationAnalysis(Analysis):
                 for factor_name,values in factor_values.iteritems():
                     factor_name = factor_name.replace(' ', '_')
                     df[factor_name]=pd.Series(values)
-
-                df.to_csv('/home/bonaiuto/Dropbox/sensorimotordb/test.csv')
 
                 (classification,stats) = r_classify_script(df)
                 stats=stats[0]
@@ -276,7 +274,7 @@ def get_woi_spikes(unit_recording, trial_start_time, trial_events, rel_evt, rel_
                     found = True
                     break
         if found:
-            spikes = len(unit_recording.get_spikes_relative(woi_time_zero, [rel_start_ms, rel_end_ms]))
+            spikes = unit_recording.get_spikes_relative(woi_time_zero, [rel_start_ms, rel_end_ms])
     else:
         # try:
         woi_time_start = trial_start_time
@@ -298,7 +296,7 @@ def get_woi_spikes(unit_recording, trial_start_time, trial_events, rel_evt, rel_
                     found_end = True
                     break
         if found_start and found_end:
-            spikes = len(unit_recording.get_spikes_fixed([woi_time_start, woi_time_end]))
+            spikes = unit_recording.get_spikes_fixed([woi_time_start, woi_time_end])
     return spikes
 
 
@@ -420,7 +418,10 @@ class ClusterAnalysis(Analysis):
             overall_max=np.max(rate_maxes)
 
             for condition_id in condition_ids:
-                normalized_rate=unit_condition_rates[condition_id]/overall_max
+                if overall_max > 0:
+                    normalized_rate=unit_condition_rates[condition_id]/overall_max
+                else:
+                    normalized_rate = unit_condition_rates[condition_id]
                 unit_rate_matrix.extend(normalized_rate)
             rate_matrix.append(unit_rate_matrix)
 

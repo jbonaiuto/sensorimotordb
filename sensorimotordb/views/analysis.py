@@ -12,8 +12,10 @@ from sensorimotordb.forms import ClassificationAnalysisForm, ClassificationAnaly
     ClusterAnalysisResultsForm, ClassificationAnalysisFactorLevelFormSet, ClassificationAnalysisStep4Form
 from sensorimotordb.models import AnalysisResults, ClassificationAnalysis, UnitClassificationType, Analysis, Factor, \
     FactorLevel, Condition, Event, ClassificationAnalysisResultsLevelMapping, ClassificationAnalysisResults, Experiment, \
-    ClassificationAnalysisSettings, TimeWindowFactorLevelSettings, UnitClassification, UnitAnalysisResults, AnalysisSettings, \
-    ClusterAnalysis, ClusterAnalysisResults, ClusterAnalysisSettings, TimeWindowConditionSettings
+    ClassificationAnalysisSettings, TimeWindowFactorLevelSettings, UnitClassification, UnitAnalysisResults, \
+    AnalysisSettings, \
+    ClusterAnalysis, ClusterAnalysisResults, ClusterAnalysisSettings, TimeWindowConditionSettings, \
+    UnitClusterProjection, UnitCluster
 from sensorimotordb.views import LoginRequiredMixin, JSONResponseMixin
 from uscbp import settings
 
@@ -415,6 +417,10 @@ class DeleteAnalysisResultsView(JSONResponseMixin,BaseDetailView):
                 UnitClassification.objects.filter(analysis_results=self.object).delete()
                 UnitAnalysisResults.objects.filter(analysis_results=self.object.delete())
                 ClassificationAnalysisResults.objects.filter(id=self.object.id).delete()
+            elif ClusterAnalysisResults.objects.filter(id=self.object.id):
+                UnitClusterProjection.objects.filter(cluster__analysis_results=self.object).delete()
+                UnitCluster.objects.filter(analysis_results=self.object).delete()
+                ClusterAnalysisResults.objects.filter(id=self.object.id).delete()
             context={'id': self.request.POST['id']}
 
         return context

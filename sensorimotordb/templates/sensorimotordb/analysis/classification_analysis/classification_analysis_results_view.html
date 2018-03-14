@@ -138,8 +138,6 @@ function loadedAnalysisResultsData(resp)
     $('.analysis_settings_info').each(function(index, element){
         $(this).empty();
         var tmplMarkup = $('#analysis_settings-template').html();
-        results.settings.factors=factors;
-        results.factor_level_data=factor_level_data;
         var compiledTmpl = _.template(tmplMarkup, results.settings);
         $(this).append(compiledTmpl);
     });

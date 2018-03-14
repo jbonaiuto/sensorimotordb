@@ -111,6 +111,14 @@ function loadedAnalysisResultsData(resp)
         }
     }
 
+    // Fill in analysis info
+    $('.analysis_settings_info').each(function(index, element){
+        $(this).empty();
+        var tmplMarkup = $('#analysis_settings-template').html();
+        var compiledTmpl = _.template(tmplMarkup, results.settings);
+        $(this).append(compiledTmpl);
+    });
+
     // List of current units
     current_unit_ids=[];
     var unit_idx=0;
@@ -804,9 +812,12 @@ function update_plot()
 {% endblock %}
 {% block content %}
 <div class="analysis_results_info"></div>
+<h2>Analysis Settings</h2>
+<div class="analysis_settings_info"></div>
 <h2>Unit Analysis Results</h2>
 <div class="unit_analysis_results_list"></div>
 {% include "sensorimotordb/analysis/cluster_analysis/cluster_unit_analysis_results_list_item_template.html" %}
 {% include "sensorimotordb/analysis/cluster_analysis/cluster_analysis_results_template.html" %}
+{% include "sensorimotordb/analysis/cluster_analysis/cluster_analysis_settings_template.html" %}
 {% endblock %}
 	

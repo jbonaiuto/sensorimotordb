@@ -1,0 +1,57 @@
+<script type="text/html" id="analysis_settings-template">
+    <div id="analysis_settings-<%= id %>">
+        <h3>Time Window Settings</h3>
+        <div id="analysis_settings-<%= id %>_time_window">
+            <% for(var l_idx=0; l_idx<time_window_condition_settings.length; l_idx++) {
+                    var time_window_setting=time_window_condition_settings[l_idx];
+            %>
+                <table border="0" cellspacing="0">
+                    <tr class="<%= getTRTag(l_idx) %>">
+                        <td><strong>Condition</strong></td>
+                        <td colspan="2"><%= time_window_setting.condition.name %></td>
+                    </tr>
+                    <tr class="<%= getTRTag(l_idx) %>">
+                        <td><strong>Baseline</strong></td>
+                        <td><strong>Relative event</strong></td>
+                        <td><%= time_window_setting.baseline_evt %></td>
+                    </tr>
+                    <tr class="<%= getTRTag(l_idx) %>">
+                        <td>&nbsp;</td>
+                        <td><strong>Start (ms)</strong></td>
+                        <td><%= time_window_setting.baseline_start %></td>
+                    </tr>
+                    <tr class="<%= getTRTag(l_idx) %>">
+                        <td>&nbsp;</td>
+                        <% if(time_window_setting.baseline_end_evt.length>0) { %>
+                            <td><strong>End event</strong></td>
+                            <td><%= time_window_setting.baseline_end_evt %></td>
+                        <% } else { %>
+                            <td><strong>End (ms)</strong></td>
+                            <td><%= time_window_setting.baseline_end %></td>
+                        <% } %>
+                    </tr>
+                    <tr class="<%= getTRTag(l_idx) %>">
+                        <td><strong>WOI</strong></td>
+                        <td><strong>Relative event</strong></td>
+                        <td><%= time_window_setting.rel_evt %></td>
+                    </tr>
+                    <tr class="<%= getTRTag(l_idx) %>">
+                        <td>&nbsp;</td>
+                        <td><strong>Start (ms)</strong></td>
+                        <td><%= time_window_setting.rel_start %></td>
+                    </tr>
+                    <tr class="<%= getTRTag(l_idx) %>">
+                        <td>&nbsp;</td>
+                        <% if(time_window_setting.rel_end_evt.length>0) { %>
+                            <td><strong>End event</strong></td>
+                            <td><%= time_window_setting.rel_end_evt %></td>
+                        <% } else { %>
+                            <td><strong>End (ms)</strong></td>
+                            <td><%= time_window_setting.rel_end %></td>
+                        <% } %>
+                    </tr>
+                </table>
+            <% } %>
+        </div>
+    </div>
+</script>

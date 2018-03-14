@@ -364,13 +364,9 @@ class FactorResource(ModelResource):
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
-        filtering={
-            'id': ALL_WITH_RELATIONS,
-        }
 
 
 class AnalysisResource(ModelResource):
-    #factors=fields.ToManyField(FactorResource,'factors', related_name='factors',null=False,full=True)
     class Meta:
         queryset=Analysis.objects.all().prefetch_related('factors')
         resource_name='analysis'

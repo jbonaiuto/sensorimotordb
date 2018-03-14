@@ -11,29 +11,32 @@
                             <table border="0" cellspacing="0">
                                 <tr>
                                     <td><strong>Factor</strong></td>
-                                    <td colspan="4"><%= factors[idx].name %></td>
+                                    <td colspan="2"><%= factors[idx].name %></td>
                                 </tr>
                                 <% for(var l_idx=0; l_idx<factors[idx].levels.length; l_idx++) { %>
                                     <tr class="<%= getTRTag(l_idx) %>">
-                                        <td>&nbsp</td>
+                                        <td>&nbsp;</td>
                                         <td><strong>Level</strong></td>
-                                        <td colspan="3"><%= factors[idx].levels[l_idx].value %></td>
+                                        <td><%= factors[idx].levels[l_idx].value %></td>
                                     </tr>
                                     <tr class="<%= getTRTag(l_idx) %>">
-                                        <td>&nbsp</td>
+                                        <td>&nbsp;</td>
                                         <td><strong>Relative event</strong></td>
                                         <td><%= factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_evt %></td>
+                                    </tr>
+                                    <tr class="<%= getTRTag(l_idx) %>">
+                                        <td>&nbsp;</td>
                                         <td><strong>Start (ms)</strong></td>
                                         <td><%= factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_start %></td>
                                     </tr>
                                     <tr class="<%= getTRTag(l_idx) %>">
-                                        <td>&nbsp</td>
+                                        <td>&nbsp;</td>
                                         <% if(factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_end_evt.length>0) { %>
                                             <td><strong>End event</strong></td>
-                                            <td colspan="3"><%= factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_end_evt %></td>
+                                            <td><%= factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_end_evt %></td>
                                         <% } else { %>
                                             <td><strong>End (ms)</strong></td>
-                                            <td colspan="3"><%= factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_end %></td>
+                                            <td><%= factor_level_data.timewindow_settings.get(factors[idx].levels[l_idx].id).rel_end %></td>
                                         <% } %>
                                     </tr>
                                 <% } %>

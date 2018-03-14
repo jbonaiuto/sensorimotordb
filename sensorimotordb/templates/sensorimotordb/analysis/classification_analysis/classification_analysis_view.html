@@ -99,10 +99,17 @@
             $('#id_classification_type_'+parent_id+'_children').append(compiledTmpl);
         }
 
-        for(var idx=0; idx<resp.children.length; idx++)
+        if(resp.children.length>0)
         {
-            var child=resp.children[idx];
-            loadedClassificationType(child);
+            for(var idx=0; idx<resp.children.length; idx++)
+            {
+                var child=resp.children[idx];
+                loadedClassificationType(child);
+            }
+        }
+        else
+        {
+            $('#id_classification_type_'+resp.id+'_children_row').hide();
         }
     }
 
@@ -117,11 +124,16 @@
                 <td><strong>Description</strong></td>
                 <td>{{ object.description }}</td>
             </tr>
+            <tr>
+                <td><strong>Script</strong></td>
+                <td><a href="/media/scripts/{{ object.script_name }}"/>{{ object.script_name }}</a></td>
+            </tr>
         </table>
     </div>
 </div>
 <h2>Factors</h2>
 <div id="id_factors"></div>
+<br>
 <h2>Unit Classification Types</h2>
 <div id="id_classification_types"></div>
 {% include "sensorimotordb/analysis/classification_analysis/factor_list_item_template.html" %}

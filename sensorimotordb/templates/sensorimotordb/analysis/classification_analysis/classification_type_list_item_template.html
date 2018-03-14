@@ -3,14 +3,12 @@
         <table>
             <tbody id="id_classification_type-<%= id %>_table">
                 <tr>
-                    <td><strong>Label:</strong></td>
                     <td><%= label %></td>
                 </tr>
-                <tr>
+                <tr id="id_classification_type_<%= id %>_children_row">
                     <td>&nbsp;</td>
                     <td>
-                        <div id="id_classification_type_<%= id %>_children">
-                        </div>
+                        <div id="id_classification_type_<%= id %>_children" style="border:1px solid black;"></div>
                     </td>
                 </tr>
             </tbody>

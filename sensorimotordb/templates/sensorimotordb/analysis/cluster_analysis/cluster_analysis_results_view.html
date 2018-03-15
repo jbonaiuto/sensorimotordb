@@ -17,7 +17,7 @@ var current_unit_ids=[];
 var current_cluster_idx=-1;
 
 // List of all clusters
-var clusters=[];
+//var clusters=[];
 
 // Map from conditions to condition names
 var conditions=new Map();
@@ -96,6 +96,7 @@ function loadedAnalysisResultsData(resp)
     $('.analysis_results_info').each(function(index, element){
         $(this).empty();
         var tmplMarkup = $('#analysis_results-template').html();
+        results.unit_group='{{ unit_group }}';
         var compiledTmpl = _.template(tmplMarkup, results);
         $(this).append(compiledTmpl);
     });
@@ -115,6 +116,7 @@ function loadedAnalysisResultsData(resp)
     $('.analysis_settings_info').each(function(index, element){
         $(this).empty();
         var tmplMarkup = $('#analysis_settings-template').html();
+        results.settings.mds_type='{{ mds_type }}';
         var compiledTmpl = _.template(tmplMarkup, results.settings);
         $(this).append(compiledTmpl);
     });
@@ -387,52 +389,55 @@ function loadedRecordingTrialData(resp)
         {
             var unit=unit_recording.unit;
 
-            // If this is the first instance of this unit in this condition
-            if(!orig_unit_condition_data.spikes.get(unit.id).has(condition_id))
+            if(orig_unit_condition_data.spikes.has(unit.id))
             {
-                orig_unit_condition_data.spikes.get(unit.id).set(condition_id, []);
-                orig_unit_condition_data.events.get(unit.id).set(condition_id, []);
-                orig_unit_condition_data.numTrials.get(unit.id).set(condition_id, 0);
-            }
-
-            // Update num trials
-            orig_unit_condition_data.numTrials.get(unit.id).set(condition_id,
-                    orig_unit_condition_data.numTrials.get(unit.id).get(condition_id)+1);
-
-            // Add trial start event
-            var start_event={
-                t: start_time,
-                trial: trial_number,
-                name: 'start',
-                description: 'trial start'
-            };
-            orig_unit_condition_data.events.get(unit.id).get(condition_id).push(start_event);
-
-            // Add each event in trial
-            for(let evt of recording_trial.events)
-            {
-                var current_event={
-                    t: parseFloat(evt.time),
-                    trial: trial_number,
-                    name: evt.name,
-                    description: evt.description
-                };
-                if(event_types.indexOf(current_event.name)<0)
-                    event_types.push(current_event.name);
-                orig_unit_condition_data.events.get(unit.id).get(condition_id).push(current_event);
-            }
-
-            // Add unit spikes
-            if(unit_recording.spike_times.length>0)
-            {
-                var spike_times=unit_recording.spike_times.split(',');
-                for(var l=0; l<spike_times.length; l++)
+                // If this is the first instance of this unit in this condition
+                if(!orig_unit_condition_data.spikes.get(unit.id).has(condition_id))
                 {
-                    var spk={
-                        x: parseFloat(spike_times[l]),
-                        y: trial_number
+                    orig_unit_condition_data.spikes.get(unit.id).set(condition_id, []);
+                    orig_unit_condition_data.events.get(unit.id).set(condition_id, []);
+                    orig_unit_condition_data.numTrials.get(unit.id).set(condition_id, 0);
+                }
+
+                // Update num trials
+                orig_unit_condition_data.numTrials.get(unit.id).set(condition_id,
+                        orig_unit_condition_data.numTrials.get(unit.id).get(condition_id)+1);
+
+                // Add trial start event
+                var start_event={
+                    t: start_time,
+                    trial: trial_number,
+                    name: 'start',
+                    description: 'trial start'
+                };
+                orig_unit_condition_data.events.get(unit.id).get(condition_id).push(start_event);
+
+                // Add each event in trial
+                for(let evt of recording_trial.events)
+                {
+                    var current_event={
+                        t: parseFloat(evt.time),
+                        trial: trial_number,
+                        name: evt.name,
+                        description: evt.description
                     };
-                    orig_unit_condition_data.spikes.get(unit.id).get(condition_id).push(spk);
+                    if(event_types.indexOf(current_event.name)<0)
+                        event_types.push(current_event.name);
+                    orig_unit_condition_data.events.get(unit.id).get(condition_id).push(current_event);
+                }
+
+                // Add unit spikes
+                if(unit_recording.spike_times.length>0)
+                {
+                    var spike_times=unit_recording.spike_times.split(',');
+                    for(var l=0; l<spike_times.length; l++)
+                    {
+                        var spk={
+                            x: parseFloat(spike_times[l]),
+                            y: trial_number
+                        };
+                        orig_unit_condition_data.spikes.get(unit.id).get(condition_id).push(spk);
+                    }
                 }
             }
         }
@@ -776,7 +781,7 @@ function plotCluster()
     {
         var cluster_parent_id='analysis_results-'+results.id+'-cluster-'+current_cluster_idx+'-mean_rate';
         var cluster_legend_id='analysis_results-'+results.id+'-cluster-'+current_cluster_idx+'_legend'
-        $('#'+parent_id).append('<div id="'+cluster_parent_id+'" style="text-align:center"><h3>Cluster '+(current_cluster_idx+1)+'</h3></div>');
+        $('#'+parent_id).append('<div id="'+cluster_parent_id+'" style="text-align:center"><h3>Cluster '+(current_cluster_idx+1)+'</h3><h4>'+results.unit_clusters[current_cluster_idx].units.length+' neurons</h4></div>');
         $('#'+parent_id).append('<div id="analysis_results-'+results.id+'-cluster-'+current_cluster_idx+'_legend" class="legend"></div>');
         plots.cluster=drawMeanNormalizedFiringRates(cluster_parent_id, cluster_legend_id, cluster_data.mean_rates.get(current_cluster_idx),
                 cluster_data.events.get(current_cluster_idx), cluster_data.event_types.get(current_cluster_idx),

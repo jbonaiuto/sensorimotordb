@@ -341,6 +341,7 @@ class RunClusterAnalysisView(LoginRequiredMixin, CreateView):
         context['experiment']=Experiment.objects.get(id=self.request.GET.get('experiment',None))
         context['conditions']=Condition.objects.filter(experiment=context['experiment'])
         context['events']=Event.objects.filter(trial__condition__experiment__id=self.request.GET.get('experiment',None)).values_list('name',flat=True).distinct()
+        context['unit_groups']=UnitClassification.objects.filter(analysis_results__experiment__id=self.request.GET.get('experiment',None))
         return context
 
     def get_initial(self):
@@ -360,6 +361,8 @@ class RunClusterAnalysisView(LoginRequiredMixin, CreateView):
 
         settings=ClusterAnalysisSettings(analysis=analysis, num_clusters=int(self.request.POST['num_clusters']),
             bin_width=int(self.request.POST['bin_width']), kernel_width=int(self.request.POST['kernel_width']))
+        if self.request.POST['unit_group']>-1:
+            settings.unit_group=UnitClassification.objects.get(id=self.request.POST['unit_group'])
         settings.save()
 
         self.object.analysis_settings=settings
@@ -451,6 +454,13 @@ class ClusterAnalysisResultsDetailView(AnalysisResultsDetailView):
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         context = self.get_context_data(object=self.object)
+        context['unit_group']='All'
+        settings=ClusterAnalysisSettings.objects.get(id=self.object.analysis_settings.id)
+        if settings.unit_group is not None:
+            context['unit_group']='%s - %s' % (settings.unit_group.analysis_results.name, settings.unit_group.type.label)
+
+        analysis=ClusterAnalysis.objects.get(id=self.object.analysis.id)
+        context['mds_type'] = analysis.mds_type
         return self.render_to_response(context)
 
     def get_context_data(self, **kwargs):

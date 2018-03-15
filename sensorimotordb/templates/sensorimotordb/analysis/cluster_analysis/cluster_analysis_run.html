@@ -388,6 +388,17 @@ function setBaselineRelType(idx)
             <td><input type="text" id="id_kernel_width" name="kernel_width" value="30"/></td>
         </tr>
         <tr>
+            <th><strong>Unit group</strong></th>
+            <td>
+                <select id="id_unit_group" name="unit_group">
+                    <option value="-1">All</option>
+                    {% for group in unit_groups %}
+                        <option value="{{ group.id }}">{{ group.analysis_results.name }} - {{ group.type.label }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        <tr>
             <td colspan="2"><strong>Conditions</strong> <input id="id_add_condition" type="button" value="New" onclick="addCondition();" disabled=true></td>
         </tr>
         <tr>

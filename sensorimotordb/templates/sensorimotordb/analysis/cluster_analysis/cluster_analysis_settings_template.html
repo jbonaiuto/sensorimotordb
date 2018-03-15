@@ -1,5 +1,23 @@
 <script type="text/html" id="analysis_settings-template">
     <div id="analysis_settings-<%= id %>">
+        <table>
+            <tr>
+                <td><strong>MDS type</strong></td>
+                <td><%= mds_type %></td>
+            </tr>
+            <tr>
+                <td><strong>Number of clusters</strong></td>
+                <td><%= num_clusters %></td>
+            </tr>
+            <tr>
+                <td><strong>Bin width</strong></td>
+                <td><%= bin_width %></td>
+            </tr>
+            <tr>
+                <td><strong>Kernel width (ms)</strong></td>
+                <td><%= kernel_width %></td>
+            </tr>
+        </table>
         <h3>Time Window Settings</h3>
         <div id="analysis_settings-<%= id %>_time_window">
             <% for(var l_idx=0; l_idx<time_window_condition_settings.length; l_idx++) {

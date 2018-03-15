@@ -357,6 +357,8 @@ class ClusterAnalysis(Analysis):
     def run(self, results, analysis_settings):
         unit_ids=np.unique(UnitRecording.objects.filter(trial__condition__experiment=results.experiment).values_list('unit',
             flat=True))
+        if analysis_settings.unit_group is not None:
+            unit_ids=np.unique(analysis_settings.unit_group.units.values_list('id', flat=True))
         condition_ids=np.unique(TimeWindowConditionSettings.objects.filter(analysis_settings=analysis_settings).values_list('condition', flat=True))
 
         rate_matrix=[]
@@ -454,6 +456,7 @@ class ClusterAnalysisSettings(AnalysisSettings):
     num_clusters=models.IntegerField(blank=True, null=True)
     bin_width=models.IntegerField(blank=True, null=True)
     kernel_width=models.IntegerField(blank=True, null=True)
+    unit_group=models.ForeignKey('UnitClassification', null=True)
 
     class Meta:
         app_label='sensorimotordb'

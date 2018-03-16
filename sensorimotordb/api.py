@@ -357,6 +357,7 @@ class FactorLevelResource(ModelResource):
 
 
 class FactorResource(ModelResource):
+    analysis=fields.ToOneField('sensorimotordb.api.AnalysisResource', 'analysis')
     levels=fields.ToManyField(FactorLevelResource, 'factor_levels', related_name='factor_levels',null=True,full=True)
     class Meta:
         queryset=Factor.objects.all().prefetch_related('factor_levels')
@@ -364,6 +365,9 @@ class FactorResource(ModelResource):
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         cache = SimpleCache(timeout=10)
+        filtering = {
+            'analysis': ALL_WITH_RELATIONS
+        }
 
 
 class AnalysisResource(ModelResource):

@@ -962,7 +962,7 @@ function drawPopulationFiringRate(parent_id, legend_id, group_trial_rates, group
             .attr("title", "test2")
             .attr("version", 1.1)
             .attr("xmlns", "http://www.w3.org/2000/svg")
-            .node().parentNode.innerHTML;
+            .node().outerHTML;
 
         var blob = new Blob([html], {type: "image/svg+xml"});
         saveAs(blob, parent_id+".svg");
@@ -1367,7 +1367,7 @@ function drawMeanNormalizedFiringRates(parent_id, legend_id, group_mean_rates, g
             .attr("title", "test2")
             .attr("version", 1.1)
             .attr("xmlns", "http://www.w3.org/2000/svg")
-            .node().parentNode.innerHTML;
+            .node().outerHTML;
 
         var blob = new Blob([html], {type: "image/svg+xml"});
         saveAs(blob, parent_id+".svg");

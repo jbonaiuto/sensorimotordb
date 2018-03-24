@@ -7,6 +7,7 @@
 <script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_functions.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/neural_data_plot.js' %}"></script>
+<script type="text/javascript" src="{% static 'sensorimotordb/js/FileSaver.js' %}"></script>
 <script>
 
 // Analysis results JSON object
@@ -245,7 +246,9 @@ function init_cluster_scatter_plot(element_id, data)
     // add the graph canvas to the body of the webpage
     var svg = d3.select("#"+element_id).append("svg")
         .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
+        .attr("height", height + margin.top + margin.bottom);
+
+    var origin_transform=svg
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -260,7 +263,7 @@ function init_cluster_scatter_plot(element_id, data)
     yScale.domain([d3.min(data, yValue)-1, d3.max(data, yValue)+1]);
 
     // x-axis
-    svg.append("g")
+    origin_transform.append("g")
             .attr("class", "x axis")
             .attr("transform", "translate(0," + height + ")")
             .call(xAxis)
@@ -271,7 +274,7 @@ function init_cluster_scatter_plot(element_id, data)
             .style("text-anchor", "end");
 
     // y-axis
-    svg.append("g")
+    origin_transform.append("g")
             .attr("class", "y axis")
             .call(yAxis)
             .append("text")
@@ -282,7 +285,7 @@ function init_cluster_scatter_plot(element_id, data)
             .style("text-anchor", "end");
 
     // draw dots
-    svg.selectAll(".dot")
+    origin_transform.selectAll(".dot")
             .data(data)
             .enter().append("circle")
             .attr("class", "dot")
@@ -308,7 +311,7 @@ function init_cluster_scatter_plot(element_id, data)
             });
 
     // draw legend
-    var legend = svg.selectAll(".legend")
+    var legend = origin_transform.selectAll(".legend")
             .data(color.domain())
             .enter().append("g")
             .attr("class", "legend")
@@ -331,6 +334,26 @@ function init_cluster_scatter_plot(element_id, data)
             .attr("dy", ".35em")
             .style("text-anchor", "end")
             .text(function(d) { return d;});
+
+    d3.select("#"+element_id+"_generate")
+        .on("click", writeDownloadLink);
+
+    function writeDownloadLink(){
+        try {
+            var isFileSaverSupported = !!new Blob();
+        } catch (e) {
+            alert("blob not supported");
+        }
+
+        var html = svg
+            .attr("title", "test2")
+            .attr("version", 1.1)
+            .attr("xmlns", "http://www.w3.org/2000/svg")
+            .node().outerHTML;
+
+        var blob = new Blob([html], {type: "image/svg+xml"});
+        saveAs(blob, element_id+".svg");
+    };
 }
 
 function loadUnitRates(cluster_idx)
@@ -783,6 +806,7 @@ function plotCluster()
         var cluster_legend_id='analysis_results-'+results.id+'-cluster-'+current_cluster_idx+'_legend'
         $('#'+parent_id).append('<div id="'+cluster_parent_id+'" style="text-align:center"><h3>Cluster '+(current_cluster_idx+1)+'</h3><h4>'+results.unit_clusters[current_cluster_idx].units.length+' neurons</h4></div>');
         $('#'+parent_id).append('<div id="analysis_results-'+results.id+'-cluster-'+current_cluster_idx+'_legend" class="legend"></div>');
+        $('#'+parent_id).append('<button id="analysis_results-'+results.id+'-cluster-'+current_cluster_idx+'-mean_rate_generate">Save as SVG</button>');
         plots.cluster=drawMeanNormalizedFiringRates(cluster_parent_id, cluster_legend_id, cluster_data.mean_rates.get(current_cluster_idx),
                 cluster_data.events.get(current_cluster_idx), cluster_data.event_types.get(current_cluster_idx),
                 conditions, 0.5);
@@ -811,6 +835,31 @@ function update_plot()
     {
         plots.unit.get(unit_id).update(realigned_unit_condition_data.rates.get(unit_id), realigned_unit_condition_data.events.get(unit_id));
     }
+}
+
+function save_as_csv()
+{
+    try {
+        var isFileSaverSupported = !!new Blob();
+    } catch (e) {
+        alert("blob not supported");
+    }
+
+    var txt = 'Monkey,Penetration,Unit,Cluster\n';
+    for(var cluster_idx=0; cluster_idx<results.unit_clusters.length; cluster_idx++)
+    {
+        var cluster=results.unit_clusters[cluster_idx];
+        for(var j=0; j<cluster.units.length; j++)
+        {
+            var unit=cluster.units[j];
+            current_unit_ids.push(unit.id);
+            var unit_label='Subject '+unit.penetration.subject.subj_id + ', Penetration '+unit.penetration.label+', Unit '+unit.label;
+            txt=txt+unit.penetration.subject.subj_id+','+unit.penetration.label+','+unit.label+','+(cluster_idx+1)+'\n';
+        }
+    }
+
+    var blob = new Blob([txt], {type: "text/plain"});
+    saveAs(blob, "cluster_"+results.id+".csv");
 }
 
 </script>

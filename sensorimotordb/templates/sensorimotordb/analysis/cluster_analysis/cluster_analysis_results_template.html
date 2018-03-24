@@ -29,6 +29,8 @@
             <tr>
                 <td valign=top colspan="4">
                     <div id="analysis_results-<%= id %>-scatter" style="text-align:center"><img src="{% static 'sensorimotordb/img/loading.gif' %}"></div>
+                    <button id="analysis_results-<%= id %>-scatter_generate">Save as SVG</button>
+                    <button id="analysis_results-<%= id %>-export" onclick="return save_as_csv();">Save as CSV</button>
                 </td>
                 <td></td>
             </tr>

@@ -143,7 +143,7 @@ function loadedAnalysisResultsData(resp)
     });
 
     // List of current units
-    current_unit_ids=[];
+    current_unit_ids=[]
     for(var unit_idx=0; unit_idx<results.unit_analysis_results.length; unit_idx++)
     {
         var unit_results=results.unit_analysis_results[unit_idx];
@@ -1109,6 +1109,37 @@ function exportToBODB(analysis_id)
     var win = window.open('{{ bodb_server }}/bodb/sed/neurophysiology/sensorimotordb/import/?_popup=1&analysis_id={{ object.id }}&api_key={{ api_key }}&user={{ username }}', 'Export to BODB', 'height=800,width=1000,resizable=yes,scrollbars=yes');
     win.focus();
     return false;
+}
+
+function save_as_csv()
+{
+    try {
+        var isFileSaverSupported = !!new Blob();
+    } catch (e) {
+        alert("blob not supported");
+    }
+
+    var txt = 'Monkey,Penetration,Unit,Classification\n';
+    for(var unit_idx=0; unit_idx<results.unit_analysis_results.length; unit_idx++)
+    {
+        var unit_results=results.unit_analysis_results[unit_idx];
+        var class_label='';
+        for(let classification of results.unit_classifications)
+        {
+            for(let unit_classification of classification.units)
+            {
+                if(unit_classification.id==unit_results.unit.id)
+                {
+                    class_label=classification.type.label;
+                    break
+                }
+            }
+        }
+        txt=txt+unit_results.unit.penetration.subject.subj_id+','+unit_results.unit.penetration.label+','+unit_results.unit.label+','+class_label+'\n';
+    }
+
+    var blob = new Blob([txt], {type: "text/plain"});
+    saveAs(blob, "classification_"+results.id+".csv");
 }
 
 </script>

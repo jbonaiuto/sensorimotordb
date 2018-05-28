@@ -216,7 +216,7 @@ function loadedAnalysisResultsData(resp)
     }
 
     // Create hierarchical plot
-    d3.select(self.frameElement).style("height", "800px");
+    //d3.select(self.frameElement).style("height", "800px");
     init_code_hierarchy_plot("analysis_results-"+results.id+"-pie", data);
 
     // Set rate to loading
@@ -351,10 +351,12 @@ function init_code_hierarchy_plot(element_id, data)
     var x_margin = 40;
     var y_margin = 40;
 
-    var max_depth=3;
+    //var max_depth=3;
+    var max_depth=4;
 
     var data_slices = [];
-    var max_level = 4;
+    //var max_level = 4;
+    var max_level = 5;
 
     var svg = d3.select("#"+element_id).append("svg")
             .attr("width", width)

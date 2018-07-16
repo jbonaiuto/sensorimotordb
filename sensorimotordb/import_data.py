@@ -1534,11 +1534,6 @@ def import_social_goal_mirror_restricted_data(db='default'):
                             unit_recording.spike_times = ','.join([str(x) for x in sorted(spike_times)])
                         unit_recording.save(using=db)
 
-    try:
-        rebuild_index.Command().handle(interactive=False)
-    except:
-        pass
-
 
 def import_social_goal_mirror_all_data(db='default'):
     monkeys = ['Betta', 'Houdini']
@@ -1642,15 +1637,15 @@ def import_social_goal_mirror_all_data(db='default'):
         subject.species=Species.objects.using(db).get(genus_name='Macaca',species_name='mulatta')
         subject.save(using=db)
 
-        penetrations=monkey_pentrations[monkey]
+        penetrations = monkey_pentrations[monkey]
         for pen_num in penetrations:
             penetration_dir = '/home/bonaiuto/Dropbox/social_goal_mirror/data/%s%02d' % (monkey, pen_num)
-            penetration_label='%2d' % pen_num
+            penetration_label = '%2d' % pen_num
             print(penetration_label)
             penetration = Penetration(label=penetration_label, subject=subject)
             penetration.save(using=db)
 
-            mat_file = scipy.io.loadmat(os.path.join(penetration_dir,'spikes.mat'))
+            mat_file = scipy.io.loadmat(os.path.join(penetration_dir, 'spikes.mat'))
 
             hand_grasp_times=[]
             hand_fixation_times = []
@@ -1893,13 +1888,9 @@ def import_social_goal_mirror_all_data(db='default'):
                             unit_recording.spike_times = ','.join([str(x) for x in sorted(spike_times)])
                         unit_recording.save(using=db)
 
-    try:
-        rebuild_index.Command().handle(interactive=False)
-    except:
-        pass
 
 
-def import_social_goal_data(db='default'):
+def import_social_goal_motor_data(db='default'):
     monkeys=['betta','houdini']
 
     collator=User.objects.using(db).filter(is_superuser=True)[0]
@@ -2001,7 +1992,7 @@ def import_social_goal_data(db='default'):
         subject.species=Species.objects.using(db).get(genus_name='Macaca',species_name='mulatta')
         subject.save(using=db)
 
-        nex_files=glob('/home/jbonaiuto/Projects/sensorimotordb/project/data/ferrari/%s*.nex' % monkey)
+        nex_files=glob('/home/bonaiuto/Projects/sensorimotordb/data/ferrari/%s*.nex' % monkey)
         for nex_idx, nex_file in enumerate(nex_files):
 
             (path,file)=os.path.split(nex_file)
@@ -2127,9 +2118,14 @@ def import_social_goal_data(db='default'):
 
 if __name__=='__main__':
     django.setup()
-#    remove_all()
+    remove_all()
 #    import_kraskov_data('data/kraskov/units4BODB.mat','data/kraskov/')
 #    sed=import_bonini_data(['data/bonini/01_PIC_F5_09022012_mot_mirror_mrgSORTED.nex',
 #                            'data/bonini/02_Pic_F5_10022012_mot_mirror_mrgSORTED.nex'])
-    #import_social_goal_data()
-    import_social_goal_mirror_all_data()
+    import_social_goal_motor_data()
+    #import_social_goal_mirror_data()
+
+    try:
+        rebuild_index.Command().handle(interactive=False)
+    except:
+        pass

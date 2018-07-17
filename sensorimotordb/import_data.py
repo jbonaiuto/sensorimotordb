@@ -1,3 +1,4 @@
+import datetime
 from decimal import Decimal
 from shutil import copyfile
 import django
@@ -8,7 +9,8 @@ from neo import io, os
 import scipy.io
 from glob import glob
 from django.db.models import Q
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, ConditionVideoEvent, Penetration, Subject
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, \
+    Species, GraspPerformanceCondition, Condition, UnitRecording, ConditionVideoEvent, Penetration, Subject, Session
 from uscbp import settings
 
 def remove_all(db='default'):
@@ -27,6 +29,7 @@ def remove_all(db='default'):
     cursor.execute('DELETE FROM %s.sensorimotordb_graspcondition WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_conditionvideoevent WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_condition WHERE 1=1' % (settings.DATABASES[db]['NAME']))
+    cursor.execute('DELETE FROM %s.sensorimotordb_session WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_subject WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     for exp in Experiment.objects.using(db).all():
         cursor.execute('DELETE FROM %s.sensorimotordb_experiment WHERE id=%d' % (settings.DATABASES[db]['NAME'],exp.id))
@@ -1993,6 +1996,7 @@ def import_social_goal_motor_data(db='default'):
         subject.save(using=db)
 
         nex_files=glob('/home/bonaiuto/Projects/sensorimotordb/data/ferrari/%s*.nex' % monkey)
+        session_num=1
         for nex_idx, nex_file in enumerate(nex_files):
 
             (path,file)=os.path.split(nex_file)
@@ -2000,6 +2004,11 @@ def import_social_goal_motor_data(db='default'):
             penetration_label=file.split('_')[1][3:]
             penetration=Penetration(label=penetration_label, subject=subject)
             penetration.save(using=db)
+
+            session = Session(experiment=exp, session_number=session_num,
+                              datetime=datetime.datetime.fromtimestamp(os.path.getctime(nex_file)))
+            session.save()
+            session_num=session_num+1
 
             r=io.NeuroExplorerIO(filename=nex_file)
             block=r.read(cascade=True, lazy=False)[0]
@@ -2065,6 +2074,7 @@ def import_social_goal_motor_data(db='default'):
                             # create trial
                             trial=RecordingTrial()
                             trial.trial_number=trial_idx+1
+                            trial.session=session
                             trial.start_time=trial_start_times[trial_idx]
                             trial.end_time=trial_end_times[trial_idx]
                             trial.save(using=db)

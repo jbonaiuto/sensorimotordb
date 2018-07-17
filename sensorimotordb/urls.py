@@ -4,10 +4,11 @@ from tastypie.api import Api
 from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, \
     EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, \
     UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, \
-    UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, FactorResource, \
+    UnitClassificationResource, AnalysisResource, AnalysisResultsResource, FactorResource, \
     FactorLevelResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, \
     ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, \
-    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource, SubjectResource, ClusterAnalysisResultsResource
+    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource, \
+    SubjectResource, ClusterAnalysisResultsResource, SessionResource
 from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, \
     ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, \
     DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, ClassificationAnalysisDetailView, \
@@ -42,6 +43,7 @@ v1_api.register(TimeWindowFactorLevelSettingsResource())
 v1_api.register(FactorResource())
 v1_api.register(FactorLevelResource())
 v1_api.register(PenetrationResource())
+v1_api.register(SessionResource())
 v1_api.register(SubjectResource())
 v1_api.register(ClusterAnalysisResultsResource())
 

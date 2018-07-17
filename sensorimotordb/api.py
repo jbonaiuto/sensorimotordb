@@ -9,12 +9,12 @@ from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
 from tastypie.paginator import Paginator
 from tastypie.utils import trailing_slash
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition,\
-    Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, UnitClassification,\
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, \
+    Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, UnitClassification, \
     Analysis, UnitAnalysisResults, FactorLevel, Factor, UnitClassificationType, ClassificationAnalysis, \
     ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, \
     ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings, Subject, ClusterAnalysisResults, \
-    UnitClusterProjection, ClusterAnalysisSettings, TimeWindowConditionSettings, UnitCluster
+    UnitClusterProjection, ClusterAnalysisSettings, TimeWindowConditionSettings, UnitCluster, Session
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -171,6 +171,16 @@ class PenetrationResource(ModelResource):
         cache = SimpleCache(timeout=10)
 
 
+class SessionResource(ModelResource):
+    experiment=fields.ForeignKey(ExperimentResource, 'experiment')
+    class Meta:
+        queryset=Session.objects.all().select_related('experiment')
+        resource_name = 'session'
+        authorization=DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+
 class BasicUnitResource(SearchResourceMixin, ModelResource):
     penetration=fields=fields.ToOneField(PenetrationResource,'penetration',full=True)
     class Meta:
@@ -272,19 +282,22 @@ class RecordingTrialResource(ModelResource):
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         filtering={
             'unit_recordings': ALL_WITH_RELATIONS,
-            'condition': ALL_WITH_RELATIONS
+            'condition': ALL_WITH_RELATIONS,
+            'session': ALL_WITH_RELATIONS
         }
         cache = SimpleCache(timeout=10)
 
 class BasicRecordingTrialResource(ModelResource):
     condition=fields.ToOneField(ConditionResource, 'condition')
+    session=fields.ToOneField(SessionResource, 'session')
     class Meta:
-        queryset = RecordingTrial.objects.all().select_related('condition').prefetch_related('unit_recordings').distinct()
+        queryset = RecordingTrial.objects.all().select_related('condition','session').prefetch_related('unit_recordings').distinct()
         resource_name = 'recording_trial'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         filtering={
-            'condition': ALL_WITH_RELATIONS
+            'condition': ALL_WITH_RELATIONS,
+            'session': ALL_WITH_RELATIONS
         }
         cache = SimpleCache(timeout=10)
 

@@ -169,12 +169,14 @@ class Experiment(models.Model):
 class Session(models.Model):
     experiment = models.ForeignKey(Experiment, null=False)
     datetime = models.DateTimeField()
+    session_number=models.IntegerField()
 
     class Meta:
         app_label='sensorimotordb'
 
     def export(self, group):
         group.attrs['datetime'] = np.string_(self.datetime)
+        group.attrs['session_number'] = self.session_number
         f_trials = group.create_group('trials')
         for trial in RecordingTrial.objects.filter(session=self).distinct():
             f_trial = f_trials.create_group('condition_%d.trial_%d' % (trial.condition.id, trial.id))

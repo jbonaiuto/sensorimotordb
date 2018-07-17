@@ -158,12 +158,27 @@ class Experiment(models.Model):
             f_penetration=f_penetrations.create_group(str(penetration.id))
             penetration.export(f_penetration)
 
-        f_trials=f.create_group('trials')
-        for trial in RecordingTrial.objects.filter(condition__experiment=self).distinct():
-            f_trial=f_trials.create_group('condition_%d.trial_%d' % (trial.condition.id, trial.id))
-            trial.export(f_trial)
+        f_sessions=f.create_group('sessions')
+        for session in Session.objects.filter(experiment=self).distinct():
+            f_session=f_sessions.create_group('session_%d' % session.id)
+            session.export(f_session)
 
         f.close()
+
+
+class Session(models.Model):
+    experiment = models.ForeignKey(Experiment, null=False)
+    datetime = models.DateTimeField()
+
+    class Meta:
+        app_label='sensorimotordb'
+
+    def export(self, group):
+        group.attrs['datetime'] = np.string_(self.datetime)
+        f_trials = group.create_group('trials')
+        for trial in RecordingTrial.objects.filter(session=self).distinct():
+            f_trial = f_trials.create_group('condition_%d.trial_%d' % (trial.condition.id, trial.id))
+            trial.export(f_trial)
 
 
 class Condition(models.Model):
@@ -196,6 +211,8 @@ class ConditionVideoEvent(models.Model):
     class Meta:
         app_label='sensorimotordb'
 
+
+## TODO: TrialVideoEvent
 
 class GraspCondition(Condition):
     object=models.CharField(max_length=50)
@@ -284,6 +301,7 @@ class Unit(models.Model):
 
 class RecordingTrial(models.Model):
     condition=models.ForeignKey('Condition',null=True,related_name='recording_trials')
+    session=models.ForeignKey('Session',null=False)
     trial_number=models.IntegerField()
     start_time=models.DecimalField(max_digits=10, decimal_places=5)
     end_time=models.DecimalField(max_digits=10, decimal_places=5)
@@ -294,6 +312,7 @@ class RecordingTrial(models.Model):
     def export(self, group):
         group.attrs['trial_number']=self.trial_number
         group.attrs['condition']=self.condition.id
+        group.attrs['session'] = self.session.id
         group.attrs['start_time']=float(self.start_time)
         group.attrs['end_time']=float(self.end_time)
         f_events=group.create_group('events')

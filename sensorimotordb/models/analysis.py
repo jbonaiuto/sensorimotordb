@@ -70,6 +70,7 @@ class ClassificationAnalysis(Analysis):
 
             unit_results=UnitAnalysisResults(analysis_results=results, unit=unit, results_text='')
 
+            session_ids =[]
             trial_ids = []
             rates = []
             spikes=[]
@@ -115,6 +116,7 @@ class ClassificationAnalysis(Analysis):
                             rates.append(rate)
                             spikes.append(len(woi_spikes))
                             trial_ids.append(trial_idx + 1)
+                            session_ids.append(unit_recording.trial.session.id)
 
                             for other_factor in self.analysis_factors.all():
                                 if other_factor.type == 'condition':
@@ -125,6 +127,7 @@ class ClassificationAnalysis(Analysis):
 
             if script_ext=='.R':
                 df = pd.DataFrame({
+                    'session': pd.Series(session_ids),
                     'trial': pd.Series(trial_ids),
                     'rate': pd.Series(rates),
                     'spikes': pd.Series(spikes)
@@ -137,6 +140,7 @@ class ClassificationAnalysis(Analysis):
                 stats=stats[0]
                 classification=classification[0]
             elif script_ext=='.m':
+                matlab_session.putvalue('session',np.asarray(session_ids))
                 matlab_session.putvalue('trial',np.asarray(trial_ids))
                 matlab_session.putvalue('rate',np.asarray(rates))
                 matlab_session.putvalue('spikes',np.asarray(spikes))

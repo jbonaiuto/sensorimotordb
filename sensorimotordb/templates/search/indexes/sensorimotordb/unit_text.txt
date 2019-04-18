@@ -1,5 +1,9 @@
 {{ object.type }}
 {{ object.label }}
+{{ object.array.label }}
+{{ object.array.subject.subj_id }}
+{{ object.array.subject.species.genus_name }} {{ object.penetration.subject.species.species_name }}
+{{ object.array.subject.species.common_name }}
 {{ object.penetration.label }}
 {{ object.penetration.subject.subj_id }}
 {{ object.penetration.subject.species.genus_name }} {{ object.penetration.subject.species.species_name }}

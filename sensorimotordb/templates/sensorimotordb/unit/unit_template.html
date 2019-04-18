@@ -7,12 +7,19 @@
             </tr>
             <tr>
                 <td><strong>Subject</strong></td>
-                <td><%= penetration.subject.subj_id %></td>
+                <td><% if(penetration!=null) {%><%= penetration.subject.subj_id %>{% } else { %><%= array.subject.subj_id %><% } %></td>
             </tr>
+            <% if(penetration!=null) {%>
             <tr>
                 <td><strong>Penetration</strong></td>
                 <td><%= penetration.label %></td>
             </tr>
+            <% } else { %>
+            <tr>
+                <td><strong>Array</strong></td>
+                <td><%= array.label %></td>
+            </tr>
+            <% } %>
             <tr>
                 <td><strong>Type</strong></td>
                 <td><%= type %></td>
@@ -27,7 +34,7 @@
         <label for="binwidth">Bin width</label>
         <input id="binwidth" value="20" size="4"/>
         <label for="kernelwidth">Gaussian width (ms)</label>
-        <input id="kernelwidth" value="30" size="4"/>
+        <input id="kernelwidth" value="60" size="4"/>
         <input id="align_event" type="hidden" value="start"/>
     </form>
     <div id="unit-<%= id %>-plots" style="float:left"><img src="{% static 'sensorimotordb/img/loading.gif' %}"></div>

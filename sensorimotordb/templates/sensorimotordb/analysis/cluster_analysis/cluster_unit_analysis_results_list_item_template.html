@@ -3,7 +3,7 @@
     <div id="unit_analysis_results-<%= id %>" class="<%= getTRTag(idx) %>" style="display:inline">
         <table>
             <tr>
-                <td colspan="2"><a href="/sensorimotordb/unit/<%= id %>/"><h<%= level %>>Subject <%= penetration.subject.subj_id %>, Penetration <%= penetration.label %>, Unit <%= label %></h<%= level %>></a></td>
+                <td colspan="2"><a href="/sensorimotordb/unit/<%= id %>/"><h<%= level %>><% if(penetration!=null){ %>Subject <%= penetration.subject.subj_id %>, Penetration <%= penetration.label %><% } else { %>Subject <%= array.subject.subj_id %>, Array <%= array.label %><% } %>, Unit <%= label %></h<%= level %>></a></td>
             </tr>
             <tr>
                 <td valign=top width="25%"><strong>Cluster</strong></td>

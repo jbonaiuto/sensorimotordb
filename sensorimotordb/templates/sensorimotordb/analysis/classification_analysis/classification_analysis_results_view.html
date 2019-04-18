@@ -1121,7 +1121,7 @@ function save_as_csv()
         alert("blob not supported");
     }
 
-    var txt = 'Monkey,Penetration,Unit,Classification\n';
+    var txt = 'Monkey,Penetration,Array,Unit,Classification\n';
     for(var unit_idx=0; unit_idx<results.unit_analysis_results.length; unit_idx++)
     {
         var unit_results=results.unit_analysis_results[unit_idx];
@@ -1137,7 +1137,10 @@ function save_as_csv()
                 }
             }
         }
-        txt=txt+unit_results.unit.penetration.subject.subj_id+','+unit_results.unit.penetration.label+','+unit_results.unit.label+','+class_label+'\n';
+        if(unit_results.unit.penetration!=null)
+            txt=txt+unit_results.unit.penetration.subject.subj_id+','+unit_results.unit.penetration.label+',,'+unit_results.unit.label+','+class_label+'\n';
+        else if(unit_results.unit.array!=null)
+            txt=txt+unit_results.unit.array.subject.subj_id+',,'+unit_results.unit.array.label+','+unit_results.unit.label+','+class_label+'\n';
     }
 
     var blob = new Blob([txt], {type: "text/plain"});

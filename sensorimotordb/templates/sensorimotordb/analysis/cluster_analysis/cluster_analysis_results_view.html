@@ -135,7 +135,11 @@ function loadedAnalysisResultsData(resp)
         {
             var unit=cluster.units[j];
             current_unit_ids.push(unit.id);
-            var unit_label='Subject '+unit.penetration.subject.subj_id + ', Penetration '+unit.penetration.label+', Unit '+unit.label;
+            var unit_label='';
+            if(unit.penetration!=null)
+                unit_label='Subject '+unit.penetration.subject.subj_id + ', Penetration '+unit.penetration.label+', Unit '+unit.label;
+            else if(unit.array!=null)
+                unit_label='Subject '+unit.array.subject.subj_id + ', Array '+unit.array.label+', Unit '+unit.label;
             units.set(unit.id, unit_label);
 
             orig_unit_condition_data.spikes.set(unit.id, new Map());
@@ -845,7 +849,7 @@ function save_as_csv()
         alert("blob not supported");
     }
 
-    var txt = 'Monkey,Penetration,Unit,Cluster\n';
+    var txt = 'Monkey,Penetration,Array,Unit,Cluster\n';
     for(var cluster_idx=0; cluster_idx<results.unit_clusters.length; cluster_idx++)
     {
         var cluster=results.unit_clusters[cluster_idx];
@@ -853,8 +857,10 @@ function save_as_csv()
         {
             var unit=cluster.units[j];
             current_unit_ids.push(unit.id);
-            var unit_label='Subject '+unit.penetration.subject.subj_id + ', Penetration '+unit.penetration.label+', Unit '+unit.label;
-            txt=txt+unit.penetration.subject.subj_id+','+unit.penetration.label+','+unit.label+','+(cluster_idx+1)+'\n';
+            if(unit.penetration!=null)
+                txt=txt+unit.penetration.subject.subj_id+','+unit.penetration.label+',,'+unit.label+','+(cluster_idx+1)+'\n';
+            else if(unit.array!=null)
+                txt=txt+unit.penetration.subject.subj_id+',,'+unit.array.label+','+unit.label+','+(cluster_idx+1)+'\n';
         }
     }
 

@@ -56,7 +56,7 @@ class BrainRegion(models.Model):
         ('ventricle', 'ventricle'),
         )
     # nomenclature region belongs to
-    nomenclature = models.ForeignKey('Nomenclature')
+    nomenclature = models.ForeignKey('Nomenclature',null=True)
     name = models.CharField(max_length=100)
     abbreviation = models.CharField(max_length=50, blank=True)
     # can be a fiber tract, neural region, or ventricle
@@ -157,6 +157,11 @@ class Experiment(models.Model):
         for penetration in Penetration.objects.filter(units__unitrecording__trial__condition__experiment=self).distinct():
             f_penetration=f_penetrations.create_group(str(penetration.id))
             penetration.export(f_penetration)
+
+        f_arrays=f.create_group('arrays')
+        for array in Array.objects.filter(units__unitrecording__trial__condition__experiment=self).distinct():
+            f_array=f_arrays.create_group(str(array.id))
+            array.export(f_array)
 
         f_trials=f.create_group('trials')
         for trial in RecordingTrial.objects.filter(condition__experiment=self).distinct():
@@ -266,11 +271,29 @@ class Penetration(models.Model):
             unit.export(f_unit)
 
 
+class Array(models.Model):
+    label=models.CharField(max_length=50)
+    subject = models.ForeignKey(Subject, related_name='arrays')
+
+    class Meta:
+        app_label = 'sensorimotordb'
+
+    def export(self, group):
+        group.attrs['id'] = self.id
+        group.attrs['label'] = np.string_(self.label)
+        f_subject = group.create_group('subject')
+        self.subject.export(f_subject)
+        f_units = group.create_group('units')
+        for unit in Unit.objects.filter(unitrecording__trial__condition__experiment=self).distinct():
+            f_unit = f_units.create_group(str(unit.id))
+            unit.export(f_unit)
+
 class Unit(models.Model):
     label=models.CharField(max_length=50)
     type=models.CharField(max_length=50)
     area=models.ForeignKey('BrainRegion')
-    penetration=models.ForeignKey("Penetration", related_name="units")
+    penetration=models.ForeignKey("Penetration", related_name="units", null=True)
+    array=models.ForeignKey("Array", related_name="units", null=True)
 
     class Meta:
         app_label='sensorimotordb'
@@ -284,6 +307,7 @@ class Unit(models.Model):
 
 class RecordingTrial(models.Model):
     condition=models.ForeignKey('Condition',null=True,related_name='recording_trials')
+    date=models.DateField(blank=True)
     trial_number=models.IntegerField()
     start_time=models.DecimalField(max_digits=10, decimal_places=5)
     end_time=models.DecimalField(max_digits=10, decimal_places=5)
@@ -294,6 +318,7 @@ class RecordingTrial(models.Model):
     def export(self, group):
         group.attrs['trial_number']=self.trial_number
         group.attrs['condition']=self.condition.id
+        group.attrs['date']=datetime.date.strftime(self.date,'%d.m.%y')
         group.attrs['start_time']=float(self.start_time)
         group.attrs['end_time']=float(self.end_time)
         f_events=group.create_group('events')

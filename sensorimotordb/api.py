@@ -9,12 +9,12 @@ from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
 from tastypie.paginator import Paginator
 from tastypie.utils import trailing_slash
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition,\
-    Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, UnitClassification,\
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, \
+    Species, GraspPerformanceCondition, Condition, UnitRecording, Nomenclature, AnalysisResults, UnitClassification, \
     Analysis, UnitAnalysisResults, FactorLevel, Factor, UnitClassificationType, ClassificationAnalysis, \
     ClassificationAnalysisResults, ClassificationAnalysisResultsLevelMapping, AnalysisSettings, \
     ClassificationAnalysisSettings, Penetration, TimeWindowFactorLevelSettings, Subject, ClusterAnalysisResults, \
-    UnitClusterProjection, ClusterAnalysisSettings, TimeWindowConditionSettings, UnitCluster
+    UnitClusterProjection, ClusterAnalysisSettings, TimeWindowConditionSettings, UnitCluster, Array
 
 from django.conf.urls import url
 from haystack.query import SearchQuerySet, EmptySearchQuerySet
@@ -171,10 +171,20 @@ class PenetrationResource(ModelResource):
         cache = SimpleCache(timeout=10)
 
 
-class BasicUnitResource(SearchResourceMixin, ModelResource):
-    penetration=fields=fields.ToOneField(PenetrationResource,'penetration',full=True)
+class ArrayResource(ModelResource):
+    subject=fields.ForeignKey(SubjectResource, 'subject', full=True)
     class Meta:
-        queryset = Unit.objects.all().select_related('penetration')
+        queryset=Array.objects.all().select_related('subject')
+        resource_name = 'array'
+        authorization= DjangoAuthorization()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
+        cache = SimpleCache(timeout=10)
+
+class BasicUnitResource(SearchResourceMixin, ModelResource):
+    penetration=fields.ToOneField(PenetrationResource,'penetration',full=True, null=True)
+    array=fields.ToOneField(ArrayResource, 'array', full=True, null=True)
+    class Meta:
+        queryset = Unit.objects.all().select_related('penetration','array')
         resource_name = 'unit'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
@@ -183,10 +193,11 @@ class BasicUnitResource(SearchResourceMixin, ModelResource):
 
 class UnitResource(BasicUnitResource):
     area = fields.ToOneField(BrainRegionResource, 'area',full=True)
-    penetration=fields=fields.ToOneField(PenetrationResource,'penetration',full=True, null=False)
+    penetration=fields.ToOneField(PenetrationResource,'penetration',full=True, null=True)
+    array=fields.ToOneField(ArrayResource,'array',full=True,null=True)
 
     class Meta:
-        queryset = Unit.objects.all().select_related('area','penetration')
+        queryset = Unit.objects.all().select_related('area','penetration','array')
         resource_name = 'unit'
         authorization= DjangoAuthorization()
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
@@ -314,8 +325,10 @@ class FullRecordingTrialResource(ModelResource):
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         filtering={
             'unit_recordings': ALL_WITH_RELATIONS,
-            'condition': ALL_WITH_RELATIONS
+            'condition': ALL_WITH_RELATIONS,
+            'date':ALL_WITH_RELATIONS
         }
+        ordering=['date']
         cache = SimpleCache(timeout=10)
 
 

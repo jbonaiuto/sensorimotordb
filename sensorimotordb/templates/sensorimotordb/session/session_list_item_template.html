@@ -1,0 +1,10 @@
+{% load staticfiles %}
+<script type="text/html" id="session-template">
+    <div id="session-<%= idx %>" class="<%= getTRTag(idx) %>">
+        <table>
+            <tr>
+                <td><input type="checkbox" id="id_session_<%= idx %>" name="session_<%= idx %>" checked onclick="reloadRecordingTrialData()"/> <a href="/sensorimotordb/session/<%= exp_id %>/<%= date %>/"><%= date %></a></td>
+            </tr>
+        </table>
+    </div>
+</script>

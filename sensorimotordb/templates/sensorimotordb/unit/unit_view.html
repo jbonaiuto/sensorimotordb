@@ -26,8 +26,14 @@
 
     var unit_id={{ object.id }};
 
+    // Recording trial dates
+    var session_dates_str=[];
+    var session_dates_date=[];
+
     // Conditions
     var conditions=new Map();
+
+    var experiment_id=-1;
 
     // Original spike and event data
     var orig_condition_data={
@@ -107,10 +113,10 @@
             var condition=resp.objects[condition_idx];
             conditions.set(condition.id, condition.name);
 
-            // Init
-            orig_condition_data.events.set(condition.id, []);
-            orig_condition_data.spikes.set(condition.id, []);
-            orig_condition_data.numTrials.set(condition.id, 0);
+            if(experiment_id<0)
+            {
+                experiment_id=condition.experiment.id;
+            }
 
             // Update condition template
             $('.condition_list').each(function(index, element){
@@ -134,6 +140,67 @@
         $.ajax(args);
     }
 
+    function reloadRecordingTrialData()
+    {
+        var dates_to_load=[];
+        for(var i=0; i<session_dates_str.length; i++)
+        {
+            if(document.getElementById('id_session_'+i).checked)
+            {
+                dates_to_load.push(session_dates_str[i]);
+            }
+        }
+
+        $('#unit-{{ object.id }}-plots').empty();
+        $('#unit-{{ object.id }}-plots_legend').empty();
+
+        for(let condition_id of realigned_condition_data.rate.keys())
+        {
+            $('#condition-'+condition_id+'-plots').empty();
+        }
+
+        // Original spike and event data
+        orig_condition_data={
+            // Mapping from condition ID to spikes
+            'spikes': new Map(),
+            // Mapping from condition ID to events
+            'events': new Map(),
+            // Mapping from condition ID to num trials
+            'numTrials': new Map()
+        };
+
+        // Realigned firing rate and event data
+        realigned_condition_data={
+            // Mapping from condition ID to events
+            'events': new Map(),
+            // Mapping from condition ID firing rates
+            'rate': new Map(),
+            // Mapping from condition ID to spikes
+            'spikes': new Map()
+        };
+
+        // Plots
+        plots={
+            condition_raster: new Map(),
+            condition_histo: new Map(),
+            condition_rate: new Map(),
+            unit: null
+        };
+
+        // Load recording trials for all conditions
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/api/v1/full_recording_trial/?unit_recordings__unit={{ object.id }}&date__in="+Array.from(dates_to_load).join(',')+"&limit=0&format=json",
+            data: data,
+            success: loadedRecordingTrialData,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+
+
     /**
      * Loaded recording trials
      * @param resp
@@ -147,8 +214,23 @@
             var trial_number=recording_trial.trial_number;
             var start_time=parseFloat(recording_trial.start_time);
 
+            // Add to list of session dates if not already there
+            if($.inArray(recording_trial.date, session_dates_str)<0)
+            {
+                session_dates_str.push(recording_trial.date);
+                session_dates_date.push(new Date(recording_trial.date));
+            }
+
             // Get condition ID
             var condition_id=parseInt(recording_trial.condition.split('/')[5]);
+
+            // Init
+            if(!orig_condition_data.numTrials.has(condition_id))
+            {
+                orig_condition_data.events.set(condition_id, []);
+                orig_condition_data.spikes.set(condition_id, []);
+                orig_condition_data.numTrials.set(condition_id, 0);
+            }
 
             // Update number of trials
             orig_condition_data.numTrials.set(condition_id, orig_condition_data.numTrials.get(condition_id)+1);
@@ -214,6 +296,25 @@
         }
         else
         {
+            var sortedIdx = Array.from(Array(session_dates_date.length).keys())
+                  .sort((a, b) => session_dates_date[a] < session_dates_date[b] ? -1 : (session_dates_date[b] < session_dates_date[a]) | 0)
+
+            $('.session_list').each(function(index, element){
+                if($(this).contents().length==0)
+                {
+                    for(var idx=0; idx<sortedIdx.length; idx++)
+                    {
+                        var tmplMarkup = $('#session-template').html();
+                        data=[];
+                        data.idx=sortedIdx[idx];
+                        data.date=session_dates_str[sortedIdx[idx]];
+                        data.exp_id=experiment_id;
+                        var compiledTmpl = _.template(tmplMarkup,data);
+                        $(this).append(compiledTmpl);
+                     }
+                }
+            });
+
             // Realign spikes and events and compute firing rates
             update_rates();
 
@@ -321,8 +422,11 @@
 {% endblock %}
 {% block content %}
     <div class="unit_info"></div>
+    <h2 style="clear: both">Sessions</h2>
+    <div class="session_list"></div>
     <h2 style="clear: both">Conditions</h2>
     <div class="condition_list"></div>
 {% include "sensorimotordb/unit/unit_template.html" %}
+{% include "sensorimotordb/session/session_list_item_template.html" %}
 {% include "sensorimotordb/condition/condition_list_item_template.html" %}
 {% endblock %}

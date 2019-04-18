@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load staticfiles %}
 {% block extrahead %}
-<title>SensoriMotorDB - View Experiment: {{ object.title }}</title>
+<title>SensoriMotorDB - View Session: {{ date }}</title>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/jquery-1.10.1.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/d3.min.js' %}"></script>
 <script type="text/javascript" src="{% static 'sensorimotordb/js/underscore-min.js' %}"></script>
@@ -23,10 +23,6 @@
             } };
         $.ajax(args);
     });
-
-    // Recording trial dates
-    var session_dates_str=[];
-    var session_dates_date=[];
 
     // Map from condition IDs to condition names
     var conditions=new Map();
@@ -75,6 +71,7 @@
     function loadedExperimentData(resp){
         $('.experiment_info').each(function(index, element){
             $(this).empty();
+            resp.title=resp.title+" - {{ date }}";
             var tmplMarkup = $('#experiment-template').html();
             var compiledTmpl = _.template(tmplMarkup, resp);
             $(this).append(compiledTmpl);
@@ -83,65 +80,8 @@
         d3.selectAll("#kernelwidth").on("change", function(){ dispatch.statechange()});
         dispatch.on("statechange", update);
 
-        // Load analysis results
-        loadAnalysisResults();
-
         // Load conditions for experiment
         loadConditions();
-    }
-
-    /**
-     * Load analysis results
-     */
-    function loadAnalysisResults(){
-        $('.analysis_results_list').each(function(index, element){
-            $(this).empty();
-        });
-        var data = {};
-        var args = {
-            type: "GET",
-            url: "/sensorimotordb/api/v1/analysis_results/?experiment={{ object.id }}&limit=0&format=json",
-            data: data,
-            success: loadedAnalysisResultsData,
-            error: function(data) {
-                //alert("Something went wrong!");
-            } };
-        $.ajax(args);
-    }
-
-    /**
-     * Loaded analysis results
-     * @param resp
-     */
-    function loadedAnalysisResultsData(resp)
-    {
-        // Add analysis results to list
-        for(var i=0; i<resp.objects.length; i++)
-        {
-            // Add condition to list
-            var results=resp.objects[i];
-            $('.analysis_results_list').each(function(index, element){
-                results.level=3;
-                results.idx=i;
-                var tmplMarkup = $('#analysis-results-template').html();
-                var compiledTmpl = _.template(tmplMarkup, results);
-                $(this).append(compiledTmpl);
-            });
-        }
-        // Load more if there are more
-        if(resp.meta.next!=null)
-        {
-            var data = {};
-            var args = {
-                type: "GET",
-                url: resp.meta.next,
-                data: data,
-                success: loadedAnalysisResultsData,
-                error: function(data) {
-                    //alert("Something went wrong!");
-                } };
-            $.ajax(args);
-        }
     }
 
     /**
@@ -215,7 +155,7 @@
                 var data = {};
                 var args = {
                     type: "GET",
-                    url: "/sensorimotordb/api/v1/full_recording_trial/?condition__in="+Array.from(conditions.keys()).join(',')+"&limit=0&format=json",
+                    url: "/sensorimotordb/api/v1/full_recording_trial/?condition__in="+Array.from(conditions.keys()).join(',')+"&date={{ date }}&limit=0&format=json",
                     data: data,
                     success: loadedRecordingTrialData,
                     error: function(data) {
@@ -226,75 +166,6 @@
         }
     }
 
-    function reloadRecordingTrialData()
-    {
-        var dates_to_load=[];
-        for(var i=0; i<session_dates_str.length; i++)
-        {
-            if(document.getElementById('id_session_'+i).checked)
-            {
-                dates_to_load.push(session_dates_str[i]);
-            }
-        }
-
-        // Plot conditions
-        for(let condition_id of realigned_condition_unit_data.rates.keys())
-        {
-            $('#condition-'+condition_id+'-plots').empty();
-            $('#condition-'+condition_id+'-plots_legend').empty();
-        }
-
-        $('.unit_list').each(function(index, element){
-            $(this).empty();
-        });
-
-        // Map from unit IDs to unit labels
-        units=new Map();
-
-        // Original spike and event data
-        orig_unit_condition_data={
-            // Mapping from unit ID to condition ID to spikes
-            'spikes': new Map(),
-            // Mapping from unit ID to condition ID to events
-            'events': new Map(),
-            // Mapping from unit ID to condition ID to num trials
-            'numTrials': new Map()
-        };
-
-        // Realigned firing rate and event data
-        realigned_unit_condition_data={
-            // Mapping from unit ID to condition ID to events
-            'events': new Map(),
-            // Mapping from unit ID to condition ID to firing rates
-            'rates': new Map()
-        };
-
-        // Realigned firing rate and event data
-        realigned_condition_unit_data={
-            // Mapping from condition ID to unit ID to events
-            'events': new Map(),
-            // Mapping from condition ID to unit ID to firing rates
-            'rates': new Map()
-        };
-
-        // Condition and unit plots
-        plots={
-            'condition': new Map(),
-            'unit': new Map()
-        };
-
-        // Load recording trials for all conditions
-        var data = {};
-        var args = {
-            type: "GET",
-            url: "/sensorimotordb/api/v1/full_recording_trial/?condition__in="+Array.from(conditions.keys()).join(',')+"&date__in="+Array.from(dates_to_load).join(',')+"&limit=0&format=json",
-            data: data,
-            success: loadedRecordingTrialData,
-            error: function(data) {
-                //alert("Something went wrong!");
-            } };
-        $.ajax(args);
-    }
 
     /**
      * Loaded recording trials
@@ -308,13 +179,6 @@
             // Get trial number and start time
             var trial_number=recording_trial.trial_number;
             var start_time=parseFloat(recording_trial.start_time);
-
-            // Add to list of session dates if not already there
-            if($.inArray(recording_trial.date, session_dates_str)<0)
-            {
-                session_dates_str.push(recording_trial.date);
-                session_dates_date.push(new Date(recording_trial.date));
-            }
 
             // Get condition ID
             var condition_id=parseInt(recording_trial.condition.split('/')[5]);
@@ -418,25 +282,6 @@
         }
         else
         {
-            var sortedIdx = Array.from(Array(session_dates_date.length).keys())
-                  .sort((a, b) => session_dates_date[a] < session_dates_date[b] ? -1 : (session_dates_date[b] < session_dates_date[a]) | 0)
-
-            $('.session_list').each(function(index, element){
-                if($(this).contents().length==0)
-                {
-                    for(var idx=0; idx<sortedIdx.length; idx++)
-                    {
-                        var tmplMarkup = $('#session-template').html();
-                        data=[];
-                        data.idx=sortedIdx[idx];
-                        data.date=session_dates_str[sortedIdx[idx]];
-                        data.exp_id={{ object.id }};
-                        var compiledTmpl = _.template(tmplMarkup,data);
-                        $(this).append(compiledTmpl);
-                     }
-                }
-            });
-
             // Realign spikes and events and compute firing rates
             update_rates();
 
@@ -551,101 +396,11 @@
                     realigned_condition_unit_data.events.get(condition_id));
         }
     }
-
-    /**
-     * Run selected analysis
-     */
-    function runAnalysis()
-    {
-        var selectBox = document.getElementById("analysis_type");
-        var selectedValue = selectBox.options[selectBox.selectedIndex].value;
-        if(selectedValue.length>0)
-            document.location.href='/sensorimotordb/analysis/'+selectedValue+'/run/?experiment={{ object.id }}';
-    }
-
-    /**
-     * Delete analysis results
-     * @param id
-     */
-    function deleteAnalysisResults(id)
-    {
-        if (confirm('Are you sure you want to delete these results?')) {
-            var data={'id':id, 'csrfmiddlewaretoken': '{{ csrf_token }}'};
-            var args={
-                type:"POST",
-                url:'/sensorimotordb/analysis_results/'+id+'/delete/',
-                data: data,
-                success: doneAnalysisResultsDelete };
-            $.ajax(args);
-        }
-    }
-
-    /**
-     * Finished deleting analysis results
-     * @param data
-     * @param status
-     */
-    function doneAnalysisResultsDelete(data, status)
-    {
-        if(status=='success')
-        {
-            // Remove subevent from list in left panel
-            $(document.getElementById('analysis_results-'+data.id)).remove();
-        }
-    }
-
-    /**
-     * Delete experiment
-     * @param id
-     */
-    function deleteExperiment(id)
-    {
-        if (confirm('Are you sure you want to delete this experiment?')) {
-            var data={'id':id, 'csrfmiddlewaretoken': '{{ csrf_token }}'};
-            var args={
-                type:"POST",
-                url:'/sensorimotordb/experiment/'+id+'/delete/',
-                data: data,
-                success: doneExperimentDelete };
-            $.ajax(args);
-        }
-    }
-
-    /**
-     * Finished deleting experiment
-     * @param data
-     * @param status
-     */
-    function doneExperimentDelete(data, status)
-    {
-        if(status=='success')
-        {
-            document.location.href='/sensorimotordb/';
-        }
-    }
 </script>
 {% endblock %}
 {% block content %}
     <div class="experiment_info"></div>
-    <h2>Analysis Results</h2>
-        <label for="analysis_type">Run Analysis</label>
-        <select id="analysis_type" onchange="runAnalysis();">
-            <option value="" selected></option>
-            {% for analysis in analyses %}
-                <option value="{{ analysis.id }}">{{ analysis.name }}</option>
-            {% endfor %}
-        </select>
-    <div class="analysis_results_list"></div>
-
     <table>
-        <tr>
-            <td colspan="2"><h2>Sessions</h2></td>
-        </tr>
-        <tr>
-            <td colspan="2">
-                <div class="session_list"></div>
-            </td>
-        </tr>
         <tr>
             <td><h2>Conditions</h2></td>
             <td><form>
@@ -672,7 +427,5 @@
     </table>
     {% include "sensorimotordb/experiment/experiment_template.html" %}
     {% include "sensorimotordb/condition/condition_list_item_template.html" %}
-    {% include "sensorimotordb/session/session_list_item_template.html" %}
     {% include "sensorimotordb/unit/unit_list_item_template.html" %}
-    {% include "sensorimotordb/analysis/analysis_results_list_item_template.html" %}
 {% endblock %}

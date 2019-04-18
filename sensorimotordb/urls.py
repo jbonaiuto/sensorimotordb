@@ -4,16 +4,22 @@ from tastypie.api import Api
 from sensorimotordb.api import ExperimentResource, UnitResource, BrainRegionResource, RecordingTrialResource, \
     EventResource, GraspObservationConditionResource, SpeciesResource, GraspPerformanceConditionResource, \
     UnitRecordingResource, NomenclatureResource, UserResource, ConditionResource, FullRecordingTrialResource, \
-    UnitClassificationResource, AnalysisResource,   AnalysisResultsResource, FactorResource, \
+    UnitClassificationResource, AnalysisResource, AnalysisResultsResource, FactorResource, \
     FactorLevelResource, UnitClassificationTypeResource, ClassificationAnalysisResultsResource, \
     ClassificationAnalysisResource, AnalysisSettingsResource, ClassificationAnalysisSettingsResource, \
-    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource, SubjectResource, ClusterAnalysisResultsResource
+    ClassificationAnalysisResultsLevelMappingResource, PenetrationResource, TimeWindowFactorLevelSettingsResource, \
+    SubjectResource, ClusterAnalysisResultsResource, ArrayResource
 from sensorimotordb.views import UnitDetailView, ConditionDetailView, ExperimentDetailView, SearchView, IndexView, \
-    ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, ExperimentExportView, \
-    DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, ClassificationAnalysisDetailView, \
-    DeleteUnitClassificationTypeView, CreateUnitClassificationTypeView, UpdateUnitClassificationTypeView, CreateClassificationAnalysisWizardView, \
+    ExperimentExportRequestView, ExperimentExportRequestDenyView, ExperimentExportRequestApproveView, \
+    ExperimentExportView, \
+    DeleteExperimentView, UpdateExperimentView, UpdateConditionView, DeleteConditionView, \
+    ClassificationAnalysisDetailView, \
+    DeleteUnitClassificationTypeView, CreateUnitClassificationTypeView, UpdateUnitClassificationTypeView, \
+    CreateClassificationAnalysisWizardView, \
     CLASSIFICATION_ANALYSIS_WIZARD_FORMS, AnalysisListDetailView, DeleteClassificationAnalysisView, RunAnalysisView, \
-    RunClassificationAnalysisView, DeleteAnalysisResultsView, AnalysisResultsDetailView, ClassificationAnalysisResultsDetailView, CreateClusterAnalysisView, ClusterAnalysisDetailView, RunClusterAnalysisView, ClusterAnalysisResultsDetailView
+    RunClassificationAnalysisView, DeleteAnalysisResultsView, AnalysisResultsDetailView, \
+    ClassificationAnalysisResultsDetailView, CreateClusterAnalysisView, ClusterAnalysisDetailView, \
+    RunClusterAnalysisView, ClusterAnalysisResultsDetailView, SessionDetailView
 
 v1_api = Api(api_name='v1')
 v1_api.register(UserResource())
@@ -42,6 +48,7 @@ v1_api.register(TimeWindowFactorLevelSettingsResource())
 v1_api.register(FactorResource())
 v1_api.register(FactorLevelResource())
 v1_api.register(PenetrationResource())
+v1_api.register(ArrayResource())
 v1_api.register(SubjectResource())
 v1_api.register(ClusterAnalysisResultsResource())
 
@@ -71,6 +78,7 @@ urlpatterns = patterns('',
     (r'^experiment/(?P<pk>\d+)/export_request/approve/(?P<activation_key>\w+)/$', ExperimentExportRequestApproveView.as_view(), {}, 'experiment_export_request_approve'),
     (r'^experiment/(?P<pk>\d+)/export/$', ExperimentExportView.as_view(), {}, 'experiment_export_view'),
     (r'^search/', SearchView.as_view(), {}, 'search_view'),
+    (r'^session/(?P<pk>\d+)/(?P<date>[0-9]{4}-([0][0-9]|[1][0-2])-([0][0-9]|[1][0-9]|[2][0-9]|[3][0-1]))/$', SessionDetailView.as_view(), {}, 'session_view'),
     (r'^unit/(?P<pk>\d+)/$', UnitDetailView.as_view(), {}, 'unit_view'),
     (r'^unit_classification_type/(?P<pk>\d+)/delete/$', DeleteUnitClassificationTypeView.as_view(), {}, 'unit_classification_type_delete'),
     (r'^unit_classification_type/(?P<pk>\d+)/edit/$', UpdateUnitClassificationTypeView.as_view(), {}, 'unit_classification_type_edit'),

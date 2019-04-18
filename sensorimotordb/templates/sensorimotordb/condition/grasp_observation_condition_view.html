@@ -37,6 +37,10 @@
 
     var condition_id={{ object.id }};
 
+    // Recording trial dates
+    var session_dates_str=[];
+    var session_dates_date=[];
+
     // Map from unit IDs to unit labels
     var units=new Map();
 
@@ -65,8 +69,6 @@
 
     // Plots
     var plots={
-        unit_raster: new Map(),
-        unit_histo: new Map(),
         unit_rate: new Map(),
         condition: null
     };
@@ -157,6 +159,67 @@
         $.ajax(args);
     }
 
+    function reloadRecordingTrialData()
+    {
+        var dates_to_load=[];
+        for(var i=0; i<session_dates_str.length; i++)
+        {
+            if(document.getElementById('id_session_'+i).checked)
+            {
+                dates_to_load.push(session_dates_str[i]);
+            }
+        }
+
+        // Plot conditions
+        $('#condition-'+condition_id+'-plots').empty();
+        $('#condition-'+condition_id+'-plots_legend').empty();
+
+        $('.unit_list').each(function(index, element){
+            $(this).empty();
+        });
+
+        // Map from unit IDs to unit labels
+        units=new Map();
+
+        // Original spike and event data
+        orig_unit_data={
+            // Mapping from unit ID to spikes
+            'spikes': new Map(),
+            // Mapping from unit ID to events
+            'events': new Map(),
+            // Mapping from unit ID to num trials
+            'numTrials': new Map()
+        };
+
+        // Realigned firing rate and event data
+        realigned_unit_data={
+            // Mapping from unit ID to events
+            'events': new Map(),
+            // Mapping from unit ID firing rates
+            'rate': new Map(),
+            // Mapping from unit ID to spikes
+            'spikes': new Map()
+        };
+
+        // Condition and unit plots
+        plots={
+            unit_rate: new Map(),
+            condition: null
+        };
+
+        // Load recording trials for all conditions
+        var data = {};
+        var args = {
+            type: "GET",
+            url: "/sensorimotordb/api/v1/full_recording_trial/?condition="+condition_id+"&date__in="+Array.from(dates_to_load).join(',')+"&limit=0&format=json",
+            data: data,
+            success: loadedRecordingTrialData,
+            error: function(data) {
+                //alert("Something went wrong!");
+            } };
+        $.ajax(args);
+    }
+
     /**
      * Loaded recording trial data
      * @param resp
@@ -170,6 +233,13 @@
             var trial_number=recording_trial.trial_number;
             var start_time=parseFloat(recording_trial.start_time);
 
+            // Add to list of session dates if not already there
+            if($.inArray(recording_trial.date, session_dates_str)<0)
+            {
+                session_dates_str.push(recording_trial.date);
+                session_dates_date.push(new Date(recording_trial.date));
+            }
+
             // For each unit recording in this trial
             for(var unit_recording_idx=0; unit_recording_idx<recording_trial.unit_recordings.length; unit_recording_idx++)
             {
@@ -180,7 +250,10 @@
                 if(!units.has(unit.id))
                 {
                     // Add to list
-                    units.set(unit.id, 'Subject '+unit.penetration.subject.subj_id+', Penetration '+unit.penetration.label+', Unit '+unit.label);
+                    if(unit.penetration!=null)
+                        units.set(unit.id, 'Subject '+unit.penetration.subject.subj_id+', Penetration '+unit.penetration.label+', Unit '+unit.label);
+                    else if(unit.array!=null)
+                        units.set(unit.id, 'Subject '+unit.array.subject.subj_id+', Array '+unit.array.label+', Unit '+unit.label);
 
                     // Init
                     orig_unit_data.events.set(unit.id, []);
@@ -256,6 +329,25 @@
         }
         else
         {
+            var sortedIdx = Array.from(Array(session_dates_date.length).keys())
+                  .sort((a, b) => session_dates_date[a] < session_dates_date[b] ? -1 : (session_dates_date[b] < session_dates_date[a]) | 0)
+
+            $('.session_list').each(function(index, element){
+                if($(this).contents().length==0)
+                {
+                    for(var idx=0; idx<sortedIdx.length; idx++)
+                    {
+                        var tmplMarkup = $('#session-template').html();
+                        data=[];
+                        data.idx=sortedIdx[idx];
+                        data.date=session_dates_str[sortedIdx[idx]];
+                        data.exp_id={{ object.experiment.id }};
+                        var compiledTmpl = _.template(tmplMarkup,data);
+                        $(this).append(compiledTmpl);
+                     }
+                }
+            });
+
             // Realign spikes and events and compute firing rates
             update_rates();
 
@@ -263,14 +355,6 @@
             for(let unit_id of realigned_unit_data.rate.keys())
             {
                 $('#unit-'+unit_id+'-plots').empty();
-                var raster_svg=drawRaster('unit-'+unit_id+'-plots', realigned_unit_data.spikes.get(unit_id),
-                        realigned_unit_data.events.get(unit_id), event_types);
-                plots.unit_raster.set(unit_id, raster_svg);
-
-                var histo_svg=drawHistogram('unit-'+unit_id+'-plots', realigned_unit_data.spikes.get(unit_id),
-                        realigned_unit_data.events.get(unit_id), event_types);
-                plots.unit_histo.set(unit_id, histo_svg);
-
                 var rate_svg=drawFiringRate('unit-'+unit_id+'-plots', realigned_unit_data.rate.get(unit_id),
                         realigned_unit_data.events.get(unit_id), event_types);
                 plots.unit_rate.set(unit_id, rate_svg);
@@ -285,18 +369,6 @@
                         alert("blob not supported");
                     }
 
-                    var raster_html = raster_svg
-                        .attr("title", "test2")
-                        .attr("version", 1.1)
-                        .attr("xmlns", "http://www.w3.org/2000/svg")
-                        .node().outerHTML;
-
-                    var histo_html = histo_svg
-                        .attr("title", "test2")
-                        .attr("version", 1.1)
-                        .attr("xmlns", "http://www.w3.org/2000/svg")
-                        .node().outerHTML;
-
                     var rate_html = rate_svg
                         .attr("title", "test2")
                         .attr("version", 1.1)
@@ -304,8 +376,6 @@
                         .node().outerHTML;
 
                     var zip=new JSZip();
-                    zip.file("unit-"+unit_id+"_raster.svg",raster_html);
-                    zip.file("unit-"+unit_id+"_histogram.svg",histo_html);
                     zip.file("unit-"+unit_id+"_rate.svg",rate_html);
                     zip.generateAsync({type:"blob"})
                         .then(function(content) {
@@ -386,8 +456,6 @@
         update_rates();
         for(let unit_id of units.keys())
         {
-            plots.unit_raster.get(unit_id).update(realigned_unit_data.spikes.get(unit_id), realigned_unit_data.events.get(unit_id));
-            plots.unit_histo.get(unit_id).update(realigned_unit_data.spikes.get(unit_id), realigned_unit_data.events.get(unit_id));
             plots.unit_rate.get(unit_id).update(realigned_unit_data.rate.get(unit_id), realigned_unit_data.events.get(unit_id));
         }
         plots.condition.update(realigned_unit_data.rate, realigned_unit_data.events);
@@ -426,8 +494,11 @@
 {% endblock %}
 {% block content %}
         <div class="condition_info"></div>
+	    <h2 style="clear: both">Sessions</h2>
+        <div class="session_list"></div>
         <h2 style="clear: both">Unit Recordings</h2>
         <div class="unit_list"></div>
     {% include "sensorimotordb/condition/grasp_observation_condition_template.html" %}
+    {% include "sensorimotordb/session/session_list_item_template.html" %}
     {% include "sensorimotordb/unit/unit_list_item_template.html" %}
 {% endblock %}

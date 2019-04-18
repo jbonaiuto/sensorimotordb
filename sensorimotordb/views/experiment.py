@@ -8,7 +8,9 @@ from django.views.generic.edit import ModelFormMixin
 from haystack.management.commands import update_index, rebuild_index
 import os
 from sensorimotordb.forms import GraspObservationConditionForm, GraspPerformanceConditionForm, ExperimentForm, ExperimentExportRequestForm, ExperimentExportRequestDenyForm, ExperimentExportRequestApproveForm
-from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, ConditionVideoEvent, Unit, UnitRecording, Event, RecordingTrial, Experiment, ExperimentExportRequest, UnitAnalysisResults, UnitClassification, AnalysisResults, Analysis, ClassificationAnalysisResults, Penetration, Subject
+from sensorimotordb.models import Condition, GraspObservationCondition, GraspPerformanceCondition, ConditionVideoEvent, \
+    Unit, UnitRecording, Event, RecordingTrial, Experiment, ExperimentExportRequest, UnitAnalysisResults, \
+    UnitClassification, AnalysisResults, Analysis, ClassificationAnalysisResults, Penetration, Subject, Array
 from sensorimotordb.views import LoginRequiredMixin, JSONResponseMixin
 from uscbp import settings
 from uscbp.settings import PROJECT_PATH
@@ -101,6 +103,19 @@ class UnitDetailView(LoginRequiredMixin, DetailView):
     template_name = 'sensorimotordb/unit/unit_view.html'
 
 
+class SessionDetailView(LoginRequiredMixin, DetailView):
+    model = Experiment
+    template_name = 'sensorimotordb/session/session_view.html'
+
+    def get_context_data(self, **kwargs):
+        context=super(SessionDetailView,self).get_context_data(**kwargs)
+        context['can_export']=False
+        if self.request.user.is_superuser or ExperimentExportRequest.objects.filter(experiment__id=self.object.id, requesting_user__id=self.request.user.id, status='approved').exists():
+            context['can_export']=True
+        context['date']=self.kwargs.get('date', None)
+        return context
+
+
 class ExperimentDetailView(LoginRequiredMixin, DetailView):
     model = Experiment
     template_name = 'sensorimotordb/experiment/experiment_view.html'
@@ -147,8 +162,10 @@ class DeleteExperimentView(JSONResponseMixin,BaseDetailView):
             Event.objects.filter(trial__condition__experiment=self.object).delete()
             RecordingTrial.objects.filter(condition__experiment=self.object).delete()
             Unit.objects.filter(id__in=units_to_delete).delete()
+            Subject.objects.filter(arrays__units__id__in=units_to_delete).delete()
             Subject.objects.filter(penetrations__units__id__in=units_to_delete).delete()
             Penetration.objects.filter(units__id__in=units_to_delete).delete()
+            Array.objects.filter(units__id__in=units_to_delete).delete()
             Condition.objects.filter(experiment=self.object).delete()
             ExperimentExportRequest.objects.filter(experiment=self.object).delete()
 

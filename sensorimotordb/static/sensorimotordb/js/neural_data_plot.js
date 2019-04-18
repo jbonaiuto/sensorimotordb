@@ -37,11 +37,37 @@ function drawRaster(parent_id, trial_spikes, trial_events, event_types)
         .scale(yScale)
         .orient("left").ticks(5);
 
+    var absTrialNumbers=[];
+    // Convert absolute trial numbers to relative
+    for(var i=0; i<data.events.length; i++)
+    {
+        if($.inArray(data.events[i].trial, absTrialNumbers)<0)
+        {
+            absTrialNumbers.push(data.events[i].trial);
+        }
+    }
+    for(var i=0; i<data.spikes.length; i++)
+    {
+        if($.inArray(data.spikes[i].y, absTrialNumbers)<0)
+        {
+            absTrialNumbers.push(data.spikes[i].y);
+        }
+    }
+    absTrialNumbers.sort((a, b) => a - b);
+    for(var i=0; i<data.events.length; i++)
+    {
+        data.events[i].relTrial=absTrialNumbers.indexOf(data.events[i].trial)+1;
+    }
+    for(var i=0; i<data.spikes.length; i++)
+    {
+        data.spikes[i].relTrial=absTrialNumbers.indexOf(data.spikes[i].y)+1;
+    }
+
     // Scale the range of the data
     xScale.domain([d3.min([d3.min(data.events,function(d){return d.t}),d3.min(data.spikes,function(d){return d.x})]),
         d3.max([d3.max(data.events,function(d){return d.t}),d3.max(data.spikes,function(d){return d.x})])]);
-    yScale.domain([d3.min([d3.min(data.events,function(d){return d.trial}),d3.min(data.spikes, function(d) { return d.y; })]),
-        d3.max([d3.max(data.events,function(d){return d.trial}),d3.max(data.spikes, function(d) { return d.y; })])]);
+    yScale.domain([d3.min([d3.min(data.events,function(d){return d.relTrial}),d3.min(data.spikes, function(d) { return d.relTrial; })]),
+        d3.max([d3.max(data.events,function(d){return d.relTrial}),d3.max(data.spikes, function(d) { return d.relTrial; })])]);
 
     var raster=origin_transform.append("g")
         .attr("class", "raster");
@@ -49,7 +75,7 @@ function drawRaster(parent_id, trial_spikes, trial_events, event_types)
     raster.selectAll("circle")
         .data(data.spikes)
         .enter().append("svg:circle")
-        .attr("transform", function (d) { return "translate("+xScale(d.x)+", "+yScale(d.y)+")"})
+        .attr("transform", function (d) { return "translate("+xScale(d.x)+", "+yScale(d.relTrial)+")"})
         .attr("r", 1);
 
     var events = origin_transform.append("g")
@@ -58,11 +84,11 @@ function drawRaster(parent_id, trial_spikes, trial_events, event_types)
     var event_circles=events.selectAll("circle")
         .data(data.events)
         .enter().append("svg:circle")
-        .attr("transform", function (d) { return "translate("+xScale(d.t)+", "+yScale(d.trial)+")"})
+        .attr("transform", function (d) { return "translate("+xScale(d.t)+", "+yScale(d.relTrial)+")"})
         .attr("r", 4)
         .style('fill', function (d) {return p(event_types.indexOf(d.name))})
         .on("mouseover", function(d) {
-            focus.attr("transform", "translate(" + xScale(d.t) + "," + yScale(d.trial) + ")");
+            focus.attr("transform", "translate(" + xScale(d.t) + "," + yScale(d.relTrial) + ")");
             focus.select("text").text(d.name);
             focus.style("display","")
         })
@@ -113,17 +139,43 @@ function drawRaster(parent_id, trial_spikes, trial_events, event_types)
         data.events=realigned_trial_events;
         focus.style("display","none");
 
+        var absTrialNumbers=[];
+        // Convert absolute trial numbers to relative
+        for(var i=0; i<data.events.length; i++)
+        {
+            if($.inArray(data.events[i].trial, absTrialNumbers)<0)
+            {
+                absTrialNumbers.push(data.events[i].trial);
+            }
+        }
+        for(var i=0; i<data.spikes.length; i++)
+        {
+            if($.inArray(data.spikes[i].y, absTrialNumbers)<0)
+            {
+                absTrialNumbers.push(data.spikes[i].y);
+            }
+        }
+        absTrialNumbers.sort((a, b) => a - b);
+        for(var i=0; i<data.events.length; i++)
+        {
+            data.events[i].relTrial=absTrialNumbers.indexOf(data.events[i].trial)+1;
+        }
+        for(var i=0; i<data.spikes.length; i++)
+        {
+            data.spikes[i].relTrial=absTrialNumbers.indexOf(data.spikes[i].y)+1;
+        }
+
         xScale.domain([d3.min([d3.min(data.events,function(d){return d.t}),d3.min(data.spikes,function(d){return d.x})]),
             d3.max([d3.max(data.events,function(d){return d.t}),d3.max(data.spikes,function(d){return d.x})])]);
         xAxis.scale(xScale);
 
         origin_transform.selectAll("circle")
             .data(data.spikes)
-            .attr("transform", function (d) { return "translate("+xScale(d.x)+", "+yScale(d.y)+")"});
+            .attr("transform", function (d) { return "translate("+xScale(d.x)+", "+yScale(d.relTrial)+")"});
 
         events.selectAll("circle")
             .data(data.events)
-            .attr("transform", function (d) { return "translate("+xScale(d.t)+", "+yScale(d.trial)+")"})
+            .attr("transform", function (d) { return "translate("+xScale(d.t)+", "+yScale(d.relTrial)+")"})
 
         origin_transform.select(".x.axis").call(xAxis);
     };

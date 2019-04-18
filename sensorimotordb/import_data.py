@@ -1,3 +1,5 @@
+import csv
+from datetime import datetime
 from decimal import Decimal
 from shutil import copyfile
 import django
@@ -6,9 +8,13 @@ from django.db import connections
 from haystack.management.commands import rebuild_index
 from neo import io, os
 import scipy.io
+import numpy as np
 from glob import glob
-from django.db.models import Q
-from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, Species, GraspPerformanceCondition, Condition, UnitRecording, ConditionVideoEvent, Penetration, Subject
+import pandas as pd
+from django.db.models import Q, Max
+from sensorimotordb.models import Experiment, Unit, BrainRegion, RecordingTrial, Event, GraspObservationCondition, \
+    Species, GraspPerformanceCondition, Condition, UnitRecording, ConditionVideoEvent, Penetration, Subject, Array, \
+    Nomenclature
 from uscbp import settings
 
 def remove_all(db='default'):
@@ -21,6 +27,7 @@ def remove_all(db='default'):
     cursor.execute('DELETE FROM %s.sensorimotordb_unitrecording WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_recordingtrial WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_penetration WHERE 1=1' % (settings.DATABASES[db]['NAME']))
+    cursor.execute('DELETE FROM %s.sensorimotordb_array WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_unit WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_graspobservationcondition WHERE 1=1' % (settings.DATABASES[db]['NAME']))
     cursor.execute('DELETE FROM %s.sensorimotordb_graspperformancecondition WHERE 1=1' % (settings.DATABASES[db]['NAME']))
@@ -1536,6 +1543,401 @@ def import_social_goal_mirror_data(db='default'):
     except:
         pass
 
+
+def import_tool_exp_data(subj_name, date, db='default'):
+    recording_date = datetime.strptime(date, '%d.%m.%y')
+
+    collator = User.objects.using(db).filter(is_superuser=True)[0]
+    if User.objects.using(db).filter(username='jbonaiuto').count():
+        collator = User.objects.using(db).get(username='jbonaiuto')
+
+    exp_title='Tool use experiment'
+    if Experiment.objects.using(db).filter(title=exp_title).count():
+        exp=Experiment.objects.using(db).get(title=exp_title)
+        print('using experiment %d' % exp.id)
+    else:
+        exp=Experiment()
+        exp.collator=collator
+        exp.last_modified_by=collator
+        exp.title=exp_title
+        exp.brief_description='Recording of F1, F5hand, F5mouth, F2, 45v/12r, and 45a neurons while monkeys perform grasps, use rake, observe grasps, and observe multiple tool actions'
+        exp.save(using=db)
+        print('importing experiment %d' % exp.id)
+
+    demonstrator_species = Species.objects.using(db).get(genus_name='Homo', species_name='sapiens')
+
+    conditions={}
+    # if GraspPerformanceCondition.objects.using(db).filter(experiment=exp, name='Grasp left object with hand').count():
+    #     conditions['motor_grasp_left']=GraspPerformanceCondition.objects.using(db).get(experiment=exp, name='Grasp left object with hand')
+    # else:
+    #     conditions['motor_grasp_left']=GraspPerformanceCondition()
+    #     conditions['motor_grasp_left'].experiment=exp
+    #     conditions['motor_grasp_left'].name='Grasp left object with hand'
+    #     conditions['motor_grasp_left'].description=''
+    #     conditions['motor_grasp_left'].type = 'grasp_perform'
+    #     conditions['motor_grasp_left'].object = 'cube'
+    #     conditions['motor_grasp_left'].object_distance = 13
+    #     conditions['motor_grasp_left'].grasp = 'precision pinch'
+    #     conditions['motor_grasp_left'].hand_visible = True
+    #     conditions['motor_grasp_left'].object_visible = True
+    #     conditions['motor_grasp_left'].save(using=db)
+    # if GraspPerformanceCondition.objects.using(db).filter(experiment=exp, name='Grasp center object with hand').count():
+    #     conditions['motor_grasp_center']=GraspPerformanceCondition.objects.using(db).get(experiment=exp, name='Grasp center object with hand')
+    # else:
+    #     conditions['motor_grasp_center']=GraspPerformanceCondition()
+    #     conditions['motor_grasp_center'].experiment=exp
+    #     conditions['motor_grasp_center'].name='Grasp center object with hand'
+    #     conditions['motor_grasp_center'].description=''
+    #     conditions['motor_grasp_center'].type = 'grasp_perform'
+    #     conditions['motor_grasp_center'].object = 'cube'
+    #     conditions['motor_grasp_center'].object_distance = 13
+    #     conditions['motor_grasp_center'].grasp = 'precision pinch'
+    #     conditions['motor_grasp_center'].hand_visible = True
+    #     conditions['motor_grasp_center'].object_visible = True
+    #     conditions['motor_grasp_center'].save(using=db)
+    # if GraspPerformanceCondition.objects.using(db).filter(experiment=exp, name='Grasp right object with hand').count():
+    #     conditions['motor_grasp_right']=GraspPerformanceCondition.objects.using(db).get(experiment=exp, name='Grasp right object with hand')
+    # else:
+    #     conditions['motor_grasp_right']=GraspPerformanceCondition()
+    #     conditions['motor_grasp_right'].experiment=exp
+    #     conditions['motor_grasp_right'].name='Grasp center object with hand'
+    #     conditions['motor_grasp_right'].description=''
+    #     conditions['motor_grasp_right'].type = 'grasp_perform'
+    #     conditions['motor_grasp_right'].object = 'cube'
+    #     conditions['motor_grasp_right'].object_distance = 13
+    #     conditions['motor_grasp_right'].grasp = 'precision pinch'
+    #     conditions['motor_grasp_right'].hand_visible = True
+    #     conditions['motor_grasp_right'].object_visible = True
+    #     conditions['motor_grasp_right'].save(using=db)
+    if GraspPerformanceCondition.objects.using(db).filter(experiment=exp, name='Grasp object with hand').count():
+        conditions['motor_grasp']=GraspPerformanceCondition.objects.using(db).get(experiment=exp, name='Grasp object with hand')
+    else:
+        conditions['motor_grasp']=GraspPerformanceCondition()
+        conditions['motor_grasp'].experiment=exp
+        conditions['motor_grasp'].name='Grasp object with hand'
+        conditions['motor_grasp'].description=''
+        conditions['motor_grasp'].type = 'grasp_perform'
+        conditions['motor_grasp'].object = 'cube'
+        conditions['motor_grasp'].object_distance = 13
+        conditions['motor_grasp'].grasp = 'precision pinch'
+        conditions['motor_grasp'].hand_visible = True
+        conditions['motor_grasp'].object_visible = True
+        conditions['motor_grasp'].save(using=db)
+    # if GraspObservationCondition.objects.using(db).filter(experiment=exp, name='Observe grasp with hand from right').count():
+    #     conditions['visual_grasp_right']=GraspObservationCondition.objects.using(db).get(experiment=exp, name='Observe grasp with hand from right')
+    # else:
+    #     conditions['visual_grasp_right'] = GraspObservationCondition()
+    #     conditions['visual_grasp_right'].experiment = exp
+    #     conditions['visual_grasp_right'].name = 'Observe grasp with hand from right'
+    #     conditions['visual_grasp_right'].description = ''
+    #     conditions['visual_grasp_right'].type = 'grasp_observe'
+    #     conditions['visual_grasp_right'].object = 'cube'
+    #     conditions['visual_grasp_right'].object_distance = 13
+    #     conditions['visual_grasp_right'].grasp = 'precision pinch'
+    #     conditions['visual_grasp_right'].demonstrator_species = demonstrator_species
+    #     conditions['visual_grasp_right'].demonstration_type = 'live'
+    #     conditions['visual_grasp_right'].viewing_angle = 90
+    #     conditions['visual_grasp_right'].whole_body_visible = True
+    #     conditions['visual_grasp_right'].save(using=db)
+    #
+    # if GraspObservationCondition.objects.using(db).filter(experiment=exp, name='Observe grasp with hand from left').count():
+    #     conditions['visual_grasp_left']=GraspObservationCondition.objects.using(db).get(experiment=exp, name='Observe grasp with hand from left')
+    # else:
+    #     conditions['visual_grasp_left'] = GraspObservationCondition()
+    #     conditions['visual_grasp_left'].experiment = exp
+    #     conditions['visual_grasp_left'].name = 'Observe grasp with hand from left'
+    #     conditions['visual_grasp_left'].description = ''
+    #     conditions['visual_grasp_left'].type = 'grasp_observe'
+    #     conditions['visual_grasp_left'].object = 'cube'
+    #     conditions['visual_grasp_left'].object_distance = 13
+    #     conditions['visual_grasp_left'].grasp = 'precision pinch'
+    #     conditions['visual_grasp_left'].demonstrator_species = demonstrator_species
+    #     conditions['visual_grasp_left'].demonstration_type = 'live'
+    #     conditions['visual_grasp_left'].viewing_angle = -90
+    #     conditions['visual_grasp_left'].whole_body_visible = True
+    #     conditions['visual_grasp_left'].save(using=db)
+    if GraspObservationCondition.objects.using(db).filter(experiment=exp, name='Observe grasp with hand').count():
+        conditions['visual_grasp']=GraspObservationCondition.objects.using(db).get(experiment=exp, name='Observe grasp with hand')
+    else:
+        conditions['visual_grasp'] = GraspObservationCondition()
+        conditions['visual_grasp'].experiment = exp
+        conditions['visual_grasp'].name = 'Observe grasp with hand'
+        conditions['visual_grasp'].description = ''
+        conditions['visual_grasp'].type = 'grasp_observe'
+        conditions['visual_grasp'].object = 'cube'
+        conditions['visual_grasp'].object_distance = 13
+        conditions['visual_grasp'].grasp = 'precision pinch'
+        conditions['visual_grasp'].demonstrator_species = demonstrator_species
+        conditions['visual_grasp'].demonstration_type = 'live'
+        conditions['visual_grasp'].viewing_angle = -90
+        conditions['visual_grasp'].whole_body_visible = True
+        conditions['visual_grasp'].save(using=db)
+        
+    # if GraspObservationCondition.objects.using(db).filter(experiment=exp, name='Observe grasp with pliers from right').count():
+    #     conditions['visual_pliers_right']=GraspObservationCondition.objects.using(db).get(experiment=exp, name='Observe grasp with pliers from right')
+    # else:
+    #     conditions['visual_pliers_right'] = GraspObservationCondition()
+    #     conditions['visual_pliers_right'].experiment = exp
+    #     conditions['visual_pliers_right'].name = 'Observe grasp with pliers from right'
+    #     conditions['visual_pliers_right'].description = ''
+    #     conditions['visual_pliers_right'].type = 'grasp_observe'
+    #     conditions['visual_pliers_right'].object = 'cube'
+    #     conditions['visual_pliers_right'].object_distance = 13
+    #     conditions['visual_pliers_right'].grasp = 'precision pinch'
+    #     conditions['visual_pliers_right'].demonstrator_species = demonstrator_species
+    #     conditions['visual_pliers_right'].demonstration_type = 'live'
+    #     conditions['visual_pliers_right'].viewing_angle = 90
+    #     conditions['visual_pliers_right'].whole_body_visible = True
+    #     conditions['visual_pliers_right'].save(using=db)
+    #
+    # if GraspObservationCondition.objects.using(db).filter(experiment=exp, name='Observe grasp with pliers from left').count():
+    #     conditions['visual_pliers_left']=GraspObservationCondition.objects.using(db).get(experiment=exp, name='Observe grasp with pliers from left')
+    # else:
+    #     conditions['visual_pliers_left'] = GraspObservationCondition()
+    #     conditions['visual_pliers_left'].experiment = exp
+    #     conditions['visual_pliers_left'].name = 'Observe grasp with pliers from left'
+    #     conditions['visual_pliers_left'].description = ''
+    #     conditions['visual_pliers_left'].type = 'grasp_observe'
+    #     conditions['visual_pliers_left'].object = 'cube'
+    #     conditions['visual_pliers_left'].object_distance = 13
+    #     conditions['visual_pliers_left'].grasp = 'precision pinch'
+    #     conditions['visual_pliers_left'].demonstrator_species = demonstrator_species
+    #     conditions['visual_pliers_left'].demonstration_type = 'live'
+    #     conditions['visual_pliers_left'].viewing_angle = -90
+    #     conditions['visual_pliers_left'].whole_body_visible = True
+    #     conditions['visual_pliers_left'].save(using=db)
+    if GraspObservationCondition.objects.using(db).filter(experiment=exp, name='Observe grasp with pliers').count():
+        conditions['visual_pliers']=GraspObservationCondition.objects.using(db).get(experiment=exp, name='Observe grasp with pliers')
+    else:
+        conditions['visual_pliers'] = GraspObservationCondition()
+        conditions['visual_pliers'].experiment = exp
+        conditions['visual_pliers'].name = 'Observe grasp with pliers'
+        conditions['visual_pliers'].description = ''
+        conditions['visual_pliers'].type = 'grasp_observe'
+        conditions['visual_pliers'].object = 'cube'
+        conditions['visual_pliers'].object_distance = 13
+        conditions['visual_pliers'].grasp = 'precision pinch'
+        conditions['visual_pliers'].demonstrator_species = demonstrator_species
+        conditions['visual_pliers'].demonstration_type = 'live'
+        conditions['visual_pliers'].viewing_angle = -90
+        conditions['visual_pliers'].whole_body_visible = True
+        conditions['visual_pliers'].save(using=db)
+
+    # if GraspObservationCondition.objects.using(db).filter(experiment=exp, name='Observe rake pull from right').count():
+    #     conditions['visual_rake_pull_right']=GraspObservationCondition.objects.using(db).get(experiment=exp, name='Observe rake pull from right')
+    # else:
+    #     conditions['visual_rake_pull_right'] = GraspObservationCondition()
+    #     conditions['visual_rake_pull_right'].experiment = exp
+    #     conditions['visual_rake_pull_right'].name = 'Observe rake pull from right'
+    #     conditions['visual_rake_pull_right'].description = ''
+    #     conditions['visual_rake_pull_right'].type = 'grasp_observe'
+    #     conditions['visual_rake_pull_right'].object = 'cube'
+    #     conditions['visual_rake_pull_right'].object_distance = 13
+    #     conditions['visual_rake_pull_right'].grasp = 'pull'
+    #     conditions['visual_rake_pull_right'].demonstrator_species = demonstrator_species
+    #     conditions['visual_rake_pull_right'].demonstration_type = 'live'
+    #     conditions['visual_rake_pull_right'].viewing_angle = 90
+    #     conditions['visual_rake_pull_right'].whole_body_visible = True
+    #     conditions['visual_rake_pull_right'].save(using=db)
+    #
+    # if GraspObservationCondition.objects.using(db).filter(experiment=exp, name='Observe rake pull from left').count():
+    #     conditions['visual_rake_pull_left']=GraspObservationCondition.objects.using(db).get(experiment=exp, name='Observe rake pull from left')
+    # else:
+    #     conditions['visual_rake_pull_left'] = GraspObservationCondition()
+    #     conditions['visual_rake_pull_left'].experiment = exp
+    #     conditions['visual_rake_pull_left'].name = 'Observe rake pull from left'
+    #     conditions['visual_rake_pull_left'].description = ''
+    #     conditions['visual_rake_pull_left'].type = 'grasp_observe'
+    #     conditions['visual_rake_pull_left'].object = 'cube'
+    #     conditions['visual_rake_pull_left'].object_distance = 13
+    #     conditions['visual_rake_pull_left'].grasp = 'pull'
+    #     conditions['visual_rake_pull_left'].demonstrator_species = demonstrator_species
+    #     conditions['visual_rake_pull_left'].demonstration_type = 'live'
+    #     conditions['visual_rake_pull_left'].viewing_angle = -90
+    #     conditions['visual_rake_pull_left'].whole_body_visible = True
+    #     conditions['visual_rake_pull_left'].save(using=db)
+    if GraspObservationCondition.objects.using(db).filter(experiment=exp, name='Observe rake pull').count():
+        conditions['visual_rake_pull']=GraspObservationCondition.objects.using(db).get(experiment=exp, name='Observe rake pull')
+    else:
+        conditions['visual_rake_pull'] = GraspObservationCondition()
+        conditions['visual_rake_pull'].experiment = exp
+        conditions['visual_rake_pull'].name = 'Observe rake pull'
+        conditions['visual_rake_pull'].description = ''
+        conditions['visual_rake_pull'].type = 'grasp_observe'
+        conditions['visual_rake_pull'].object = 'cube'
+        conditions['visual_rake_pull'].object_distance = 13
+        conditions['visual_rake_pull'].grasp = 'pull'
+        conditions['visual_rake_pull'].demonstrator_species = demonstrator_species
+        conditions['visual_rake_pull'].demonstration_type = 'live'
+        conditions['visual_rake_pull'].viewing_angle = -90
+        conditions['visual_rake_pull'].whole_body_visible = True
+        conditions['visual_rake_pull'].save(using=db)
+
+    condition_map={
+        'visual_grasp_left':'visual_grasp',
+        'visual_grasp_right': 'visual_grasp',
+        'visual_pliers_left': 'visual_pliers',
+        'visual_pliers_right': 'visual_pliers',
+        'visual_rake_pull_left': 'visual_rake_pull',
+        'visual_rake_pull_right': 'visual_rake_pull',
+        'motor_grasp_left': 'motor_grasp',
+        'motor_grasp_center': 'motor_grasp',
+        'motor_grasp_right': 'motor_grasp',
+    }
+    if Subject.objects.using(db).filter(subj_id=subj_name).count():
+        subject=Subject.objects.using(db).get(subj_id=subj_name)
+    else:
+        subject = Subject(subj_id=subj_name)
+        subject.species = Species.objects.using(db).get(genus_name='Macaca', species_name='mulatta')
+        subject.save(using=db)
+
+    # Reads trial info and events
+    data_dir = os.path.join('/home/bonaiuto/Projects/tool_learning/data/preprocessed_data/', subj_name, date)
+    trial_info=pd.read_csv(os.path.join(data_dir,'trial_info.csv'))
+    trial_events=pd.read_csv(os.path.join(data_dir,'trial_events.csv'))
+
+    arrays = ['F1', 'F5hand', 'F5mouth', '46v-12r', '45a', 'F2']
+
+    trials=[]
+
+    evt_dict={'visual_grasp': { 'exp_place_right': 'plc',
+                                      'exp_grasp_center': 'o_on',
+                                      'exp_place_left': 'plc',
+                                      'reward': 'rew',
+                                      'error': 'err',
+                                      'exp_start_off': 's_off',
+                                      'laser_exp_start_center': 'fix',
+                                      'manual_reward': 'rew',
+                                      'manual_error': 'err',
+                                      'go':'go'},
+              'visual_pliers': { 'exp_place_right': 'plc',
+                                     'exp_grasp_center': 'o_on',
+                                     'exp_place_left': 'plc',
+                                     'reward': 'rew',
+                                     'error': 'err',
+                                     'exp_start_off': 's_off',
+                                     'laser_exp_start_center': 'fix',
+                                     'manual_reward': 'rew',
+                                     'manual_error': 'err',
+                                     'go': 'go'},
+              'visual_rake_pull': {'exp_place_right': 'plc',
+                                'exp_grasp_center': 'o_on',
+                                'exp_place_left': 'plc',
+                                'reward': 'rew',
+                                'error': 'err',
+                                'exp_start_off': 's_off',
+                                'laser_exp_start_center': 'fix',
+                                'manual_reward': 'rew',
+                                'manual_error': 'err',
+                                'go': 'go'},
+             'motor_grasp': { 'monkey_handle_on': 's_on',
+                                      'trap_edge': 'o_on',
+                                      'trap_bottom': 'plc',
+                                      'reward': 'rew',
+                                      'error': 'err',
+                                      'monkey_handle_off': 's_off',
+                                      'manual_reward': 'rew',
+                                      'manual_error': 'err',
+                                      'go':'go',
+                                      'laser_monkey_tool_center': 'fix'}
+             }
+
+    for index, row in trial_info.iterrows():
+
+        # create trial
+        trial = RecordingTrial()
+        trial.date=recording_date
+        trial.condition=conditions[condition_map[row['condition']]]
+
+        # Figure out if correct trial
+        if row['correct']:
+            # Figure out global trial number
+            global_trial_idx = 1
+            if RecordingTrial.objects.using(db).filter(condition__experiment=trial.condition.experiment).count():
+                global_trial_idx = RecordingTrial.objects.using(db).filter(condition__experiment=trial.condition.experiment).aggregate(Max('trial_number'))['trial_number__max'] + 1
+            trial.trial_number = global_trial_idx
+
+
+            # Figure out what rows have trial events
+            evt_trial_rows = np.where(trial_events.trial == row['trial'])[0]
+
+            # Get start and end times
+            for row_idx in evt_trial_rows:
+                evt_code = trial_events.event[row_idx]
+                evt_time = trial_events.time[row_idx]/1000.0
+                if evt_code == 'trial_start':
+                    trial.start_time = evt_time
+                elif evt_code == 'trial_stop':
+                    trial.end_time = evt_time+1
+
+            print('importing trial %d, %.3f-%.3f' % (row['trial'], trial.start_time, trial.end_time))
+            trial.save(using=db)
+
+            # Add events
+            for row_idx in evt_trial_rows:
+                evt_code = trial_events.event[row_idx]
+                evt_time = trial_events.time[row_idx]/1000.0
+                if not (evt_code == 'trial_start' or evt_code == 'trial_stop') and evt_code in evt_dict[condition_map[row['condition']]]:
+                    trans_evt_code=evt_dict[condition_map[row['condition']]][evt_code]
+                    new_event = Event(name=trans_evt_code, description=trans_evt_code, trial=trial, time=evt_time)
+                    new_event.save(using=db)
+
+        trials.append(trial)
+
+    # Import spikes
+    for array_idx, region in enumerate(arrays):
+
+        if Array.objects.using(db).filter(label=region).count():
+            array = Array.objects.using(db).get(label=region)
+        else:
+            array = Array(label=region, subject=subject)
+            array.save()
+
+        fnames=glob(os.path.join(data_dir,'%s*.csv' % region))
+        for fname in fnames:
+            electrode=os.path.split(fname)[1].split('_')[1]
+            electrode_df=pd.read_csv(fname)
+            for label_id in np.unique(electrode_df.cell):
+                if label_id>=0:
+                    unit_label='%s-%d' % (electrode,label_id)
+                    if Unit.objects.using(db).filter(label=unit_label, array=array).count():
+                        unit = Unit.objects.using(db).get(label=unit_label, array=array)
+                    else:
+                        print('importing unit %s' % unit_label)
+                        unit = Unit()
+                        unit.label = unit_label
+                        unit.array = array
+                        if BrainRegion.objects.using(db).filter(Q(Q(name=region) | Q(abbreviation=region))):
+                            region = BrainRegion.objects.using(db).filter(Q(Q(name=region) | Q(abbreviation=region)))[0]
+                        else:
+                            if Nomenclature.objects.using(db).filter(name='Parma').count():
+                                nomenclature = Nomenclature.objects.using(db).get(name='Parma')
+                            else:
+                                nomenclature = Nomenclature(name='Parma', version='1')
+                                nomenclature.save()
+                            region = BrainRegion(name=region, abbreviation=region,
+                                                 brain_region_type='neural region',
+                                                 nomenclature=nomenclature)
+                            region.save()
+                        unit.area = region
+                        unit.type = 'UID'
+                        unit.save(using=db)
+
+                    unit_rows=np.where(electrode_df.cell==label_id)[0]
+                    for trial_idx in np.unique(electrode_df.trial[unit_rows]):
+                        if trial_info.correct[trial_idx]:
+                            unit_trial_rows=np.where((electrode_df.cell==label_id) & (electrode_df.trial==trial_idx))[0]
+                            unit_trial_spike_times=electrode_df.time[unit_trial_rows]/1000.0
+
+                            unit_recording = UnitRecording(unit=unit, trial=trials[trial_idx])
+                            if isinstance(unit_trial_spike_times,np.float64):
+                                unit_recording.spike_times =str(unit_trial_spike_times)
+                            else:
+                                unit_recording.spike_times = ','.join([str(x) for x in sorted(unit_trial_spike_times)])
+                            unit_recording.save(using=db)
+
+
+
 def import_social_goal_data(db='default'):
     monkeys=['betta','houdini']
 
@@ -1765,8 +2167,13 @@ def import_social_goal_data(db='default'):
 if __name__=='__main__':
     django.setup()
     remove_all()
+    #dates=['20.11.18','21.11.18','26.11.18','27.11.18','28.11.18','29.11.18','30.11.18']
+    dates=['08.03.19']
+    for date in dates:
+        print('*******************import date  %s ****************' % date)
+        import_tool_exp_data('betta',date)
 #    import_kraskov_data('data/kraskov/units4BODB.mat','data/kraskov/')
 #    sed=import_bonini_data(['data/bonini/01_PIC_F5_09022012_mot_mirror_mrgSORTED.nex',
 #                            'data/bonini/02_Pic_F5_10022012_mot_mirror_mrgSORTED.nex'])
     #import_social_goal_data()
-    import_social_goal_mirror_data()
+    #import_social_goal_mirror_data()

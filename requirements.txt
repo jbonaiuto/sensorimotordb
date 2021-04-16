@@ -3,7 +3,7 @@ backports.shutil-get-terminal-size==1.0.0
 Cython==0.23.1
 decorator==4.0.11
 Django==1.11.23
-django-debug-toolbar==1.7
+django-debug-toolbar==1.11.1
 django-formtools==2.0
 django-haystack==2.4.0
 django-memcached==0.1.2
